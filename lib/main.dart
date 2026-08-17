@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/app_state.dart';
 import 'screens/home/root_shell.dart';
+import 'theme/sync_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,17 +45,7 @@ class SyncMonthApp extends StatelessWidget {
               GlobalWidgetsLocalizations.delegate,
               GlobalCupertinoLocalizations.delegate,
             ],
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xFF2E7D32),
-                brightness: Brightness.light,
-              ),
-              useMaterial3: true,
-              cardTheme: const CardThemeData(
-                elevation: 0,
-                margin: EdgeInsets.zero,
-              ),
-            ),
+            theme: buildSyncTheme(),
             home: const RootShell(),
           );
         },

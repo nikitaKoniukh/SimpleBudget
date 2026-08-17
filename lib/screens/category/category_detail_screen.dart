@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../widgets/summary_card.dart';
 
@@ -27,122 +28,163 @@ class CategoryDetailScreen extends StatelessWidget {
     final planned = state.categoryPlanned(categoryId);
     final actual = state.categoryActual(categoryId);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(cat.localizedName(state.localeCode)),
-        backgroundColor: Color(cat.colorValue).withValues(alpha: 0.5),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Center(
-              child: Chip(
-                label: Text(
-                  cat.type == 'savings'
-                      ? l10n.typeSavings
-                      : cat.type == 'debt'
-                          ? l10n.typeDebt
-                          : l10n.typeExpense,
+    return SyncBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(cat.localizedName(state.localeCode)),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Chip(
+                  label: Text(
+                    cat.type == 'savings'
+                        ? l10n.typeSavings
+                        : cat.type == 'debt'
+                            ? l10n.typeDebt
+                            : l10n.typeExpense,
+                  ),
+                  visualDensity: VisualDensity.compact,
                 ),
-                visualDensity: VisualDensity.compact,
               ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLineItemEditor(
-          context,
-          categoryId: categoryId,
+          ],
         ),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.addItem),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-        children: [
-          Text(
-            '${l10n.groupTotal}: ${formatIls(actual)} / ${formatIls(planned)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => showLineItemEditor(
+            context,
+            categoryId: categoryId,
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: Text(l10n.description, style: _headerStyle)),
-              SizedBox(
-                width: 88,
-                child: Text(l10n.budget, style: _headerStyle, textAlign: TextAlign.end),
+          icon: const Icon(Icons.add),
+          label: Text(l10n.addItem),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Color(cat.colorValue).withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(18),
               ),
-              SizedBox(
-                width: 88,
-                child: Text(l10n.actual, style: _headerStyle, textAlign: TextAlign.end),
+              child: Text(
+                '${l10n.groupTotal}: ${formatIls(actual)} / ${formatIls(planned)}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
-              SizedBox(
-                width: 88,
-                child: Text(l10n.difference, style: _headerStyle, textAlign: TextAlign.end),
-              ),
-            ],
-          ),
-          const Divider(),
-          ...items.map((item) {
-            return InkWell(
-              onTap: () => showLineItemEditor(context, item: item),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.localizedDescription(state.localeCode),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          if (item.installmentHint != null)
+            ),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              Text(l10n.noData)
+            else
+              ...items.map((item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => showLineItemEditor(context, item: item),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              item.installmentHint!,
-                              style: Theme.of(context).textTheme.labelSmall,
+                              item.localizedDescription(state.localeCode),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
                             ),
-                        ],
+                            if (item.installmentHint != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                item.installmentHint!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(color: SyncColors.textMuted),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _StackedMetric(
+                                    label: l10n.plannedLabel,
+                                    value: formatIls(item.planned),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _StackedMetric(
+                                    label: l10n.spentLabel,
+                                    value: formatIls(item.actual),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.difference,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              color: SyncColors.textMuted,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      DifferenceText(value: item.difference),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    SizedBox(
-                      width: 88,
-                      child: Text(
-                        formatIls(item.planned),
-                        textAlign: TextAlign.end,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 88,
-                      child: Text(
-                        formatIls(item.actual),
-                        textAlign: TextAlign.end,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 88,
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: DifferenceText(value: item.difference),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
+                  ),
+                );
+              }),
+          ],
+        ),
       ),
     );
   }
+}
 
-  static const _headerStyle = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-  );
+class _StackedMetric extends StatelessWidget {
+  const _StackedMetric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: SyncColors.textMuted,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> showLineItemEditor(
@@ -172,12 +214,13 @@ Future<void> showLineItemEditor(
   final result = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true,
     builder: (ctx) {
       return Padding(
         padding: EdgeInsets.only(
           left: 16,
           right: 16,
-          top: 16,
+          top: 8,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
         ),
         child: StatefulBuilder(
@@ -303,7 +346,6 @@ Future<void> showLineItemEditor(
       installmentCurrent: instCur,
       installmentTotal: instTot,
     );
-    // category may change — rebuild map
     await state.repo.upsertLineItem(
       householdId: hid,
       monthId: monthId,

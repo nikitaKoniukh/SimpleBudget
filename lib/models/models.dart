@@ -162,6 +162,20 @@ class IncomeEntry {
         'createdAt': createdAt?.toIso8601String(),
       };
 
+  IncomeEntry copyWith({
+    String? sourceId,
+    double? amount,
+    String? note,
+  }) {
+    return IncomeEntry(
+      id: id,
+      sourceId: sourceId ?? this.sourceId,
+      amount: amount ?? this.amount,
+      note: note ?? this.note,
+      createdAt: createdAt,
+    );
+  }
+
   factory IncomeEntry.fromMap(String id, Map<String, dynamic> map) {
     return IncomeEntry(
       id: id,

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/budget_repository.dart';
+import '../data/default_categories.dart';
 
 class AppState extends ChangeNotifier {
   AppState({
@@ -218,6 +219,7 @@ class AppState extends ChangeNotifier {
   Future<void> createMonth({
     required String monthId,
     String? copyFromMonthId,
+    List<DefaultCategory> selectedCategories = const [],
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
@@ -226,6 +228,12 @@ class AppState extends ChangeNotifier {
         householdId: hid,
         fromMonthId: copyFromMonthId,
         toMonthId: monthId,
+      );
+    } else if (selectedCategories.isNotEmpty) {
+      await _repo.createMonthWithCategories(
+        householdId: hid,
+        monthId: monthId,
+        categories: selectedCategories,
       );
     } else {
       await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
@@ -287,6 +295,13 @@ class AppState extends ChangeNotifier {
       type: type,
       sortOrder: _categories.length,
     );
+  }
+
+  Future<int> addDefaultCategories() async {
+    final hid = _appUser?.householdId;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    return _repo.addDefaultCategories(householdId: hid, monthId: mid);
   }
 
   Future<void> updateCategory(BudgetCategory category) async {

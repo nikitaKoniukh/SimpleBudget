@@ -1,7 +1,9 @@
-# SimpleBudget
+# SyncMonth
 
 Family monthly budget planner for iOS and Android. Shared household: everyone can
 view and edit. Users create months and categories themselves (no auto-seed).
+
+**Tagline:** Family monthly budget / Семейный месячный бюджет
 
 ## Stack
 
@@ -10,15 +12,16 @@ view and edit. Users create months and categories themselves (no auto-seed).
 - Cloud Firestore (household sync + offline cache)
 - English / Russian UI toggle
 - Currency: ₪ ILS
-- App IDs: `com.yetzira.simplebudget`
+- App IDs: `com.yetzira.syncmonth`
 
-## v2 product model
+## Product model
 
 1. Create or join a **household** (all members can edit)
-2. **Add month** (empty, or copy previous month’s plan — actuals reset)
-3. **Add categories** yourself (expense / savings / debt + color)
-4. Add **income** sources/amounts and **expense** line items (planned / actual)
-5. Invite partner via code; live sync
+2. **Create month** (pick categories, or copy previous month’s plan — actuals reset)
+3. **Home** — month health + category progress
+4. **Activity** — income and spends / quick log
+5. **Plan** — categories and line items
+6. Invite partner via code; live sync
 
 ## Firebase
 
@@ -38,4 +41,4 @@ flutter pub get
 flutter run
 ```
 
-Manual checklist: [docs/SMOKE_TEST.md](docs/SMOKE_TEST.md)
+See [`docs/SMOKE_TEST.md`](docs/SMOKE_TEST.md) for a manual checklist.

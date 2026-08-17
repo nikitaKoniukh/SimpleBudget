@@ -38,7 +38,26 @@ class CategoriesScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.manageCategories)),
+      appBar: AppBar(
+        title: Text(l10n.manageCategories),
+        actions: [
+          if (state.categories.isNotEmpty)
+            TextButton(
+              onPressed: () async {
+                final n = await state.addDefaultCategories();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      n > 0 ? l10n.defaultsAdded : l10n.defaultsAlreadyPresent,
+                    ),
+                  ),
+                );
+              },
+              child: Text(l10n.addDefaultCategories),
+            ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _editCategory(context),
         icon: const Icon(Icons.add),
@@ -48,7 +67,29 @@ class CategoriesScreen extends StatelessWidget {
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(l10n.emptyCategories, textAlign: TextAlign.center),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.emptyCategories, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () async {
+                        final n = await state.addDefaultCategories();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              n > 0
+                                  ? l10n.defaultsAdded
+                                  : l10n.defaultsAlreadyPresent,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(l10n.addDefaultCategories),
+                    ),
+                  ],
+                ),
               ),
             )
           : ListView.builder(

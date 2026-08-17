@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -86,8 +87,10 @@ class _AuthScreenState extends State<AuthScreen> {
     final showApple =
         !kIsWeb && Platform.isIOS && context.read<AppState>().auth.isAppleSignInAvailable;
 
-    return Scaffold(
-      body: SafeArea(
+    return SyncBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
@@ -211,6 +214,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

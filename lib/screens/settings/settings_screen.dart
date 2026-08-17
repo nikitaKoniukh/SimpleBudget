@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../category/categories_screen.dart';
 import '../home/month_actions.dart';
@@ -30,9 +31,11 @@ class SettingsScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     final household = state.household;
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.settings)),
-      body: ListView(
+    return SyncBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(title: Text(l10n.settings)),
+        body: ListView(
         children: [
           ListTile(
             title: Text(l10n.household),
@@ -112,7 +115,7 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => showCreateMonthDialog(context),
           ),
           ListTile(
-            title: Text(l10n.duplicateMonth),
+            title: Text(l10n.startNextMonth),
             trailing: const Icon(Icons.chevron_right),
             onTap: !state.hasMonthSelected
                 ? null
@@ -138,6 +141,7 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => state.auth.signOut(),
           ),
         ],
+      ),
       ),
     );
   }

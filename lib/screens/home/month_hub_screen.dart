@@ -169,6 +169,23 @@ class MonthHubScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
+                      onPressed: () async {
+                        final n = await state.addDefaultCategories();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              n > 0
+                                  ? l10n.defaultsAdded
+                                  : l10n.defaultsAlreadyPresent,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(l10n.addDefaultCategories),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(

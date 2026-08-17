@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sync_month/data/default_categories.dart';
 import 'package:sync_month/models/models.dart';
 import 'package:sync_month/utils/csv_export.dart';
 import 'package:sync_month/utils/money.dart';
@@ -14,6 +15,25 @@ void main() {
   test('formatIls includes shekel symbol', () {
     final text = formatIls(4650);
     expect(text.contains('₪'), isTrue);
+  });
+
+  test('default categories are localized EN/RU', () {
+    expect(DefaultCategories.all, isNotEmpty);
+    for (final cat in DefaultCategories.all) {
+      expect(cat.nameEn, isNotEmpty);
+      expect(cat.nameRu, isNotEmpty);
+      expect(['expense', 'savings', 'debt'], contains(cat.type));
+    }
+    expect(
+      DefaultCategories.all.any((c) => c.nameEn == 'Food' && c.nameRu == 'Еда'),
+      isTrue,
+    );
+    expect(
+      DefaultCategories.all.any(
+        (c) => c.nameEn == 'Savings' && c.type == 'savings',
+      ),
+      isTrue,
+    );
   });
 
   test('buildMonthCsv includes income and expense sections', () {
@@ -60,7 +80,6 @@ void main() {
   });
 
   test('invite share message shape via localizations is not empty', () {
-    // Smoke: money + month helpers still compose for overview totals.
     final totals = MonthTotals(income: 100, planned: 80, actual: 50);
     expect(totals.remaining, 30);
     expect(totals.planExceedsIncome, isFalse);

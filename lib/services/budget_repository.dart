@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
+import '../data/default_categories.dart';
 import '../models/models.dart';
 import '../utils/money.dart';
 
@@ -94,7 +95,7 @@ class BudgetRepository {
     return snap.exists;
   }
 
-  /// Creates an empty month (no categories, income, or line items).
+  /// Creates a month with no categories, income, or line items.
   Future<void> createEmptyMonth({
     required String householdId,
     required String monthId,
@@ -105,6 +106,65 @@ class BudgetRepository {
       throw StateError('Month already exists');
     }
     await ref.set(BudgetMonth(id: monthId).toMap());
+  }
+
+  /// Creates a month and adds only the selected default categories.
+  Future<void> createMonthWithCategories({
+    required String householdId,
+    required String monthId,
+    required List<DefaultCategory> categories,
+  }) async {
+    final ref = _monthRef(householdId, monthId);
+    final existing = await ref.get();
+    if (existing.exists) {
+      throw StateError('Month already exists');
+    }
+    final batch = _db.batch();
+    batch.set(ref, BudgetMonth(id: monthId).toMap());
+    for (var i = 0; i < categories.length; i++) {
+      final cat = categories[i];
+      batch.set(ref.collection('categories').doc(_uuid.v4()), {
+        'nameEn': cat.nameEn,
+        'nameRu': cat.nameRu,
+        'colorValue': cat.colorValue,
+        'type': cat.type,
+        'sortOrder': i,
+      });
+    }
+    await batch.commit();
+  }
+
+  /// Adds default categories that are missing (by English name). Skips duplicates.
+  Future<int> addDefaultCategories({
+    required String householdId,
+    required String monthId,
+    List<DefaultCategory>? only,
+  }) async {
+    final ref = _monthRef(householdId, monthId);
+    final existing = await ref.collection('categories').get();
+    final existingNames = existing.docs
+        .map((d) => (d.data()['nameEn'] as String? ?? '').toLowerCase())
+        .toSet();
+
+    final toAdd = only ?? DefaultCategories.all;
+    final batch = _db.batch();
+    var added = 0;
+    var sortBase = existing.docs.length;
+    for (final cat in toAdd) {
+      if (existingNames.contains(cat.nameEn.toLowerCase())) continue;
+      batch.set(ref.collection('categories').doc(_uuid.v4()), {
+        'nameEn': cat.nameEn,
+        'nameRu': cat.nameRu,
+        'colorValue': cat.colorValue,
+        'type': cat.type,
+        'sortOrder': sortBase + added,
+      });
+      added++;
+    }
+    if (added > 0) {
+      await batch.commit();
+    }
+    return added;
   }
 
   /// Copies structure from [fromMonthId] into [toMonthId].
@@ -291,6 +351,28 @@ class BudgetRepository {
       'note': note,
       'createdAt': DateTime.now().toIso8601String(),
     });
+  }
+
+  Future<void> updateIncomeEntry({
+    required String householdId,
+    required String monthId,
+    required IncomeEntry entry,
+  }) async {
+    await _monthRef(householdId, monthId)
+        .collection('incomeEntries')
+        .doc(entry.id)
+        .set(entry.toMap(), SetOptions(merge: true));
+  }
+
+  Future<void> deleteIncomeEntry({
+    required String householdId,
+    required String monthId,
+    required String entryId,
+  }) async {
+    await _monthRef(householdId, monthId)
+        .collection('incomeEntries')
+        .doc(entryId)
+        .delete();
   }
 
   Future<void> addIncomeSource({

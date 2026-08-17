@@ -64,7 +64,7 @@ class DifferenceText extends StatelessWidget {
     final isNeg = value < 0;
     final color = isNeg
         ? Theme.of(context).colorScheme.error
-        : const Color(0xFF2E7D32);
+        : const Color(0xFF3D7A5F);
     return Text(
       formatIls(value),
       style: TextStyle(

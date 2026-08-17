@@ -27,13 +27,13 @@ Future<void> exportAndShareMonthCsv(BuildContext context) async {
   );
 
   final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/simplebudget_$monthId.csv');
+  final file = File('${dir.path}/syncmonth_$monthId.csv');
   await file.writeAsString(csv, flush: true);
 
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SimpleBudget $monthId',
+      subject: 'SyncMonth $monthId',
       text: l10n.exportCsv,
     ),
   );

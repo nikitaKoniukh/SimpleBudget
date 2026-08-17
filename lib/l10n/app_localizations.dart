@@ -17,9 +17,38 @@ class AppLocalizations {
       isRu ? 'Семейный месячный бюджет' : 'Family monthly budget';
 
   String get month => isRu ? 'Месяц' : 'Month';
+  String get home => isRu ? 'Домой' : 'Home';
+  String get activity => isRu ? 'Активность' : 'Activity';
+  String get plan => isRu ? 'План' : 'Plan';
   String get income => isRu ? 'Доход' : 'Income';
+  String get expense => isRu ? 'Расход' : 'Expense';
   String get overview => isRu ? 'Обзор' : 'Overview';
   String get settings => isRu ? 'Настройки' : 'Settings';
+  String get log => isRu ? 'Записать' : 'Log';
+  String get quickLog => isRu ? 'Быстрая запись' : 'Quick log';
+  String get recentExpenses => isRu ? 'Недавние траты' : 'Recent expenses';
+  String get incomeEntries => isRu ? 'Доходы' : 'Income entries';
+  String get addFirstIncome =>
+      isRu ? 'Добавьте первый доход' : 'Add first income';
+  String get editIncome => isRu ? 'Изменить доход' : 'Edit income';
+  String get deleteIncome => isRu ? 'Удалить доход' : 'Delete income';
+  String get createThisMonth =>
+      isRu ? 'Создать этот месяц' : 'Create this month';
+  String get howAreWeDoing =>
+      isRu
+          ? 'Как мы с бюджетом в этом месяце?'
+          : 'How are we doing this month?';
+  String get startNextMonth =>
+      isRu
+          ? 'Начать следующий месяц из этого плана'
+          : 'Start next month from this plan';
+  String get stepPickMonth => isRu ? 'Выберите месяц' : 'Pick a month';
+  String get stepCategoriesOrCopy =>
+      isRu ? 'Категории или копия' : 'Categories or copy';
+  String get continueLabel => isRu ? 'Далее' : 'Continue';
+  String get done => isRu ? 'Готово' : 'Done';
+  String get plannedLabel => isRu ? 'План' : 'Planned';
+  String get spentLabel => isRu ? 'Потрачено' : 'Spent';
 
   String get budget => isRu ? 'Бюджет' : 'Budget';
   String get actual => isRu ? 'Фактически' : 'Actual';
@@ -77,8 +106,8 @@ class AppLocalizations {
   String get typeDebt => isRu ? 'Долг / карта' : 'Debt / card';
   String get emptyCategories =>
       isRu
-          ? 'Категорий пока нет. Добавьте свою первую категорию.'
-          : 'No categories yet. Add your first category.';
+          ? 'Категорий пока нет. Добавьте свои или набор по умолчанию.'
+          : 'No categories yet. Add your own or the default set.';
   String get emptyIncome =>
       isRu ? 'Добавьте источник дохода и суммы.' : 'Add an income source and amounts.';
   String get emptyMonths =>
@@ -87,8 +116,18 @@ class AppLocalizations {
           : 'No months yet. Create your first month to get started.';
   String get addMonth => isRu ? 'Добавить месяц' : 'Add month';
   String get createMonth => isRu ? 'Создать месяц' : 'Create month';
+  String get addDefaultCategories =>
+      isRu ? 'Добавить категории по умолчанию' : 'Add default categories';
+  String get defaultsAdded =>
+      isRu ? 'Категории по умолчанию добавлены' : 'Default categories added';
+  String get defaultsAlreadyPresent =>
+      isRu ? 'Все категории по умолчанию уже есть' : 'Default categories already present';
   String get createEmptyMonth =>
-      isRu ? 'Пустой месяц' : 'Empty month';
+      isRu ? 'Новый месяц без копирования' : 'New month (no copy)';
+  String get selectCategories =>
+      isRu ? 'Выберите категории' : 'Select categories';
+  String get selectAll => isRu ? 'Выбрать все' : 'Select all';
+  String get selectNone => isRu ? 'Снять все' : 'Select none';
   String get copyFromPrevious =>
       isRu ? 'Копировать из предыдущего' : 'Copy from previous month';
   String get selectMonthToCopy =>
@@ -126,8 +165,8 @@ class AppLocalizations {
   String get tryAgain => isRu ? 'Повторить' : 'Try again';
 
   String inviteShareMessage(String code, String householdName) => isRu
-      ? 'Присоединяйся к бюджету «$householdName» в SimpleBudget. Код: $code'
-      : 'Join "$householdName" on SimpleBudget. Invite code: $code';
+      ? 'Присоединяйся к бюджету «$householdName» в SyncMonth. Код: $code'
+      : 'Join "$householdName" on SyncMonth. Invite code: $code';
 
   String monthTitle(DateTime date) {
     final monthsEn = [
