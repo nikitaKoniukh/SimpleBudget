@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:339787672116:android:b7db3f8a3d08c9770a7861",
+        "mobilesdk_app_id": "1:339787672116:android:778029f6cc2404af0a7861",
         "android_client_info": {
-          "package_name": "com.simplebudget.simple_budget"
+          "package_name": "com.yetzira.simplebudget"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "339787672116-laasbhap1jh520nj8i6iqlks2kmmcc7e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC13gka0ruIB6Z6hCyPlnmh92eRZaSMcE0"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "339787672116-laasbhap1jh520nj8i6iqlks2kmmcc7e.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.yetzira.simplebudget"
+              }
+            }
+          ]
         }
       }
     }

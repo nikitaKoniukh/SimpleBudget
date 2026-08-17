@@ -26,8 +26,11 @@ workflow (income, color categories, planned vs actual) with Flutter + Firebase.
    - Put `CLIENT_ID` / web client ID into [`lib/config/oauth_config.dart`](lib/config/oauth_config.dart).
    - Add `REVERSED_CLIENT_ID` as a URL scheme in `ios/Runner/Info.plist` (`CFBundleURLTypes`).
 3. **Apple** (iOS)
+   - Bundle ID is `com.yetzira.simplebudget` (same as Android applicationId).
+   - In Apple Developer, create/update App ID with that bundle ID and enable **Sign In with Apple**.
    - Enable Apple provider in Firebase Console.
    - Xcode capability **Sign in with Apple** is wired via `ios/Runner/Runner.entitlements`.
+   - Re-add your Android **SHA-1** on the new Android app (`com.yetzira.simplebudget`) in Firebase Project settings.
 
 4. Firestore rules: `firebase deploy --only firestore:rules --project=simplebudget-family`
 

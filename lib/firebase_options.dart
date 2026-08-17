@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC13gka0ruIB6Z6hCyPlnmh92eRZaSMcE0',
-    appId: '1:339787672116:android:b7db3f8a3d08c9770a7861',
+    appId: '1:339787672116:android:778029f6cc2404af0a7861',
     messagingSenderId: '339787672116',
     projectId: 'simplebudget-family',
     storageBucket: 'simplebudget-family.firebasestorage.app',
@@ -59,10 +59,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyALy5XukL2Y3YIiKq5d8lrfu_i5JeXbZsE',
-    appId: '1:339787672116:ios:3a879e50cc9b27190a7861',
+    appId: '1:339787672116:ios:f19c979018d193970a7861',
     messagingSenderId: '339787672116',
     projectId: 'simplebudget-family',
     storageBucket: 'simplebudget-family.firebasestorage.app',
-    iosBundleId: 'com.simplebudget.simpleBudget',
+    iosClientId: '339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8.apps.googleusercontent.com',
+    iosBundleId: 'com.yetzira.simplebudget',
   );
+
 }

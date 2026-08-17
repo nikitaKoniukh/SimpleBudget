@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8</string>
 	<key>API_KEY</key>
 	<string>AIzaSyALy5XukL2Y3YIiKq5d8lrfu_i5JeXbZsE</string>
 	<key>GCM_SENDER_ID</key>
@@ -9,7 +13,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.simplebudget.simpleBudget</string>
+	<string>com.yetzira.simplebudget</string>
 	<key>PROJECT_ID</key>
 	<string>simplebudget-family</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:339787672116:ios:3a879e50cc9b27190a7861</string>
+	<string>1:339787672116:ios:f19c979018d193970a7861</string>
 </dict>
 </plist>

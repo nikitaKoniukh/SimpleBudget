@@ -1,4 +1,4 @@
-package com.simplebudget.simple_budget
+package com.yetzira.simplebudget
 
 import io.flutter.embedding.android.FlutterActivity
 
