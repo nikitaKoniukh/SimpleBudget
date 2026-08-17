@@ -26,30 +26,32 @@ workflow (income, color categories, planned vs actual) with Flutter + Firebase.
 - Project ID: `simplebudget-family`
 - Console: https://console.firebase.google.com/project/simplebudget-family/overview
 
-### Register SyncMonth apps (required after rename)
+### SyncMonth Firebase apps (done)
 
-The package/bundle ID changed from `com.yetzira.simplebudget` → `com.yetzira.syncmonth`.
-Firebase still uses project `simplebudget-family`, but you must register **new** Android/iOS apps:
+Registered on project `simplebudget-family`:
 
-1. Firebase Console → Project settings → Your apps → **Add app**
-   - Android package name: `com.yetzira.syncmonth`
-   - iOS bundle ID: `com.yetzira.syncmonth`
-2. Download fresh `google-services.json` → `android/app/google-services.json`
-3. Download fresh `GoogleService-Info.plist` → `ios/Runner/GoogleService-Info.plist`
-4. Run FlutterFire (recommended):
+| Platform | Package / Bundle ID | App ID |
+|----------|---------------------|--------|
+| Android | `com.yetzira.syncmonth` | `1:339787672116:android:2496b3e3b1ad3ff30a7861` |
+| iOS | `com.yetzira.syncmonth` | `1:339787672116:ios:2f314c0946fbae380a7861` |
+
+Config files are wired (`google-services.json`, `GoogleService-Info.plist`, `lib/firebase_options.dart`, OAuth URL scheme).
+
+Still required for Google Sign-In on Android:
+
+1. Add debug/release **SHA-1** on the SyncMonth Android app in Firebase Project settings, then re-download `google-services.json` if OAuth clients change.
+2. Apple Developer: App ID `com.yetzira.syncmonth` with **Sign In with Apple**.
+
+Old `com.yetzira.simplebudget` apps can be removed from Firebase when you no longer need them.
+
+To regenerate configs later:
 
 ```bash
-dart pub global activate flutterfire_cli
-flutterfire configure --project=simplebudget-family
+flutterfire configure --project=simplebudget-family \
+  --platforms=android,ios \
+  --android-package-name=com.yetzira.syncmonth \
+  --ios-bundle-id=com.yetzira.syncmonth
 ```
-
-   This refreshes `lib/firebase_options.dart` and `firebase.json` with the new app IDs.
-5. Android: add debug/release **SHA-1** on the new Android app, then re-download `google-services.json` if OAuth clients change.
-6. Update [`lib/config/oauth_config.dart`](lib/config/oauth_config.dart) from the new plist (`CLIENT_ID`, web client ID).
-7. Set `REVERSED_CLIENT_ID` as a URL scheme in `ios/Runner/Info.plist` (`CFBundleURLTypes`).
-8. Apple Developer: create/update App ID `com.yetzira.syncmonth` with **Sign In with Apple**, then enable Apple provider in Firebase.
-
-You can remove the old `com.yetzira.simplebudget` apps from Firebase once the new ones work.
 
 ### Auth setup
 

@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:339787672116:android:778029f6cc2404af0a7861",
+        "mobilesdk_app_id": "1:339787672116:android:2496b3e3b1ad3ff30a7861",
         "android_client_info": {
           "package_name": "com.yetzira.syncmonth"
         }
@@ -31,7 +31,7 @@
               "client_type": 3
             },
             {
-              "client_id": "339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8.apps.googleusercontent.com",
+              "client_id": "339787672116-gh10imd92oavvqn1bqu8c5bore73kati.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.yetzira.syncmonth"
