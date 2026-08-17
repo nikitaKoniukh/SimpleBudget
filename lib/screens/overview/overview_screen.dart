@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
+import '../../utils/share_helpers.dart';
 import '../../widgets/summary_card.dart';
 
 class OverviewScreen extends StatelessWidget {
@@ -101,17 +102,23 @@ class OverviewScreen extends StatelessWidget {
                 final next = await state.duplicateCurrentMonth();
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Created $next')),
+                  SnackBar(content: Text('${l10n.monthCreated}: $next')),
                 );
               } catch (e) {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$e')),
+                  SnackBar(content: Text('${l10n.errorGeneric}: $e')),
                 );
               }
             },
             icon: const Icon(Icons.copy_all_outlined),
             label: Text(l10n.duplicateMonth),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => exportAndShareMonthCsv(context),
+            icon: const Icon(Icons.table_view_outlined),
+            label: Text(l10n.exportCsv),
           ),
         ],
       ),

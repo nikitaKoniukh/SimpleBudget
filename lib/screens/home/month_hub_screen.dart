@@ -10,6 +10,17 @@ import '../category/category_detail_screen.dart';
 class MonthHubScreen extends StatelessWidget {
   const MonthHubScreen({super.key});
 
+  String _typeLabel(AppLocalizations l10n, String type) {
+    switch (type) {
+      case 'savings':
+        return l10n.typeSavings;
+      case 'debt':
+        return l10n.typeDebt;
+      default:
+        return l10n.typeExpense;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -33,13 +44,34 @@ class MonthHubScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: 'Previous',
-            onPressed: () =>
-                state.setMonth(previousMonthId(state.monthId)),
+            onPressed: () async {
+              await state.setMonth(previousMonthId(state.monthId));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.monthTitle(
+                    dateFromMonthId(state.monthId),
+                  )),
+                  duration: const Duration(milliseconds: 900),
+                ),
+              );
+            },
             icon: const Icon(Icons.chevron_left),
           ),
           IconButton(
             tooltip: 'Next',
-            onPressed: () => state.setMonth(nextMonthId(state.monthId)),
+            onPressed: () async {
+              await state.setMonth(nextMonthId(state.monthId));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.monthTitle(
+                    dateFromMonthId(state.monthId),
+                  )),
+                  duration: const Duration(milliseconds: 900),
+                ),
+              );
+            },
             icon: const Icon(Icons.chevron_right),
           ),
         ],
@@ -82,35 +114,100 @@ class MonthHubScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...state.categories.map((cat) {
-            final planned = state.categoryPlanned(cat.id);
-            final actual = state.categoryActual(cat.id);
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              color: Color(cat.colorValue).withValues(alpha: 0.35),
-              child: ListTile(
-                title: Text(
-                  cat.localizedName(state.localeCode),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '${l10n.budget}: ${formatIls(planned)} · ${l10n.actual}: ${formatIls(actual)}',
-                ),
-                trailing: Text(
-                  formatIls(actual),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => CategoryDetailScreen(categoryId: cat.id),
+          if (state.categories.isEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.category_outlined,
+                      size: 40,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
-                  );
-                },
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.emptyCategories,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            );
-          }),
+            )
+          else
+            ...state.categories.map((cat) {
+              final planned = state.categoryPlanned(cat.id);
+              final actual = state.categoryActual(cat.id);
+              return Card(
+                margin: const EdgeInsets.only(bottom: 10),
+                color: Color(cat.colorValue).withValues(alpha: 0.35),
+                child: ListTile(
+                  title: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          cat.localizedName(state.localeCode),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      _CategoryTypeChip(
+                        label: _typeLabel(l10n, cat.type),
+                        type: cat.type,
+                      ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    '${l10n.budget}: ${formatIls(planned)} · ${l10n.actual}: ${formatIls(actual)}',
+                  ),
+                  trailing: Text(
+                    formatIls(actual),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CategoryDetailScreen(categoryId: cat.id),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }),
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryTypeChip extends StatelessWidget {
+  const _CategoryTypeChip({required this.label, required this.type});
+
+  final String label;
+  final String type;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color bg;
+    switch (type) {
+      case 'savings':
+        bg = const Color(0xFFFFB74D);
+      case 'debt':
+        bg = const Color(0xFFE57373);
+      default:
+        bg = Theme.of(context).colorScheme.surfaceContainerHighest;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: bg.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }

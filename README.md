@@ -6,7 +6,7 @@ workflow (income, color categories, planned vs actual) with Flutter + Firebase.
 ## Stack
 
 - Flutter (iOS / Android)
-- Firebase Auth (email/password)
+- Firebase Auth (email/password, Google, Apple on iOS)
 - Cloud Firestore (household sync + offline cache)
 - English / Russian UI toggle
 - Currency: ₪ ILS
@@ -16,16 +16,20 @@ workflow (income, color categories, planned vs actual) with Flutter + Firebase.
 - Project ID: `simplebudget-family`
 - Console: https://console.firebase.google.com/project/simplebudget-family/overview
 
-### One-time console setup
+### Auth setup
 
-1. **Authentication** → Sign-in method → enable **Email/Password**  
-   https://console.firebase.google.com/project/simplebudget-family/authentication/providers
-2. Firestore database is already created (`europe-west1`) and rules are in `firestore.rules`.
-3. Redeploy rules anytime:
+1. **Email/Password** — enable in Authentication → Sign-in method (done if you already enabled it).
+2. **Google**
+   - Enable Google provider in Firebase Console.
+   - Android: add your debug/release **SHA-1** under Project settings → Your apps → Android app, then re-download `google-services.json`.
+   - iOS: re-download `GoogleService-Info.plist` (needs `CLIENT_ID` + `REVERSED_CLIENT_ID`).
+   - Put `CLIENT_ID` / web client ID into [`lib/config/oauth_config.dart`](lib/config/oauth_config.dart).
+   - Add `REVERSED_CLIENT_ID` as a URL scheme in `ios/Runner/Info.plist` (`CFBundleURLTypes`).
+3. **Apple** (iOS)
+   - Enable Apple provider in Firebase Console.
+   - Xcode capability **Sign in with Apple** is wired via `ios/Runner/Runner.entitlements`.
 
-```bash
-firebase deploy --only firestore:rules --project=simplebudget-family
-```
+4. Firestore rules: `firebase deploy --only firestore:rules --project=simplebudget-family`
 
 ## Run
 
@@ -35,14 +39,16 @@ flutter pub get
 flutter run
 ```
 
+Manual checklist: [docs/SMOKE_TEST.md](docs/SMOKE_TEST.md)
+
 ## App flows
 
-1. Sign up / sign in
-2. Create household **or** join with invite code (Settings → copy code for partner)
-3. Month hub: Income / Budget / Actual / Remaining + category cards
+1. Sign up / sign in (email, Google, or Apple on iOS)
+2. Create household **or** join with invite code (Settings → copy or share invite)
+3. Month hub: Income / Budget / Actual / Remaining + category cards with type badges
 4. Income: multi-entry amounts per source
 5. Category detail: Planned / Actual / Difference
-6. Overview: overspent, savings (Set aside), duplicate next month from plan
-7. Settings: language EN/RU, invite code, sign out
+6. Overview: overspent, savings (Set aside), duplicate next month, export CSV
+7. Settings: language EN/RU, invite share, CSV export, sign out
 
 New months are seeded from the family sheet template (Home, Car, Shopping, Set aside, Visa, …).

@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -28,14 +31,33 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  String _friendlyError(Object e) {
+    final text = e.toString();
+    if (text.contains('cancelled')) return '';
+    return text.replaceFirst('Exception: ', '').replaceFirst('StateError: ', '');
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
       _error = null;
     });
-    final auth = context.read<AppState>().auth;
     try {
+      await action();
+    } catch (e) {
+      final msg = _friendlyError(e);
+      if (msg.isNotEmpty && mounted) {
+        setState(() => _error = msg);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final auth = context.read<AppState>().auth;
+    await _run(() async {
       if (_isSignUp) {
         await auth.signUp(
           email: _email.text,
@@ -45,16 +67,25 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         await auth.signIn(email: _email.text, password: _password.text);
       }
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    });
+  }
+
+  Future<void> _google() async {
+    final auth = context.read<AppState>().auth;
+    await _run(() => auth.signInWithGoogle());
+  }
+
+  Future<void> _apple() async {
+    final auth = context.read<AppState>().auth;
+    await _run(() => auth.signInWithApple());
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final showApple =
+        !kIsWeb && Platform.isIOS && context.read<AppState>().auth.isAppleSignInAvailable;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -84,7 +115,9 @@ class _AuthScreenState extends State<AuthScreen> {
                       l10n.tagline,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
                           ),
                     ),
                     const SizedBox(height: 32),
@@ -106,8 +139,9 @@ class _AuthScreenState extends State<AuthScreen> {
                         labelText: l10n.email,
                         border: const OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          (v == null || !v.contains('@')) ? 'Invalid email' : null,
+                      validator: (v) => (v == null || !v.contains('@'))
+                          ? 'Invalid email'
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -144,10 +178,33 @@ class _AuthScreenState extends State<AuthScreen> {
                       onPressed: _busy
                           ? null
                           : () => setState(() => _isSignUp = !_isSignUp),
-                      child: Text(
-                        _isSignUp ? l10n.signIn : l10n.signUp,
-                      ),
+                      child: Text(_isSignUp ? l10n.signIn : l10n.signUp),
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(l10n.orContinueWith),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : _google,
+                      icon: const Icon(Icons.g_mobiledata, size: 28),
+                      label: Text(l10n.continueWithGoogle),
+                    ),
+                    if (showApple) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _apple,
+                        icon: const Icon(Icons.apple, size: 22),
+                        label: Text(l10n.continueWithApple),
+                      ),
+                    ],
                   ],
                 ),
               ),

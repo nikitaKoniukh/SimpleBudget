@@ -31,6 +31,23 @@ class CategoryDetailScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(cat.localizedName(state.localeCode)),
         backgroundColor: Color(cat.colorValue).withValues(alpha: 0.5),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Center(
+              child: Chip(
+                label: Text(
+                  cat.type == 'savings'
+                      ? l10n.typeSavings
+                      : cat.type == 'debt'
+                          ? l10n.typeDebt
+                          : l10n.typeExpense,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showLineItemEditor(

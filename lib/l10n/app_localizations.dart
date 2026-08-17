@@ -51,6 +51,11 @@ class AppLocalizations {
   String get email => isRu ? 'Email' : 'Email';
   String get password => isRu ? 'Пароль' : 'Password';
   String get displayName => isRu ? 'Имя' : 'Display name';
+  String get orContinueWith => isRu ? 'или' : 'or';
+  String get continueWithGoogle =>
+      isRu ? 'Продолжить с Google' : 'Continue with Google';
+  String get continueWithApple =>
+      isRu ? 'Продолжить с Apple' : 'Continue with Apple';
 
   String get createHousehold =>
       isRu ? 'Создать семью' : 'Create household';
@@ -59,6 +64,23 @@ class AppLocalizations {
   String get inviteCode => isRu ? 'Код приглашения' : 'Invite code';
   String get invitePartner =>
       isRu ? 'Пригласить партнёра' : 'Invite partner';
+  String get shareInvite =>
+      isRu ? 'Поделиться приглашением' : 'Share invite';
+  String get inviteCopied =>
+      isRu ? 'Код скопирован' : 'Invite code copied';
+  String get exportCsv =>
+      isRu ? 'Экспорт CSV' : 'Export CSV';
+  String get exportDone =>
+      isRu ? 'CSV готов к отправке' : 'CSV ready to share';
+  String get typeSavings => isRu ? 'Накопления' : 'Savings';
+  String get typeExpense => isRu ? 'Расход' : 'Expense';
+  String get typeDebt => isRu ? 'Долг / карта' : 'Debt / card';
+  String get emptyCategories =>
+      isRu ? 'Категорий пока нет. Создайте следующий месяц из шаблона.' : 'No categories yet. Create next month from a template.';
+  String get emptyIncome =>
+      isRu ? 'Добавьте источник дохода и суммы.' : 'Add an income source and amounts.';
+  String get monthCreated =>
+      isRu ? 'Месяц создан' : 'Month created';
   String get members => isRu ? 'Участники' : 'Members';
   String get language => isRu ? 'Язык' : 'Language';
   String get currency => isRu ? 'Валюта' : 'Currency';
@@ -76,6 +98,11 @@ class AppLocalizations {
   String get loading => isRu ? 'Загрузка…' : 'Loading…';
   String get errorGeneric =>
       isRu ? 'Что-то пошло не так' : 'Something went wrong';
+  String get tryAgain => isRu ? 'Повторить' : 'Try again';
+
+  String inviteShareMessage(String code, String householdName) => isRu
+      ? 'Присоединяйся к бюджету «$householdName» в SimpleBudget. Код: $code'
+      : 'Join "$householdName" on SimpleBudget. Invite code: $code';
 
   String monthTitle(DateTime date) {
     final monthsEn = [

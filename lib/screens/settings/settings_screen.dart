@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../utils/share_helpers.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _shareInvite(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final state = context.read<AppState>();
+    final household = state.household;
+    if (household == null) return;
+    final message = l10n.inviteShareMessage(
+      household.inviteCode,
+      household.name,
+    );
+    await SharePlus.instance.share(ShareParams(text: message));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,10 +53,22 @@ class SettingsScreen extends StatelessWidget {
                       );
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.inviteCode)),
+                        SnackBar(content: Text(l10n.inviteCopied)),
                       );
                     },
             ),
+          ),
+          ListTile(
+            title: Text(l10n.shareInvite),
+            leading: const Icon(Icons.ios_share),
+            onTap: household == null ? null : () => _shareInvite(context),
+          ),
+          ListTile(
+            title: Text(l10n.exportCsv),
+            leading: const Icon(Icons.table_view_outlined),
+            onTap: household == null
+                ? null
+                : () => exportAndShareMonthCsv(context),
           ),
           const Divider(),
           ListTile(
@@ -68,11 +94,18 @@ class SettingsScreen extends StatelessWidget {
             title: Text(l10n.duplicateMonth),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
-              final next = await state.duplicateCurrentMonth();
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Created $next')),
-              );
+              try {
+                final next = await state.duplicateCurrentMonth();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${l10n.monthCreated}: $next')),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+                );
+              }
             },
           ),
           const Divider(),

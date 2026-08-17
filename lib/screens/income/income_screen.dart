@@ -20,7 +20,25 @@ class IncomeScreen extends StatelessWidget {
         icon: const Icon(Icons.add),
         label: Text(l10n.addIncomeSource),
       ),
-      body: ListView(
+      body: state.incomeSources.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.payments_outlined,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(l10n.emptyIncome, textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            )
+          : ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
         children: [
           ...state.incomeSources.map((source) {
