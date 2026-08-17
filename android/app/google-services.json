@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "339787672116",
+    "project_id": "simplebudget-family",
+    "storage_bucket": "simplebudget-family.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339787672116:android:b7db3f8a3d08c9770a7861",
+        "android_client_info": {
+          "package_name": "com.simplebudget.simple_budget"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC13gka0ruIB6Z6hCyPlnmh92eRZaSMcE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
