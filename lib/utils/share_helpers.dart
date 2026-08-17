@@ -13,10 +13,11 @@ Future<void> exportAndShareMonthCsv(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
   final household = state.household;
-  if (household == null) return;
+  final monthId = state.monthId;
+  if (household == null || monthId == null) return;
 
   final csv = buildMonthCsv(
-    monthId: state.monthId,
+    monthId: monthId,
     householdName: household.name,
     incomeSources: state.incomeSources,
     incomeEntries: state.incomeEntries,
@@ -26,13 +27,13 @@ Future<void> exportAndShareMonthCsv(BuildContext context) async {
   );
 
   final dir = await getTemporaryDirectory();
-  final file = File('${dir.path}/syncmonth_${state.monthId}.csv');
+  final file = File('${dir.path}/simplebudget_$monthId.csv');
   await file.writeAsString(csv, flush: true);
 
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(file.path, mimeType: 'text/csv')],
-      subject: 'SyncMonth ${state.monthId}',
+      subject: 'SimpleBudget $monthId',
       text: l10n.exportCsv,
     ),
   );

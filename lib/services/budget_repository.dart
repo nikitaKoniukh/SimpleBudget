@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
-import '../data/seed_template.dart';
 import '../models/models.dart';
 import '../utils/money.dart';
 
@@ -45,8 +44,7 @@ class BudgetRepository {
     await _db.collection('users').doc(creatorUid).update({
       'householdId': household.id,
     });
-    final monthId = monthIdFromDate(DateTime.now());
-    await seedMonth(household.id, monthId);
+    // v2: no auto-seeded month or categories
     return household;
   }
 
@@ -81,66 +79,54 @@ class BudgetRepository {
     });
   }
 
-  Future<void> seedMonth(String householdId, String monthId) async {
-    final monthRef = _monthRef(householdId, monthId);
-    final existing = await monthRef.get();
-    if (existing.exists) return;
-
-    final batch = _db.batch();
-    batch.set(monthRef, BudgetMonth(id: monthId).toMap());
-
-    for (var i = 0; i < SeedTemplate.incomeSources.length; i++) {
-      final source = SeedTemplate.incomeSources[i];
-      final id = _uuid.v4();
-      batch.set(monthRef.collection('incomeSources').doc(id), {
-        'nameEn': source.nameEn,
-        'nameRu': source.nameRu,
-        'sortOrder': i,
-      });
-    }
-
-    for (var c = 0; c < SeedTemplate.categories.length; c++) {
-      final cat = SeedTemplate.categories[c];
-      final catId = _uuid.v4();
-      batch.set(monthRef.collection('categories').doc(catId), {
-        'nameEn': cat.nameEn,
-        'nameRu': cat.nameRu,
-        'colorValue': cat.colorValue,
-        'type': cat.type,
-        'sortOrder': c,
-      });
-      for (var i = 0; i < cat.items.length; i++) {
-        final item = cat.items[i];
-        final itemId = _uuid.v4();
-        batch.set(monthRef.collection('lineItems').doc(itemId), {
-          'categoryId': catId,
-          'descriptionEn': item.nameEn,
-          'descriptionRu': item.nameRu,
-          'planned': item.planned,
-          'actual': 0.0,
-          'installmentCurrent': item.installmentCurrent,
-          'installmentTotal': item.installmentTotal,
-          'sortOrder': i,
-        });
-      }
-    }
-
-    await batch.commit();
+  Stream<List<BudgetMonth>> watchMonths(String householdId) {
+    return _months(householdId).snapshots().map((snap) {
+      final list = snap.docs
+          .map((d) => BudgetMonth.fromMap(d.id, d.data()))
+          .toList();
+      list.sort((a, b) => b.id.compareTo(a.id));
+      return list;
+    });
   }
 
-  /// Copies planned amounts (and structure) from [fromMonthId] into [toMonthId].
-  /// Actuals reset to 0. Income entries are not copied.
-  Future<String> duplicateMonth({
+  Future<bool> monthExists(String householdId, String monthId) async {
+    final snap = await _monthRef(householdId, monthId).get();
+    return snap.exists;
+  }
+
+  /// Creates an empty month (no categories, income, or line items).
+  Future<void> createEmptyMonth({
+    required String householdId,
+    required String monthId,
+  }) async {
+    final ref = _monthRef(householdId, monthId);
+    final existing = await ref.get();
+    if (existing.exists) {
+      throw StateError('Month already exists');
+    }
+    await ref.set(BudgetMonth(id: monthId).toMap());
+  }
+
+  /// Copies structure from [fromMonthId] into [toMonthId].
+  /// Actuals reset to 0. Income entry amounts are not copied.
+  Future<void> createMonthFromCopy({
     required String householdId,
     required String fromMonthId,
+    required String toMonthId,
   }) async {
-    final toMonthId = nextMonthId(fromMonthId);
+    if (fromMonthId == toMonthId) {
+      throw StateError('Cannot copy a month onto itself');
+    }
     final fromRef = _monthRef(householdId, fromMonthId);
     final toRef = _monthRef(householdId, toMonthId);
 
+    final fromSnap = await fromRef.get();
+    if (!fromSnap.exists) {
+      throw StateError('Source month not found');
+    }
     final existing = await toRef.get();
     if (existing.exists) {
-      return toMonthId;
+      throw StateError('Month already exists');
     }
 
     final sources = await fromRef.collection('incomeSources').get();
@@ -150,11 +136,11 @@ class BudgetRepository {
     final batch = _db.batch();
     batch.set(toRef, BudgetMonth(id: toMonthId).toMap());
 
-    final sourceIdMap = <String, String>{};
     for (final doc in sources.docs) {
-      final newId = _uuid.v4();
-      sourceIdMap[doc.id] = newId;
-      batch.set(toRef.collection('incomeSources').doc(newId), doc.data());
+      batch.set(
+        toRef.collection('incomeSources').doc(_uuid.v4()),
+        doc.data(),
+      );
     }
 
     final categoryIdMap = <String, String>{};
@@ -172,11 +158,68 @@ class BudgetRepository {
       batch.set(toRef.collection('lineItems').doc(_uuid.v4()), data);
     }
 
-    // silence unused
-    sourceIdMap;
-
     await batch.commit();
+  }
+
+  /// Convenience: copy current month into the next calendar month.
+  Future<String> duplicateMonth({
+    required String householdId,
+    required String fromMonthId,
+  }) async {
+    final toMonthId = nextMonthId(fromMonthId);
+    await createMonthFromCopy(
+      householdId: householdId,
+      fromMonthId: fromMonthId,
+      toMonthId: toMonthId,
+    );
     return toMonthId;
+  }
+
+  Future<void> addCategory({
+    required String householdId,
+    required String monthId,
+    required String nameEn,
+    required String nameRu,
+    required int colorValue,
+    required String type,
+    required int sortOrder,
+  }) async {
+    await _monthRef(householdId, monthId).collection('categories').add({
+      'nameEn': nameEn,
+      'nameRu': nameRu,
+      'colorValue': colorValue,
+      'type': type,
+      'sortOrder': sortOrder,
+    });
+  }
+
+  Future<void> updateCategory({
+    required String householdId,
+    required String monthId,
+    required BudgetCategory category,
+  }) async {
+    await _monthRef(householdId, monthId)
+        .collection('categories')
+        .doc(category.id)
+        .set(category.toMap(), SetOptions(merge: true));
+  }
+
+  Future<void> deleteCategory({
+    required String householdId,
+    required String monthId,
+    required String categoryId,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final items = await monthRef
+        .collection('lineItems')
+        .where('categoryId', isEqualTo: categoryId)
+        .get();
+    final batch = _db.batch();
+    for (final doc in items.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(monthRef.collection('categories').doc(categoryId));
+    await batch.commit();
   }
 
   Stream<List<IncomeSource>> watchIncomeSources(
@@ -307,13 +350,5 @@ class BudgetRepository {
         .collection('lineItems')
         .doc(itemId)
         .delete();
-  }
-
-  Future<void> ensureMonthExists(String householdId, String monthId) async {
-    final ref = _monthRef(householdId, monthId);
-    final snap = await ref.get();
-    if (!snap.exists) {
-      await seedMonth(householdId, monthId);
-    }
   }
 }

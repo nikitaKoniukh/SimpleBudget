@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/share_helpers.dart';
+import '../category/categories_screen.dart';
+import '../home/month_actions.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -66,7 +68,7 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             title: Text(l10n.exportCsv),
             leading: const Icon(Icons.table_view_outlined),
-            onTap: household == null
+            onTap: !state.hasMonthSelected
                 ? null
                 : () => exportAndShareMonthCsv(context),
           ),
@@ -88,12 +90,33 @@ class SettingsScreen extends StatelessWidget {
           ),
           ListTile(
             title: Text(l10n.manageCategories),
-            subtitle: Text('${state.categories.length}'),
+            subtitle: Text(
+              state.hasMonthSelected
+                  ? '${state.categories.length}'
+                  : l10n.noMonthSelected,
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: !state.hasMonthSelected
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CategoriesScreen(),
+                      ),
+                    );
+                  },
+          ),
+          ListTile(
+            title: Text(l10n.addMonth),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showCreateMonthDialog(context),
           ),
           ListTile(
             title: Text(l10n.duplicateMonth),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
+            onTap: !state.hasMonthSelected
+                ? null
+                : () async {
               try {
                 final next = await state.duplicateCurrentMonth();
                 if (!context.mounted) return;

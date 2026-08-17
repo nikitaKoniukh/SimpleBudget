@@ -5,7 +5,9 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../widgets/summary_card.dart';
+import '../category/categories_screen.dart';
 import '../category/category_detail_screen.dart';
+import 'month_actions.dart';
 
 class MonthHubScreen extends StatelessWidget {
   const MonthHubScreen({super.key});
@@ -25,8 +27,48 @@ class MonthHubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
+
+    if (!state.hasMonthSelected) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.month),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: l10n.addMonth,
+              onPressed: () => showCreateMonthDialog(context),
+            ),
+          ],
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.calendar_month_outlined,
+                  size: 56,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(l10n.emptyMonths, textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => showCreateMonthDialog(context),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.addMonth),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final monthId = state.monthId!;
+    final monthDate = dateFromMonthId(monthId);
     final totals = state.totals;
-    final monthDate = dateFromMonthId(state.monthId);
 
     return Scaffold(
       appBar: AppBar(
@@ -43,43 +85,38 @@ class MonthHubScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            tooltip: 'Previous',
-            onPressed: () async {
-              await state.setMonth(previousMonthId(state.monthId));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.monthTitle(
-                    dateFromMonthId(state.monthId),
-                  )),
-                  duration: const Duration(milliseconds: 900),
-                ),
-              );
-            },
-            icon: const Icon(Icons.chevron_left),
+            tooltip: l10n.selectMonth,
+            onPressed: () => showSelectMonthSheet(context),
+            icon: const Icon(Icons.list),
           ),
           IconButton(
-            tooltip: 'Next',
-            onPressed: () async {
-              await state.setMonth(nextMonthId(state.monthId));
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.monthTitle(
-                    dateFromMonthId(state.monthId),
-                  )),
-                  duration: const Duration(milliseconds: 900),
-                ),
+            tooltip: l10n.addMonth,
+            onPressed: () => showCreateMonthDialog(context),
+            icon: const Icon(Icons.add),
+          ),
+          IconButton(
+            tooltip: l10n.manageCategories,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CategoriesScreen()),
               );
             },
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.category_outlined),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showLineItemEditor(context),
-        icon: const Icon(Icons.add),
-        label: Text(l10n.addExpense),
+        onPressed: state.categories.isEmpty
+            ? () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+                );
+              }
+            : () => showLineItemEditor(context),
+        icon: Icon(state.categories.isEmpty ? Icons.category : Icons.add),
+        label: Text(
+          state.categories.isEmpty ? l10n.addCategory : l10n.addExpense,
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
@@ -129,6 +166,17 @@ class MonthHubScreen extends StatelessWidget {
                     Text(
                       l10n.emptyCategories,
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const CategoriesScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(l10n.addCategory),
                     ),
                   ],
                 ),

@@ -14,6 +14,14 @@ class OverviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
+
+    if (!state.hasMonthSelected) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.overview)),
+        body: Center(child: Text(l10n.noMonthSelected)),
+      );
+    }
+
     final overspent =
         state.lineItems.where((i) => i.difference < 0).toList();
     final underspent = state.lineItems

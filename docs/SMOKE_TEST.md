@@ -1,26 +1,22 @@
-# Manual smoke test checklist
+# Manual smoke test checklist (v2)
 
-Use after `flutter run` on a simulator or device.
+## Auth & household
+- [ ] Sign up / Google / Apple works
+- [ ] Create household → lands with **no months** (empty state)
+- [ ] Second user joins via invite and sees the same empty/shared data
 
-## Auth
-- [ ] Email sign-up creates account and reaches household onboarding
-- [ ] Email sign-in works for existing user
-- [ ] Google Sign-In button appears (needs Firebase Google provider + SHA-1 / OAuth client IDs)
-- [ ] Apple Sign-In button appears on iOS device/simulator with Sign in with Apple capability
-- [ ] Cancelled Google/Apple flow does not show a scary error
+## Months
+- [ ] Add month (empty) for current year/month
+- [ ] Add categories, income, expenses
+- [ ] Add another month with **Copy from previous** → categories + planned copied, actuals 0
+- [ ] Select month from list; cannot open a month that was never created
 
-## Household
-- [ ] Create household seeds current month categories
-- [ ] Settings shows invite code; Copy works
-- [ ] Share invite opens system share sheet with code
-- [ ] Second account can Join with invite code and sees same data live
+## Categories
+- [ ] Add / edit / delete category (expense, savings, debt + color)
+- [ ] Deleting category removes its line items
+- [ ] Empty category state prompts to add category
 
-## Month flows
-- [ ] Month hub shows Income / Budget / Actual / Remaining
-- [ ] Category type badges: Savings / Expense / Debt
-- [ ] Add income entry; totals update
-- [ ] Edit line item Planned/Actual; Difference colors correctly
-- [ ] Overview lists overspent items; duplicate month creates next month with actuals = 0
-- [ ] Export CSV shares a `.csv` file
-- [ ] Language toggle EN ↔ RU updates labels
-- [ ] Month chevrons show snackbar with month name
+## Budget
+- [ ] Income sources + multi amounts
+- [ ] Line items Planned / Actual / Difference
+- [ ] Overview, CSV export, language toggle

@@ -257,6 +257,7 @@ Future<void> showLineItemEditor(
   if (result == null || !context.mounted) return;
   final hid = state.appUser!.householdId!;
   final monthId = state.monthId;
+  if (monthId == null) return;
 
   if (result == 'delete' && item != null) {
     await state.repo.deleteLineItem(

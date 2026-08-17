@@ -76,11 +76,36 @@ class AppLocalizations {
   String get typeExpense => isRu ? 'Расход' : 'Expense';
   String get typeDebt => isRu ? 'Долг / карта' : 'Debt / card';
   String get emptyCategories =>
-      isRu ? 'Категорий пока нет. Создайте следующий месяц из шаблона.' : 'No categories yet. Create next month from a template.';
+      isRu
+          ? 'Категорий пока нет. Добавьте свою первую категорию.'
+          : 'No categories yet. Add your first category.';
   String get emptyIncome =>
       isRu ? 'Добавьте источник дохода и суммы.' : 'Add an income source and amounts.';
+  String get emptyMonths =>
+      isRu
+          ? 'Месяцев пока нет. Создайте первый месяц, чтобы начать.'
+          : 'No months yet. Create your first month to get started.';
+  String get addMonth => isRu ? 'Добавить месяц' : 'Add month';
+  String get createMonth => isRu ? 'Создать месяц' : 'Create month';
+  String get createEmptyMonth =>
+      isRu ? 'Пустой месяц' : 'Empty month';
+  String get copyFromPrevious =>
+      isRu ? 'Копировать из предыдущего' : 'Copy from previous month';
+  String get selectMonthToCopy =>
+      isRu ? 'Месяц для копирования' : 'Month to copy';
+  String get noMonthSelected =>
+      isRu ? 'Сначала выберите или создайте месяц' : 'Select or create a month first';
+  String get addCategory =>
+      isRu ? 'Добавить категорию' : 'Add category';
+  String get categoryName =>
+      isRu ? 'Название категории' : 'Category name';
+  String get categoryType => isRu ? 'Тип' : 'Type';
+  String get categoryColor => isRu ? 'Цвет' : 'Color';
   String get monthCreated =>
       isRu ? 'Месяц создан' : 'Month created';
+  String get selectMonth => isRu ? 'Выбрать месяц' : 'Select month';
+  String get yearLabel => isRu ? 'Год' : 'Year';
+  String get monthLabel => isRu ? 'Месяц' : 'Month';
   String get members => isRu ? 'Участники' : 'Members';
   String get language => isRu ? 'Язык' : 'Language';
   String get currency => isRu ? 'Валюта' : 'Currency';
@@ -101,8 +126,8 @@ class AppLocalizations {
   String get tryAgain => isRu ? 'Повторить' : 'Try again';
 
   String inviteShareMessage(String code, String householdName) => isRu
-      ? 'Присоединяйся к бюджету «$householdName» в SyncMonth. Код: $code'
-      : 'Join "$householdName" on SyncMonth. Invite code: $code';
+      ? 'Присоединяйся к бюджету «$householdName» в SimpleBudget. Код: $code'
+      : 'Join "$householdName" on SimpleBudget. Invite code: $code';
 
   String monthTitle(DateTime date) {
     final monthsEn = [

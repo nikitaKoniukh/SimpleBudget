@@ -13,6 +13,13 @@ class IncomeScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
 
+    if (!state.hasMonthSelected) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.income)),
+        body: Center(child: Text(l10n.noMonthSelected)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.income)),
       floatingActionButton: FloatingActionButton.extended(
@@ -125,7 +132,7 @@ class IncomeScreen extends StatelessWidget {
     final hid = state.appUser!.householdId!;
     await state.repo.addIncomeEntry(
       householdId: hid,
-      monthId: state.monthId,
+      monthId: state.monthId!,
       sourceId: sourceId,
       amount: amount,
       note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
@@ -161,7 +168,7 @@ class IncomeScreen extends StatelessWidget {
     final state = context.read<AppState>();
     await state.repo.addIncomeSource(
       householdId: state.appUser!.householdId!,
-      monthId: state.monthId,
+      monthId: state.monthId!,
       nameEn: name,
       nameRu: name,
       sortOrder: state.incomeSources.length,
