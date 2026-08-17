@@ -11,7 +11,7 @@ String buildMonthCsv({
   String localeCode = 'en',
 }) {
   final buf = StringBuffer();
-  buf.writeln('SimpleBudget,$householdName,$monthId');
+  buf.writeln('SyncMonth,$householdName,$monthId');
   buf.writeln();
   buf.writeln('INCOME');
   buf.writeln('Source,Amount,Note');

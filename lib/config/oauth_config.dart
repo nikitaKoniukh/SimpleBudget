@@ -1,7 +1,7 @@
 /// OAuth client IDs for Google Sign-In.
 ///
 /// Filled from Firebase / GoogleService-Info.plist after FlutterFire configure
-/// for bundle ID `com.yetzira.simplebudget`.
+/// for bundle ID `com.yetzira.syncmonth`.
 ///
 /// After adding Android SHA-1 on the new Firebase Android app, re-download
 /// `google-services.json` if OAuth clients change.

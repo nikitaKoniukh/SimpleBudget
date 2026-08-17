@@ -1,4 +1,4 @@
-package com.yetzira.simplebudget
+package com.yetzira.syncmonth
 
 import io.flutter.embedding.android.FlutterActivity
 

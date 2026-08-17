@@ -12,7 +12,7 @@ class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  String get appTitle => isRu ? 'SimpleBudget' : 'SimpleBudget';
+  String get appTitle => isRu ? 'SyncMonth' : 'SyncMonth';
   String get tagline =>
       isRu ? 'Семейный месячный бюджет' : 'Family monthly budget';
 
@@ -101,8 +101,8 @@ class AppLocalizations {
   String get tryAgain => isRu ? 'Повторить' : 'Try again';
 
   String inviteShareMessage(String code, String householdName) => isRu
-      ? 'Присоединяйся к бюджету «$householdName» в SimpleBudget. Код: $code'
-      : 'Join "$householdName" on SimpleBudget. Invite code: $code';
+      ? 'Присоединяйся к бюджету «$householdName» в SyncMonth. Код: $code'
+      : 'Join "$householdName" on SyncMonth. Invite code: $code';
 
   String monthTitle(DateTime date) {
     final monthsEn = [

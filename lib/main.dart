@@ -17,11 +17,11 @@ Future<void> main() async {
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
-  runApp(const SimpleBudgetApp());
+  runApp(const SyncMonthApp());
 }
 
-class SimpleBudgetApp extends StatelessWidget {
-  const SimpleBudgetApp({super.key});
+class SyncMonthApp extends StatelessWidget {
+  const SyncMonthApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +31,7 @@ class SimpleBudgetApp extends StatelessWidget {
         builder: (context, state, _) {
           final locale = Locale(state.localeCode);
           return MaterialApp(
-            title: 'SimpleBudget',
+            title: 'SyncMonth',
             debugShowCheckedModeBanner: false,
             locale: locale,
             supportedLocales: const [

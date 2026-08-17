@@ -1,7 +1,17 @@
-# SimpleBudget
+# SyncMonth
 
 Family monthly budget planner for iOS and Android. Replaces a shared Google Sheets
 workflow (income, color categories, planned vs actual) with Flutter + Firebase.
+
+## Identity
+
+| | |
+|---|---|
+| Display name | **SyncMonth** |
+| Dart package | `sync_month` |
+| Android `applicationId` | `com.yetzira.syncmonth` |
+| iOS bundle ID | `com.yetzira.syncmonth` |
+| Firebase project | `simplebudget-family` (unchanged) |
 
 ## Stack
 
@@ -16,22 +26,36 @@ workflow (income, color categories, planned vs actual) with Flutter + Firebase.
 - Project ID: `simplebudget-family`
 - Console: https://console.firebase.google.com/project/simplebudget-family/overview
 
+### Register SyncMonth apps (required after rename)
+
+The package/bundle ID changed from `com.yetzira.simplebudget` → `com.yetzira.syncmonth`.
+Firebase still uses project `simplebudget-family`, but you must register **new** Android/iOS apps:
+
+1. Firebase Console → Project settings → Your apps → **Add app**
+   - Android package name: `com.yetzira.syncmonth`
+   - iOS bundle ID: `com.yetzira.syncmonth`
+2. Download fresh `google-services.json` → `android/app/google-services.json`
+3. Download fresh `GoogleService-Info.plist` → `ios/Runner/GoogleService-Info.plist`
+4. Run FlutterFire (recommended):
+
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure --project=simplebudget-family
+```
+
+   This refreshes `lib/firebase_options.dart` and `firebase.json` with the new app IDs.
+5. Android: add debug/release **SHA-1** on the new Android app, then re-download `google-services.json` if OAuth clients change.
+6. Update [`lib/config/oauth_config.dart`](lib/config/oauth_config.dart) from the new plist (`CLIENT_ID`, web client ID).
+7. Set `REVERSED_CLIENT_ID` as a URL scheme in `ios/Runner/Info.plist` (`CFBundleURLTypes`).
+8. Apple Developer: create/update App ID `com.yetzira.syncmonth` with **Sign In with Apple**, then enable Apple provider in Firebase.
+
+You can remove the old `com.yetzira.simplebudget` apps from Firebase once the new ones work.
+
 ### Auth setup
 
-1. **Email/Password** — enable in Authentication → Sign-in method (done if you already enabled it).
-2. **Google**
-   - Enable Google provider in Firebase Console.
-   - Android: add your debug/release **SHA-1** under Project settings → Your apps → Android app, then re-download `google-services.json`.
-   - iOS: re-download `GoogleService-Info.plist` (needs `CLIENT_ID` + `REVERSED_CLIENT_ID`).
-   - Put `CLIENT_ID` / web client ID into [`lib/config/oauth_config.dart`](lib/config/oauth_config.dart).
-   - Add `REVERSED_CLIENT_ID` as a URL scheme in `ios/Runner/Info.plist` (`CFBundleURLTypes`).
-3. **Apple** (iOS)
-   - Bundle ID is `com.yetzira.simplebudget` (same as Android applicationId).
-   - In Apple Developer, create/update App ID with that bundle ID and enable **Sign In with Apple**.
-   - Enable Apple provider in Firebase Console.
-   - Xcode capability **Sign in with Apple** is wired via `ios/Runner/Runner.entitlements`.
-   - Re-add your Android **SHA-1** on the new Android app (`com.yetzira.simplebudget`) in Firebase Project settings.
-
+1. **Email/Password** — enable in Authentication → Sign-in method.
+2. **Google** — enable provider; complete SHA-1 + OAuth steps above.
+3. **Apple** (iOS) — App ID `com.yetzira.syncmonth` + capability in `ios/Runner/Runner.entitlements`.
 4. Firestore rules: `firebase deploy --only firestore:rules --project=simplebudget-family`
 
 ## Run

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:simple_budget/models/models.dart';
-import 'package:simple_budget/utils/csv_export.dart';
-import 'package:simple_budget/utils/money.dart';
+import 'package:sync_month/models/models.dart';
+import 'package:sync_month/utils/csv_export.dart';
+import 'package:sync_month/utils/money.dart';
 
 void main() {
   test('month id helpers', () {

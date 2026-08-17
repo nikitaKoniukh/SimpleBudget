@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     projectId: 'simplebudget-family',
     storageBucket: 'simplebudget-family.firebasestorage.app',
     iosClientId: '339787672116-n34kthc12ca7s4nmrf0h9er3iihdb0c8.apps.googleusercontent.com',
-    iosBundleId: 'com.yetzira.simplebudget',
+    iosBundleId: 'com.yetzira.syncmonth',
   );
 
 }
