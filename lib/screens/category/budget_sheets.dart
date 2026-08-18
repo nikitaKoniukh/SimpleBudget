@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../widgets/form_sheet.dart';
+import 'categories_screen.dart';
 
 Future<void> showExpenseEditor(
   BuildContext context, {
@@ -45,27 +46,98 @@ Future<void> showExpenseEditor(
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 if (subs.isEmpty)
-                  Text(l10n.noSubcategories)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 12,
+                    children: [
+                      Text(l10n.noSubcategories),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final subId = await _addCategoryAndSubcategory(
+                                ctx,
+                              );
+                              if (subId != null) {
+                                setModal(() => selectedSubId = subId);
+                              }
+                            },
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.addCategory),
+                          ),
+                          if (live.categories.isNotEmpty)
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final subId = await _pickCategoryAndAddSubcategory(
+                                  ctx,
+                                );
+                                if (subId != null) {
+                                  setModal(() => selectedSubId = subId);
+                                }
+                              },
+                              icon: const Icon(Icons.account_tree_outlined),
+                              label: Text(l10n.addSubcategory),
+                            ),
+                        ],
+                      ),
+                    ],
+                  )
                 else
-                  DropdownButtonFormField<String>(
-                    key: ValueKey(selectedSubId),
-                    initialValue: selectedSubId,
-                    decoration: InputDecoration(labelText: l10n.subcategory),
-                    items: subs.map((sub) {
-                      final cat = live.categoryById(sub.categoryId);
-                      final catName = cat?.localizedName(live.localeCode);
-                      final label = catName == null
-                          ? sub.localizedName(live.localeCode)
-                          : '$catName · ${sub.localizedName(live.localeCode)}';
-                      return DropdownMenuItem(
-                        value: sub.id,
-                        child: Text(label),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setModal(() => selectedSubId = v);
-                    },
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: 8,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(selectedSubId),
+                        initialValue: selectedSubId,
+                        decoration: InputDecoration(labelText: l10n.subcategory),
+                        items: subs.map((sub) {
+                          final cat = live.categoryById(sub.categoryId);
+                          final catName = cat?.localizedName(live.localeCode);
+                          final label = catName == null
+                              ? sub.localizedName(live.localeCode)
+                              : '$catName · ${sub.localizedName(live.localeCode)}';
+                          return DropdownMenuItem(
+                            value: sub.id,
+                            child: Text(label),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setModal(() => selectedSubId = v);
+                        },
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final subId = await _addCategoryAndSubcategory(ctx);
+                              if (subId != null) {
+                                setModal(() => selectedSubId = subId);
+                              }
+                            },
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.addCategory),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final subId = await _pickCategoryAndAddSubcategory(
+                                ctx,
+                              );
+                              if (subId != null) {
+                                setModal(() => selectedSubId = subId);
+                              }
+                            },
+                            icon: const Icon(Icons.account_tree_outlined),
+                            label: Text(l10n.addSubcategory),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 TextField(
                   controller: amountCtrl,
@@ -232,7 +304,7 @@ Future<void> showPlanEditor(
   }
 }
 
-Future<void> showAddSubcategorySheet(
+Future<String?> showAddSubcategorySheet(
   BuildContext context, {
   required String categoryId,
 }) async {
@@ -284,9 +356,9 @@ Future<void> showAddSubcategorySheet(
     },
   );
 
-  if (ok != true || !context.mounted) return;
+  if (ok != true || !context.mounted) return null;
   final name = nameCtrl.text.trim();
-  if (name.isEmpty) return;
+  if (name.isEmpty) return null;
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
   int? instCur;
@@ -297,11 +369,78 @@ Future<void> showAddSubcategorySheet(
     instCur = int.tryParse(parts[0].trim());
     instTot = int.tryParse(parts[1].trim());
   }
-  await state.addSubcategory(
+  return state.addSubcategory(
     categoryId: categoryId,
     name: name,
     planned: planned,
     installmentCurrent: instCur,
     installmentTotal: instTot,
   );
+}
+
+Future<String?> _addCategoryAndSubcategory(BuildContext context) async {
+  final categoryId = await showAddCategoryFlow(context);
+  if (categoryId == null || !context.mounted) return null;
+  return showAddSubcategorySheet(context, categoryId: categoryId);
+}
+
+Future<String?> _pickCategoryAndAddSubcategory(BuildContext context) async {
+  final state = context.read<AppState>();
+  final categories = state.categories;
+  if (categories.isEmpty) {
+    return _addCategoryAndSubcategory(context);
+  }
+  if (categories.length == 1) {
+    return showAddSubcategorySheet(context, categoryId: categories.first.id);
+  }
+
+  final l10n = AppLocalizations.of(context);
+  String categoryId = categories.first.id;
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return FormSheet(
+        child: StatefulBuilder(
+          builder: (ctx, setModal) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                Text(
+                  l10n.addSubcategory,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: categoryId,
+                  decoration: InputDecoration(labelText: l10n.category),
+                  items: categories
+                      .map(
+                        (category) => DropdownMenuItem(
+                          value: category.id,
+                          child: Text(category.localizedName(state.localeCode)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setModal(() => categoryId = value);
+                  },
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.continueLabel),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
+
+  if (ok != true || !context.mounted) return null;
+  return showAddSubcategorySheet(context, categoryId: categoryId);
 }

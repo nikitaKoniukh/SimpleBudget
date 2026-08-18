@@ -212,26 +212,26 @@ class CategoriesScreen extends StatelessWidget {
 }
 
 /// Opens picker: choose from suggested list, or create a custom category.
-Future<void> showAddCategoryFlow(BuildContext context) async {
+Future<String?> showAddCategoryFlow(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
   final choice = await showCategorySourceSheet(context);
-  if (choice == null || !context.mounted) return;
+  if (choice == null || !context.mounted) return null;
 
   try {
     if (choice.suggested != null) {
-      await context.read<AppState>().addSuggestedCategory(choice.suggested!);
-      return;
+      return context.read<AppState>().addSuggestedCategory(choice.suggested!);
     }
 
     if (choice.wantsCustom) {
-      await _editCategory(context);
+      return _editCategory(context);
     }
   } catch (e) {
-    if (!context.mounted) return;
+    if (!context.mounted) return null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${l10n.errorGeneric}: $e')),
     );
   }
+  return null;
 }
 
 /// Sheet to pick a suggested category or request custom entry.
@@ -312,7 +312,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
   );
 }
 
-Future<void> _editCategory(
+Future<String?> _editCategory(
   BuildContext context, [
   BudgetCategory? existing,
 ]) async {
@@ -400,13 +400,13 @@ Future<void> _editCategory(
     },
   );
 
-  if (ok != true || !context.mounted) return;
+  if (ok != true || !context.mounted) return null;
   final name = nameCtrl.text.trim();
-  if (name.isEmpty) return;
+  if (name.isEmpty) return null;
 
   try {
     if (existing == null) {
-      await state.addCategory(
+      return await state.addCategory(
         name: name,
         colorValue: colorValue,
         type: type,
@@ -422,13 +422,15 @@ Future<void> _editCategory(
           sortOrder: existing.sortOrder,
         ),
       );
+      return existing.id;
     }
   } catch (e) {
-    if (!context.mounted) return;
+    if (!context.mounted) return null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${l10n.errorGeneric}: $e')),
     );
   }
+  return null;
 }
 
 class CategorySourceChoice {
