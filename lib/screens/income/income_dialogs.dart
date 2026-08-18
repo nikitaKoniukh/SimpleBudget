@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../widgets/form_sheet.dart';
 
 Future<void> showAddIncomeSourceDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
@@ -12,6 +13,7 @@ Future<void> showAddIncomeSourceDialog(BuildContext context) async {
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(l10n.addIncomeSource),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       content: TextField(
         controller: nameCtrl,
         decoration: InputDecoration(labelText: l10n.description),
@@ -73,68 +75,59 @@ Future<void> showIncomeEntryEditor(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
+      return FormSheet(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    entry == null ? l10n.addEntry : l10n.editIncome,
-                    style: Theme.of(ctx).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: sourceId,
-                    decoration: InputDecoration(labelText: l10n.income),
-                    items: sources
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s.id,
-                            child: Text(s.localizedName(state.localeCode)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setModal(() => sourceId = v);
-                    },
-                  ),
-                  TextField(
-                    controller: amountCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(labelText: l10n.amount),
-                  ),
-                  TextField(
-                    controller: noteCtrl,
-                    decoration: InputDecoration(labelText: l10n.note),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, 'save'),
-                    child: Text(l10n.save),
-                  ),
-                  if (entry != null)
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, 'delete'),
-                      child: Text(
-                        l10n.deleteIncome,
-                        style: TextStyle(
-                          color: Theme.of(ctx).colorScheme.error,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                Text(
+                  entry == null ? l10n.addEntry : l10n.editIncome,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: sourceId,
+                  decoration: InputDecoration(labelText: l10n.income),
+                  items: sources
+                      .map(
+                        (s) => DropdownMenuItem(
+                          value: s.id,
+                          child: Text(s.localizedName(state.localeCode)),
                         ),
+                      )
+                      .toList(),
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setModal(() => sourceId = v);
+                  },
+                ),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.amount),
+                ),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: InputDecoration(labelText: l10n.note),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, 'save'),
+                  child: Text(l10n.save),
+                ),
+                if (entry != null)
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, 'delete'),
+                    child: Text(
+                      l10n.deleteIncome,
+                      style: TextStyle(
+                        color: Theme.of(ctx).colorScheme.error,
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             );
           },
         ),

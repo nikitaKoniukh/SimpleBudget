@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../widgets/form_sheet.dart';
 
 Future<void> showExpenseEditor(
   BuildContext context, {
@@ -29,97 +30,87 @@ Future<void> showExpenseEditor(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
+      return FormSheet(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
             final subs = live.subcategories;
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    expense == null ? l10n.addExpense : l10n.save,
-                    style: Theme.of(ctx).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  if (subs.isEmpty)
-                    Text(l10n.noSubcategories)
-                  else
-                    DropdownButtonFormField<String>(
-                      key: ValueKey(selectedSubId),
-                      initialValue: selectedSubId,
-                      decoration: InputDecoration(labelText: l10n.subcategory),
-                      items: subs.map((sub) {
-                        final cat = live.categoryById(sub.categoryId);
-                        final catName = cat?.localizedName(live.localeCode);
-                        final label = catName == null
-                            ? sub.localizedName(live.localeCode)
-                            : '$catName · ${sub.localizedName(live.localeCode)}';
-                        return DropdownMenuItem(
-                          value: sub.id,
-                          child: Text(label),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setModal(() => selectedSubId = v);
-                      },
-                    ),
-                  TextField(
-                    controller: amountCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(labelText: l10n.amount),
-                    autofocus: expense == null,
-                  ),
-                  TextField(
-                    controller: noteCtrl,
-                    decoration: InputDecoration(labelText: l10n.note),
-                  ),
-                  const SizedBox(height: 8),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.date),
-                    subtitle: Text(DateFormat.yMMMd().format(date)),
-                    trailing: const Icon(Icons.calendar_today_outlined),
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: ctx,
-                        initialDate: date,
-                        firstDate: DateTime(date.year - 2),
-                        lastDate: DateTime(date.year + 2),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                Text(
+                  expense == null ? l10n.addExpense : l10n.save,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                if (subs.isEmpty)
+                  Text(l10n.noSubcategories)
+                else
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(selectedSubId),
+                    initialValue: selectedSubId,
+                    decoration: InputDecoration(labelText: l10n.subcategory),
+                    items: subs.map((sub) {
+                      final cat = live.categoryById(sub.categoryId);
+                      final catName = cat?.localizedName(live.localeCode);
+                      final label = catName == null
+                          ? sub.localizedName(live.localeCode)
+                          : '$catName · ${sub.localizedName(live.localeCode)}';
+                      return DropdownMenuItem(
+                        value: sub.id,
+                        child: Text(label),
                       );
-                      if (picked == null) return;
-                      setModal(() => date = picked);
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setModal(() => selectedSubId = v);
                     },
                   ),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: selectedSubId == null
-                        ? null
-                        : () => Navigator.pop(ctx, 'save'),
-                    child: Text(l10n.save),
-                  ),
-                  if (expense != null)
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, 'delete'),
-                      child: Text(
-                        l10n.delete,
-                        style: TextStyle(
-                          color: Theme.of(ctx).colorScheme.error,
-                        ),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.amount),
+                  autofocus: expense == null,
+                ),
+                TextField(
+                  controller: noteCtrl,
+                  decoration: InputDecoration(labelText: l10n.note),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.date),
+                  subtitle: Text(DateFormat.yMMMd().format(date)),
+                  trailing: const Icon(Icons.calendar_today_outlined),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: date,
+                      firstDate: DateTime(date.year - 2),
+                      lastDate: DateTime(date.year + 2),
+                    );
+                    if (picked == null) return;
+                    setModal(() => date = picked);
+                  },
+                ),
+                FilledButton(
+                  onPressed: selectedSubId == null
+                      ? null
+                      : () => Navigator.pop(ctx, 'save'),
+                  child: Text(l10n.save),
+                ),
+                if (expense != null)
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx, 'delete'),
+                    child: Text(
+                      l10n.delete,
+                      style: TextStyle(
+                        color: Theme.of(ctx).colorScheme.error,
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             );
           },
         ),
@@ -183,19 +174,13 @@ Future<void> showPlanEditor(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
+      return FormSheet(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 12,
           children: [
             Text(l10n.editPlan, style: Theme.of(ctx).textTheme.titleLarge),
-            const SizedBox(height: 4),
             Text(subcategory.localizedName(state.localeCode)),
             TextField(
               controller: plannedCtrl,
@@ -210,7 +195,6 @@ Future<void> showPlanEditor(
                 labelText: '${l10n.installment} (1/12)',
               ),
             ),
-            const SizedBox(height: 16),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l10n.save),
@@ -263,46 +247,38 @@ Future<void> showAddSubcategorySheet(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.addSubcategory,
-                style: Theme.of(ctx).textTheme.titleLarge,
+      return FormSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 12,
+          children: [
+            Text(
+              l10n.addSubcategory,
+              style: Theme.of(ctx).textTheme.titleLarge,
+            ),
+            TextField(
+              controller: nameCtrl,
+              decoration: InputDecoration(labelText: l10n.subcategoryName),
+              autofocus: true,
+            ),
+            TextField(
+              controller: plannedCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: l10n.plannedLabel),
+            ),
+            TextField(
+              controller: installmentCtrl,
+              decoration: InputDecoration(
+                labelText: '${l10n.installment} (1/12)',
               ),
-              TextField(
-                controller: nameCtrl,
-                decoration: InputDecoration(labelText: l10n.subcategoryName),
-                autofocus: true,
-              ),
-              TextField(
-                controller: plannedCtrl,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(labelText: l10n.plannedLabel),
-              ),
-              TextField(
-                controller: installmentCtrl,
-                decoration: InputDecoration(
-                  labelText: '${l10n.installment} (1/12)',
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.save),
-              ),
-            ],
-          ),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.save),
+            ),
+          ],
         ),
       );
     },

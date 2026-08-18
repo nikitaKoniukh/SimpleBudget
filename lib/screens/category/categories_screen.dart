@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import '../../widgets/form_sheet.dart';
 import 'budget_sheets.dart';
 
 const _palette = <int>[
@@ -328,79 +329,70 @@ Future<void> _editCategory(
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
-      return Padding(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 8,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-        ),
+      return FormSheet(
         child: StatefulBuilder(
           builder: (ctx, setLocal) {
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    existing == null ? l10n.customCategory : l10n.save,
-                    style: Theme.of(ctx).textTheme.titleLarge,
-                  ),
-                  TextField(
-                    controller: nameCtrl,
-                    decoration: InputDecoration(labelText: l10n.categoryName),
-                    autofocus: existing == null,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(l10n.categoryType),
-                  SegmentedButton<String>(
-                    segments: [
-                      ButtonSegment(
-                        value: 'expense',
-                        label: Text(l10n.typeExpense),
-                      ),
-                      ButtonSegment(
-                        value: 'savings',
-                        label: Text(l10n.typeSavings),
-                      ),
-                      ButtonSegment(
-                        value: 'debt',
-                        label: Text(l10n.typeDebt),
-                      ),
-                    ],
-                    selected: {type},
-                    onSelectionChanged: (s) => setLocal(() => type = s.first),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(l10n.categoryColor),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _palette.map((c) {
-                      final selected = c == colorValue;
-                      return GestureDetector(
-                        onTap: () => setLocal(() => colorValue = c),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Color(c),
-                            shape: BoxShape.circle,
-                            border: selected
-                                ? Border.all(width: 3, color: Colors.black87)
-                                : null,
-                          ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                Text(
+                  existing == null ? l10n.customCategory : l10n.save,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(labelText: l10n.categoryName),
+                  autofocus: existing == null,
+                ),
+                Text(l10n.categoryType),
+                SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    ButtonSegment(
+                      value: 'expense',
+                      label: Text(l10n.typeExpense),
+                    ),
+                    ButtonSegment(
+                      value: 'savings',
+                      label: Text(l10n.typeSavings),
+                    ),
+                    ButtonSegment(
+                      value: 'debt',
+                      label: Text(l10n.typeDebt),
+                    ),
+                  ],
+                  selected: {type},
+                  onSelectionChanged: (s) => setLocal(() => type = s.first),
+                ),
+                Text(l10n.categoryColor),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _palette.map((c) {
+                    final selected = c == colorValue;
+                    return GestureDetector(
+                      onTap: () => setLocal(() => colorValue = c),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Color(c),
+                          shape: BoxShape.circle,
+                          border: selected
+                              ? Border.all(width: 3, color: Colors.black87)
+                              : null,
                         ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(l10n.save),
-                  ),
-                ],
-              ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.save),
+                ),
+              ],
             );
           },
         ),
