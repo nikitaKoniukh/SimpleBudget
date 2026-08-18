@@ -1,6 +1,10 @@
 /// Suggested expense/savings/debt categories with EN + RU names.
 /// Used when creating a month, "Add defaults", and the add-category picker.
 class DefaultCategories {
+  static const savingsNameEn = 'Savings';
+  static const savingsNameRu = 'Накопления';
+  static const savingsColorValue = 0xFFFFB74D;
+
   static const List<DefaultCategory> all = [
     // —— Everyday living ——
     DefaultCategory(
@@ -127,22 +131,10 @@ class DefaultCategories {
     ),
     // —— Money goals ——
     DefaultCategory(
-      nameEn: 'Savings',
-      nameRu: 'Накопления',
+      nameEn: savingsNameEn,
+      nameRu: savingsNameRu,
       type: 'savings',
-      colorValue: 0xFFFFB74D,
-    ),
-    DefaultCategory(
-      nameEn: 'Emergency fund',
-      nameRu: 'Резервный фонд',
-      type: 'savings',
-      colorValue: 0xFFFFCC80,
-    ),
-    DefaultCategory(
-      nameEn: 'Investments',
-      nameRu: 'Инвестиции',
-      type: 'savings',
-      colorValue: 0xFFFFD54F,
+      colorValue: savingsColorValue,
     ),
     // —— Debt ——
     DefaultCategory(
@@ -172,6 +164,24 @@ class DefaultCategory {
   final String nameRu;
   final String type;
   final int colorValue;
+
+  String localizedName(String localeCode) =>
+      localeCode == 'ru' ? nameRu : nameEn;
+}
+
+/// Suggested savings pots installed as subcategories of the Savings parent.
+class DefaultPots {
+  static const List<DefaultPot> all = [
+    DefaultPot(nameEn: 'Emergency fund', nameRu: 'Резервный фонд'),
+    DefaultPot(nameEn: 'Investments', nameRu: 'Инвестиции'),
+  ];
+}
+
+class DefaultPot {
+  const DefaultPot({required this.nameEn, required this.nameRu});
+
+  final String nameEn;
+  final String nameRu;
 
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;

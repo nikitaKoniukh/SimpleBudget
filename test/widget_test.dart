@@ -31,9 +31,25 @@ void main() {
       isTrue,
     );
     expect(
+      DefaultCategories.all.where((c) => c.type == 'savings').length,
+      1,
+    );
+    expect(
       DefaultCategories.all.any(
         (c) => c.nameEn == 'Savings' && c.type == 'savings',
       ),
+      isTrue,
+    );
+    expect(
+      DefaultCategories.all.any((c) => c.nameEn == 'Emergency fund'),
+      isFalse,
+    );
+    expect(
+      DefaultPots.all.any((p) => p.nameEn == 'Emergency fund'),
+      isTrue,
+    );
+    expect(
+      DefaultPots.all.any((p) => p.nameEn == 'Investments'),
       isTrue,
     );
   });
@@ -123,6 +139,35 @@ void main() {
         'colorValue': 0,
         'type': 'savings',
         'sortOrder': 1,
+      });
+      expect(noTarget.targetAmount, isNull);
+      expect(noTarget.savedTotal, 0);
+    },
+  );
+
+  test(
+    'Subcategory serializes optional target and ignores savedTotal in toMap',
+    () {
+      const sub = Subcategory(
+        id: 's1',
+        categoryId: 'c1',
+        nameEn: 'Investments',
+        nameRu: 'Инвестиции',
+        targetAmount: 10000,
+        savedTotal: 2500,
+      );
+      final map = sub.toMap();
+      expect(map['targetAmount'], 10000);
+      expect(map.containsKey('savedTotal'), isFalse);
+
+      final parsed = Subcategory.fromMap('s1', {...map, 'savedTotal': 2500});
+      expect(parsed.targetAmount, 10000);
+      expect(parsed.savedTotal, 2500);
+
+      final noTarget = Subcategory.fromMap('s2', {
+        'categoryId': 'c1',
+        'nameEn': 'Car',
+        'nameRu': 'Автомобиль',
       });
       expect(noTarget.targetAmount, isNull);
       expect(noTarget.savedTotal, 0);

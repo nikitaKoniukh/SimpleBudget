@@ -119,12 +119,7 @@ class CategoriesScreen extends StatelessWidget {
                       child: ExpansionTile(
                         title: Text(cat.localizedName(state.localeCode)),
                         subtitle: Text(
-                          cat.isSavings
-                              ? (cat.targetAmount != null &&
-                                      cat.targetAmount! > 0
-                                  ? '${_typeLabel(l10n, cat.type)} · ${l10n.targetAmount}'
-                                  : _typeLabel(l10n, cat.type))
-                              : '${_typeLabel(l10n, cat.type)} · ${subs.length}',
+                          '${_typeLabel(l10n, cat.type)} · ${subs.length}',
                         ),
                         children: [
                           Row(
@@ -165,11 +160,11 @@ class CategoriesScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (!cat.isSavings && subs.isEmpty)
+                          if (subs.isEmpty)
                             ListTile(
                               title: Text(l10n.noSubcategories),
                             )
-                          else if (!cat.isSavings)
+                          else
                             ...subs.map(
                               (sub) => ListTile(
                                 title: Text(
@@ -179,7 +174,10 @@ class CategoriesScreen extends StatelessWidget {
                                     ? Text(
                                         '${l10n.installment} ${sub.installmentTotal}',
                                       )
-                                    : null,
+                                    : (sub.targetAmount != null &&
+                                            sub.targetAmount! > 0
+                                        ? Text(l10n.targetAmount)
+                                        : null),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete_outline),
                                   onPressed: () =>
@@ -187,15 +185,18 @@ class CategoriesScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          if (!cat.isSavings)
-                            ListTile(
-                              leading: const Icon(Icons.add),
-                              title: Text(l10n.addSubcategory),
-                              onTap: () => showAddSubcategorySheet(
-                                context,
-                                categoryId: cat.id,
-                              ),
+                          ListTile(
+                            leading: const Icon(Icons.add),
+                            title: Text(
+                              cat.isSavings
+                                  ? l10n.addPot
+                                  : l10n.addSubcategory,
                             ),
+                            onTap: () => showAddSubcategorySheet(
+                              context,
+                              categoryId: cat.id,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -379,35 +380,37 @@ Future<String?> _editCategory(
                   selected: {type},
                   onSelectionChanged: (s) => setLocal(() => type = s.first),
                 ),
-                if (type == 'savings')
+                if (type == 'savings' && existing == null)
                   TextField(
                     controller: targetCtrl,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(labelText: l10n.targetOptional),
                   ),
-                Text(l10n.categoryColor),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: categoryColorPalette.map((c) {
-                    final selected = c == colorValue;
-                    return GestureDetector(
-                      onTap: () => setLocal(() => colorValue = c),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Color(c),
-                          shape: BoxShape.circle,
-                          border: selected
-                              ? Border.all(width: 3, color: Colors.black87)
-                              : null,
+                if (existing != null || type != 'savings') ...[
+                  Text(l10n.categoryColor),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: categoryColorPalette.map((c) {
+                      final selected = c == colorValue;
+                      return GestureDetector(
+                        onTap: () => setLocal(() => colorValue = c),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Color(c),
+                            shape: BoxShape.circle,
+                            border: selected
+                                ? Border.all(width: 3, color: Colors.black87)
+                                : null,
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
+                  ),
+                ],
                 FilledButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   child: Text(l10n.save),
@@ -430,11 +433,13 @@ Future<String?> _editCategory(
 
   try {
     if (existing == null) {
+      if (type == 'savings') {
+        return await state.addPot(name: name, targetAmount: target);
+      }
       return await state.addCategory(
         name: name,
         colorValue: colorValue,
         type: type,
-        targetAmount: target,
       );
     } else {
       await state.updateCategory(

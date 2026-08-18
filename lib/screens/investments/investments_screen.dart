@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/default_categories.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
@@ -26,12 +27,12 @@ class InvestmentsScreen extends StatelessWidget {
       );
     }
 
-    final pots = state.savingsCategories;
-    final totalSaved = pots.fold<double>(0, (s, c) => s + c.savedTotal);
+    final pots = state.savingsPots;
+    final totalSaved = pots.fold<double>(0, (s, p) => s + p.savedTotal);
     final targeted = pots.where(
-      (c) => c.targetAmount != null && c.targetAmount! > 0,
+      (p) => p.targetAmount != null && p.targetAmount! > 0,
     );
-    final totalTarget = targeted.fold<double>(0, (s, c) => s + c.targetAmount!);
+    final totalTarget = targeted.fold<double>(0, (s, p) => s + p.targetAmount!);
     final hasAnyTarget = totalTarget > 0;
     final overallProgress = !hasAnyTarget
         ? 0.0
@@ -86,7 +87,7 @@ class InvestmentsScreen extends StatelessWidget {
                     progress: overallProgress,
                   ),
                   const SizedBox(height: 16),
-                  ...pots.map((pot) => _PotCard(category: pot)),
+                  ...pots.map((pot) => _PotCard(subcategory: pot)),
                 ],
               ),
       ),
@@ -165,19 +166,21 @@ class _SetAsideHero extends StatelessWidget {
 }
 
 class _PotCard extends StatelessWidget {
-  const _PotCard({required this.category});
+  const _PotCard({required this.subcategory});
 
-  final BudgetCategory category;
+  final Subcategory subcategory;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
-    final cat = category;
-    final hasTarget = cat.targetAmount != null && cat.targetAmount! > 0;
+    final pot = state.subcategoryById(subcategory.id) ?? subcategory;
+    final colorValue = state.categoryById(pot.categoryId)?.colorValue ??
+        DefaultCategories.savingsColorValue;
+    final hasTarget = pot.targetAmount != null && pot.targetAmount! > 0;
     final ratio = !hasTarget
-        ? (cat.savedTotal > 0 ? 1.0 : 0.0)
-        : (cat.savedTotal / cat.targetAmount!).clamp(0.0, 1.0);
+        ? (pot.savedTotal > 0 ? 1.0 : 0.0)
+        : (pot.savedTotal / pot.targetAmount!).clamp(0.0, 1.0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -186,7 +189,7 @@ class _PotCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => showPotDetailSheet(context, category: cat),
+          onTap: () => showPotDetailSheet(context, subcategory: pot),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
             child: Column(
@@ -198,19 +201,19 @@ class _PotCard extends StatelessWidget {
                       width: 10,
                       height: 10,
                       decoration: BoxDecoration(
-                        color: Color(cat.colorValue),
+                        color: Color(colorValue),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        cat.localizedName(state.localeCode),
+                        pot.localizedName(state.localeCode),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                     Text(
-                      formatIls(cat.savedTotal),
+                      formatIls(pot.savedTotal),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -223,13 +226,13 @@ class _PotCard extends StatelessWidget {
                       value: ratio,
                       minHeight: 8,
                       backgroundColor:
-                          Color(cat.colorValue).withValues(alpha: 0.18),
-                      color: Color(cat.colorValue),
+                          Color(colorValue).withValues(alpha: 0.18),
+                      color: Color(colorValue),
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${formatIls(cat.savedTotal)} / ${formatIls(cat.targetAmount!)}',
+                    '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}',
                     style: Theme.of(context)
                         .textTheme
                         .labelSmall

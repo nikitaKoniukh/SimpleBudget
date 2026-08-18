@@ -9,8 +9,6 @@ import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
-import '../category/budget_sheets.dart';
-import '../category/categories_screen.dart';
 
 Future<void> showSetAsideActionsSheet(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
@@ -57,16 +55,13 @@ Future<String?> showAddPotFlow(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
   final existing = {
-    for (final c in state.categories) c.nameEn.toLowerCase(),
+    for (final s in state.savingsPots) s.nameEn.toLowerCase(),
   };
-  final available = DefaultCategories.all
-      .where(
-        (c) =>
-            c.type == 'savings' && !existing.contains(c.nameEn.toLowerCase()),
-      )
+  final available = DefaultPots.all
+      .where((p) => !existing.contains(p.nameEn.toLowerCase()))
       .toList();
 
-  final choice = await showModalBottomSheet<CategorySourceChoice>(
+  final choice = await showModalBottomSheet<_PotSourceChoice>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -87,16 +82,18 @@ Future<String?> showAddPotFlow(BuildContext context) async {
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: available.map((cat) {
+                  children: available.map((pot) {
                     return ActionChip(
                       avatar: CircleAvatar(
-                        backgroundColor: Color(cat.colorValue),
+                        backgroundColor: Color(
+                          DefaultCategories.savingsColorValue,
+                        ),
                         radius: 8,
                       ),
-                      label: Text(cat.localizedName(state.localeCode)),
+                      label: Text(pot.localizedName(state.localeCode)),
                       onPressed: () => Navigator.pop(
                         modalContext,
-                        CategorySourceChoice.suggested(cat),
+                        _PotSourceChoice.suggested(pot),
                       ),
                     );
                   }).toList(),
@@ -112,7 +109,7 @@ Future<String?> showAddPotFlow(BuildContext context) async {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.pop(
                   modalContext,
-                  const CategorySourceChoice.custom(),
+                  const _PotSourceChoice.custom(),
                 ),
               ),
             ],
@@ -125,7 +122,7 @@ Future<String?> showAddPotFlow(BuildContext context) async {
   if (choice == null || !context.mounted) return null;
   try {
     if (choice.suggested != null) {
-      return context.read<AppState>().addSuggestedCategory(choice.suggested!);
+      return context.read<AppState>().addSuggestedPot(choice.suggested!);
     }
     if (choice.wantsCustom) {
       return showEditPotSheet(context);
@@ -139,9 +136,17 @@ Future<String?> showAddPotFlow(BuildContext context) async {
   return null;
 }
 
+class _PotSourceChoice {
+  const _PotSourceChoice.custom() : suggested = null, wantsCustom = true;
+  const _PotSourceChoice.suggested(this.suggested) : wantsCustom = false;
+
+  final DefaultPot? suggested;
+  final bool wantsCustom;
+}
+
 Future<String?> showEditPotSheet(
   BuildContext context, [
-  BudgetCategory? existing,
+  Subcategory? existing,
 ]) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
@@ -153,7 +158,6 @@ Future<String?> showEditPotSheet(
         ? existing.targetAmount!.toStringAsFixed(2)
         : '',
   );
-  var colorValue = existing?.colorValue ?? categoryColorPalette.first;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -161,58 +165,32 @@ Future<String?> showEditPotSheet(
     showDragHandle: true,
     builder: (ctx) {
       return FormSheet(
-        child: StatefulBuilder(
-          builder: (ctx, setLocal) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              spacing: 12,
-              children: [
-                Text(
-                  existing == null ? l10n.addPot : l10n.editPot,
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
-                TextField(
-                  controller: nameCtrl,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: InputDecoration(labelText: l10n.categoryName),
-                  autofocus: existing == null,
-                ),
-                TextField(
-                  controller: targetCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.targetOptional),
-                ),
-                Text(l10n.categoryColor),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: categoryColorPalette.map((c) {
-                    final selected = c == colorValue;
-                    return GestureDetector(
-                      onTap: () => setLocal(() => colorValue = c),
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Color(c),
-                          shape: BoxShape.circle,
-                          border: selected
-                              ? Border.all(width: 3, color: Colors.black87)
-                              : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text(l10n.save),
-                ),
-              ],
-            );
-          },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          spacing: 12,
+          children: [
+            Text(
+              existing == null ? l10n.addPot : l10n.editPot,
+              style: Theme.of(ctx).textTheme.titleLarge,
+            ),
+            TextField(
+              controller: nameCtrl,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(labelText: l10n.subcategoryName),
+              autofocus: existing == null,
+            ),
+            TextField(
+              controller: targetCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: l10n.targetOptional),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.save),
+            ),
+          ],
         ),
       );
     },
@@ -226,18 +204,12 @@ Future<String?> showEditPotSheet(
 
   try {
     if (existing == null) {
-      return await state.addCategory(
-        name: name,
-        colorValue: colorValue,
-        type: 'savings',
-        targetAmount: target,
-      );
+      return await state.addPot(name: name, targetAmount: target);
     }
-    await state.updateCategory(
+    await state.updateSubcategory(
       existing.copyWith(
         nameEn: name,
         nameRu: name,
-        colorValue: colorValue,
         targetAmount: target,
         clearTargetAmount: target == null,
       ),
@@ -254,13 +226,13 @@ Future<String?> showEditPotSheet(
 
 Future<void> showSetTargetSheet(
   BuildContext context, {
-  required BudgetCategory category,
+  required Subcategory subcategory,
 }) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
   final targetCtrl = TextEditingController(
-    text: category.targetAmount != null && category.targetAmount! > 0
-        ? category.targetAmount!.toStringAsFixed(2)
+    text: subcategory.targetAmount != null && subcategory.targetAmount! > 0
+        ? subcategory.targetAmount!.toStringAsFixed(2)
         : '',
   );
 
@@ -287,7 +259,7 @@ Future<void> showSetTargetSheet(
               onPressed: () => Navigator.pop(ctx, 'save'),
               child: Text(l10n.save),
             ),
-            if (category.targetAmount != null)
+            if (subcategory.targetAmount != null)
               TextButton(
                 onPressed: () => Navigator.pop(ctx, 'clear'),
                 child: Text(l10n.clearTarget),
@@ -300,13 +272,15 @@ Future<void> showSetTargetSheet(
 
   if (result == null || !context.mounted) return;
   if (result == 'clear') {
-    await state.updateCategory(category.copyWith(clearTargetAmount: true));
+    await state.updateSubcategory(
+      subcategory.copyWith(clearTargetAmount: true),
+    );
     return;
   }
   final parsed = double.tryParse(targetCtrl.text.replaceAll(',', ''));
   final target = parsed != null && parsed > 0 ? parsed : null;
-  await state.updateCategory(
-    category.copyWith(
+  await state.updateSubcategory(
+    subcategory.copyWith(
       targetAmount: target,
       clearTargetAmount: target == null,
     ),
@@ -315,18 +289,16 @@ Future<void> showSetTargetSheet(
 
 Future<void> showDepositEditor(
   BuildContext context, {
-  BudgetCategory? category,
+  Subcategory? subcategory,
   Expense? expense,
 }) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
   if (!state.hasMonthSelected) return;
 
-  var selectedCatId = category?.id ??
-      (expense != null
-          ? state.subcategoryById(expense.subcategoryId)?.categoryId
-          : null) ??
-      state.savingsCategories.firstOrNull?.id;
+  var selectedSubId = subcategory?.id ??
+      expense?.subcategoryId ??
+      state.savingsPots.firstOrNull?.id;
   final amountCtrl = TextEditingController(
     text: expense != null ? expense.amount.toStringAsFixed(2) : '',
   );
@@ -342,7 +314,7 @@ Future<void> showDepositEditor(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
-            final pots = live.savingsCategories;
+            final pots = live.savingsPots;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
@@ -362,7 +334,7 @@ Future<void> showDepositEditor(
                         onPressed: () async {
                           final id = await showAddPotFlow(ctx);
                           if (id != null) {
-                            setModal(() => selectedCatId = id);
+                            setModal(() => selectedSubId = id);
                           }
                         },
                         icon: const Icon(Icons.add),
@@ -372,20 +344,20 @@ Future<void> showDepositEditor(
                   )
                 else
                   DropdownButtonFormField<String>(
-                    key: ValueKey(selectedCatId),
-                    initialValue: selectedCatId,
-                    decoration: InputDecoration(labelText: l10n.category),
+                    key: ValueKey(selectedSubId),
+                    initialValue: selectedSubId,
+                    decoration: InputDecoration(labelText: l10n.subcategory),
                     items: pots
                         .map(
-                          (cat) => DropdownMenuItem(
-                            value: cat.id,
-                            child: Text(cat.localizedName(live.localeCode)),
+                          (pot) => DropdownMenuItem(
+                            value: pot.id,
+                            child: Text(pot.localizedName(live.localeCode)),
                           ),
                         )
                         .toList(),
                     onChanged: (v) {
                       if (v == null) return;
-                      setModal(() => selectedCatId = v);
+                      setModal(() => selectedSubId = v);
                     },
                   ),
                 TextField(
@@ -417,7 +389,7 @@ Future<void> showDepositEditor(
                   },
                 ),
                 FilledButton(
-                  onPressed: selectedCatId == null
+                  onPressed: selectedSubId == null
                       ? null
                       : () => Navigator.pop(ctx, 'save'),
                   child: Text(l10n.save),
@@ -447,13 +419,13 @@ Future<void> showDepositEditor(
   }
 
   final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
-  final catId = selectedCatId;
-  if (amount <= 0 || catId == null) return;
+  final subId = selectedSubId;
+  if (amount <= 0 || subId == null) return;
   final note = sentenceCase(noteCtrl.text);
 
   if (expense == null) {
     await state.addDeposit(
-      categoryId: catId,
+      subcategoryId: subId,
       amount: amount,
       date: date,
       note: note.isEmpty ? null : note,
@@ -461,7 +433,6 @@ Future<void> showDepositEditor(
     return;
   }
 
-  final subId = await state.ensureImplicitSubcategory(catId);
   await state.updateExpense(
     Expense(
       id: expense.id,
@@ -474,9 +445,14 @@ Future<void> showDepositEditor(
   );
 }
 
+int _potColor(AppState state, Subcategory pot) {
+  return state.categoryById(pot.categoryId)?.colorValue ??
+      DefaultCategories.savingsColorValue;
+}
+
 Future<void> showPotDetailSheet(
   BuildContext context, {
-  required BudgetCategory category,
+  required Subcategory subcategory,
 }) async {
   final l10n = AppLocalizations.of(context);
 
@@ -493,8 +469,9 @@ Future<void> showPotDetailSheet(
           maxChildSize: 0.9,
           builder: (ctx, scrollController) {
             final live = ctx.watch<AppState>();
-            final cat = live.categoryById(category.id) ?? category;
-            final deposits = live.expensesForCategory(cat.id);
+            final pot = live.subcategoryById(subcategory.id) ?? subcategory;
+            final deposits = live.expensesFor(pot.id);
+            final color = _potColor(live, pot);
             return ListView(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -505,14 +482,14 @@ Future<void> showPotDetailSheet(
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: Color(cat.colorValue),
+                        color: Color(color),
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        cat.localizedName(live.localeCode),
+                        pot.localizedName(live.localeCode),
                         style: Theme.of(ctx).textTheme.titleLarge,
                       ),
                     ),
@@ -521,15 +498,15 @@ Future<void> showPotDetailSheet(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () {
                         Navigator.pop(ctx);
-                        showEditPotSheet(context, cat);
+                        showEditPotSheet(context, pot);
                       },
                     ),
                   ],
                 ),
                 Text(
-                  cat.targetAmount != null && cat.targetAmount! > 0
-                      ? '${formatIls(cat.savedTotal)} / ${formatIls(cat.targetAmount!)}'
-                      : formatIls(cat.savedTotal),
+                  pot.targetAmount != null && pot.targetAmount! > 0
+                      ? '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}'
+                      : formatIls(pot.savedTotal),
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -540,7 +517,7 @@ Future<void> showPotDetailSheet(
                     FilledButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        showDepositEditor(context, category: cat);
+                        showDepositEditor(context, subcategory: pot);
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: Text(l10n.logDeposit),
@@ -548,7 +525,7 @@ Future<void> showPotDetailSheet(
                     OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(ctx);
-                        showSetTargetSheet(context, category: cat);
+                        showSetTargetSheet(context, subcategory: pot);
                       },
                       icon: const Icon(Icons.flag_outlined, size: 18),
                       label: Text(l10n.setTarget),
@@ -582,10 +559,10 @@ Future<void> showPotDetailSheet(
                       ),
                       onTap: () {
                         Navigator.pop(ctx);
-                        showExpenseEditor(
+                        showDepositEditor(
                           context,
+                          subcategory: pot,
                           expense: expense,
-                          subcategoryId: expense.subcategoryId,
                         );
                       },
                     );
@@ -598,3 +575,4 @@ Future<void> showPotDetailSheet(
     },
   );
 }
+

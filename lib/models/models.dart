@@ -271,6 +271,8 @@ class Subcategory {
     this.installmentTotal,
     this.sortOrder = 0,
     this.archived = false,
+    this.targetAmount,
+    this.savedTotal = 0,
   });
 
   final String id;
@@ -280,6 +282,12 @@ class Subcategory {
   final int? installmentTotal;
   final int sortOrder;
   final bool archived;
+
+  /// Optional lifetime goal for a savings pot. Null means no target.
+  final double? targetAmount;
+
+  /// Cumulative deposits. Written via increment, not [toMap].
+  final double savedTotal;
 
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;
@@ -292,6 +300,9 @@ class Subcategory {
     bool clearInstallmentTotal = false,
     int? sortOrder,
     bool? archived,
+    double? targetAmount,
+    bool clearTargetAmount = false,
+    double? savedTotal,
   }) {
     return Subcategory(
       id: id,
@@ -303,9 +314,14 @@ class Subcategory {
           : (installmentTotal ?? this.installmentTotal),
       sortOrder: sortOrder ?? this.sortOrder,
       archived: archived ?? this.archived,
+      targetAmount: clearTargetAmount
+          ? null
+          : (targetAmount ?? this.targetAmount),
+      savedTotal: savedTotal ?? this.savedTotal,
     );
   }
 
+  /// Does not include [savedTotal] so merge-updates cannot clobber increments.
   Map<String, dynamic> toMap() => {
     'categoryId': categoryId,
     'nameEn': nameEn,
@@ -313,6 +329,7 @@ class Subcategory {
     'installmentTotal': installmentTotal,
     'sortOrder': sortOrder,
     'archived': archived,
+    'targetAmount': targetAmount,
   };
 
   factory Subcategory.fromMap(String id, Map<String, dynamic> map) {
@@ -324,6 +341,8 @@ class Subcategory {
       installmentTotal: (map['installmentTotal'] as num?)?.toInt(),
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       archived: map['archived'] as bool? ?? false,
+      targetAmount: (map['targetAmount'] as num?)?.toDouble(),
+      savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
     );
   }
 }

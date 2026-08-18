@@ -64,7 +64,7 @@ class BudgetRepository {
       inviteCode: _generateInviteCode(),
       createdBy: creatorUid,
     );
-    await ref.set({...household.toMap(), 'catalogVersion': 3});
+    await ref.set({...household.toMap(), 'catalogVersion': 4});
     await _db.collection('users').doc(creatorUid).update({
       'householdId': household.id,
     });
@@ -348,27 +348,18 @@ class BudgetRepository {
       'targetAmount': targetAmount,
       'savedTotal': 0,
     });
-    if (type == 'savings') {
-      await addSubcategory(
-        householdId: householdId,
-        categoryId: doc.id,
-        nameEn: nameEn,
-        nameRu: nameRu,
-        sortOrder: 0,
-      );
-    }
     return doc.id;
   }
 
   Future<void> incrementSavedTotal({
     required String householdId,
-    required String categoryId,
+    required String subcategoryId,
     required double delta,
   }) async {
     if (delta == 0) return;
-    await _categories(
+    await _subcategories(
       householdId,
-    ).doc(categoryId).update({'savedTotal': FieldValue.increment(delta)});
+    ).doc(subcategoryId).update({'savedTotal': FieldValue.increment(delta)});
   }
 
   Future<void> updateCategory({
@@ -408,6 +399,16 @@ class BudgetRepository {
     final ops = <void Function(WriteBatch)>[];
     var added = 0;
     var sortBase = existing.docs.length;
+    String? savingsCatId;
+    for (final doc in existing.docs) {
+      final data = doc.data();
+      if (data['type'] == 'savings' &&
+          (data['nameEn'] as String? ?? '').toLowerCase() ==
+              DefaultCategories.savingsNameEn.toLowerCase()) {
+        savingsCatId = doc.id;
+        break;
+      }
+    }
     for (final cat in toAdd) {
       if (existingNames.contains(cat.nameEn.toLowerCase())) continue;
       final sortOrder = sortBase + added;
@@ -423,18 +424,61 @@ class BudgetRepository {
         }),
       );
       if (cat.type == 'savings') {
-        ops.add(
-          (batch) => batch.set(_subcategories(householdId).doc(_uuid.v4()), {
-            'categoryId': catId,
-            'nameEn': cat.nameEn,
-            'nameRu': cat.nameRu,
-            'sortOrder': 0,
-            'archived': false,
-          }),
-        );
+        savingsCatId = catId;
       }
       added++;
     }
+
+    if (only == null) {
+      savingsCatId ??= _uuid.v4();
+      if (!existingNames.contains(
+        DefaultCategories.savingsNameEn.toLowerCase(),
+      )) {
+        final alreadyQueued = toAdd.any(
+          (c) =>
+              c.type == 'savings' &&
+              c.nameEn.toLowerCase() ==
+                  DefaultCategories.savingsNameEn.toLowerCase(),
+        );
+        if (!alreadyQueued) {
+          ops.add(
+            (batch) => batch.set(_categories(householdId).doc(savingsCatId!), {
+              'nameEn': DefaultCategories.savingsNameEn,
+              'nameRu': DefaultCategories.savingsNameRu,
+              'colorValue': DefaultCategories.savingsColorValue,
+              'type': 'savings',
+              'sortOrder': sortBase + added,
+              'savedTotal': 0,
+            }),
+          );
+          added++;
+        }
+      }
+      final existingSubs = await _subcategories(householdId).get();
+      final existingPotNames = existingSubs.docs
+          .where((d) => d.data()['categoryId'] == savingsCatId)
+          .map((d) => (d.data()['nameEn'] as String? ?? '').toLowerCase())
+          .toSet();
+      var potSort = existingPotNames.length;
+      for (final pot in DefaultPots.all) {
+        if (existingPotNames.contains(pot.nameEn.toLowerCase())) continue;
+        final sort = potSort;
+        ops.add(
+          (batch) => batch.set(_subcategories(householdId).doc(_uuid.v4()), {
+            'categoryId': savingsCatId,
+            'nameEn': pot.nameEn,
+            'nameRu': pot.nameRu,
+            'sortOrder': sort,
+            'archived': false,
+            'savedTotal': 0,
+          }),
+        );
+        existingPotNames.add(pot.nameEn.toLowerCase());
+        potSort++;
+        added++;
+      }
+    }
+
     if (ops.isNotEmpty) {
       await _commitInChunks(ops);
     }
@@ -467,6 +511,7 @@ class BudgetRepository {
     required String nameRu,
     required int sortOrder,
     int? installmentTotal,
+    double? targetAmount,
   }) async {
     final doc = await _subcategories(householdId).add({
       'categoryId': categoryId,
@@ -475,6 +520,8 @@ class BudgetRepository {
       'sortOrder': sortOrder,
       'installmentTotal': installmentTotal,
       'archived': false,
+      'targetAmount': targetAmount,
+      'savedTotal': 0,
     });
     return doc.id;
   }
@@ -616,12 +663,15 @@ class BudgetRepository {
     final householdSnap = await householdRef.get();
     final version =
         (householdSnap.data()?['catalogVersion'] as num?)?.toInt() ?? 0;
-    if (version >= 3) return;
+    if (version >= 4) return;
 
     if (version < 2) {
       await _migrateCatalogV2(householdId);
     }
-    await _migrateSavingsPotsV3(householdId);
+    if (version < 3) {
+      await _migrateSavingsPotsV3(householdId);
+    }
+    await _migrateNestedSavingsPotsV4(householdId);
   }
 
   Future<void> _migrateCatalogV2(String householdId) async {
@@ -826,5 +876,167 @@ class BudgetRepository {
       await _commitInChunks(ops);
     }
     await householdRef.set({'catalogVersion': 3}, SetOptions(merge: true));
+  }
+
+  /// Nests sibling savings pots as subcategories of a single Savings parent.
+  Future<void> _migrateNestedSavingsPotsV4(String householdId) async {
+    final householdRef = _householdRef(householdId);
+    final cats = await _categories(householdId).get();
+    final subs = await _subcategories(householdId).get();
+    final monthsSnap = await _months(householdId).get();
+
+    final savingsDocs = cats.docs
+        .where((d) => d.data()['type'] == 'savings')
+        .toList();
+
+    QueryDocumentSnapshot<Map<String, dynamic>>? parentDoc;
+    for (final doc in savingsDocs) {
+      final name = (doc.data()['nameEn'] as String? ?? '').toLowerCase();
+      if (name == DefaultCategories.savingsNameEn.toLowerCase()) {
+        parentDoc = doc;
+        break;
+      }
+    }
+    parentDoc ??= savingsDocs.isNotEmpty ? savingsDocs.first : null;
+
+    final ops = <void Function(WriteBatch)>[];
+    String parentId;
+    var parentSubSort = 0;
+
+    if (parentDoc == null) {
+      parentId = _uuid.v4();
+      ops.add(
+        (batch) => batch.set(_categories(householdId).doc(parentId), {
+          'nameEn': DefaultCategories.savingsNameEn,
+          'nameRu': DefaultCategories.savingsNameRu,
+          'colorValue': DefaultCategories.savingsColorValue,
+          'type': 'savings',
+          'sortOrder': cats.docs.length,
+          'savedTotal': 0,
+        }),
+      );
+    } else {
+      parentId = parentDoc.id;
+    }
+
+    final subsByCat =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    for (final sub in subs.docs) {
+      final catId = sub.data()['categoryId'] as String? ?? '';
+      subsByCat.putIfAbsent(catId, () => []).add(sub);
+    }
+    parentSubSort = (subsByCat[parentId] ?? const []).length;
+
+    final siblingDocs = savingsDocs.where((d) => d.id != parentId).toList();
+    final movedSubIds = <String>{};
+
+    for (final catDoc in siblingDocs) {
+      final existingSubs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(
+        subsByCat[catDoc.id] ?? const [],
+      );
+      final catTarget = (catDoc.data()['targetAmount'] as num?)?.toDouble();
+      final catSaved = (catDoc.data()['savedTotal'] as num?)?.toDouble() ?? 0;
+      if (existingSubs.isEmpty) {
+        final subId = _uuid.v4();
+        final nameEn = catDoc.data()['nameEn'] as String? ?? '';
+        final nameRu = catDoc.data()['nameRu'] as String? ?? nameEn;
+        final sort = parentSubSort;
+        parentSubSort++;
+        ops.add(
+          (batch) => batch.set(_subcategories(householdId).doc(subId), {
+            'categoryId': parentId,
+            'nameEn': nameEn,
+            'nameRu': nameRu,
+            'sortOrder': sort,
+            'archived': false,
+            'targetAmount': catTarget,
+            'savedTotal': catSaved,
+          }),
+        );
+      } else if (existingSubs.length == 1) {
+        final sub = existingSubs.first;
+        movedSubIds.add(sub.id);
+        ops.add(
+          (batch) => batch.set(sub.reference, {
+            'categoryId': parentId,
+            'sortOrder': parentSubSort,
+            'targetAmount': catTarget ?? sub.data()['targetAmount'],
+            'savedTotal': catSaved,
+          }, SetOptions(merge: true)),
+        );
+        parentSubSort++;
+      } else {
+        final catName = (catDoc.data()['nameEn'] as String? ?? '')
+            .toLowerCase();
+        var targetAssigned = false;
+        for (final sub in existingSubs) {
+          movedSubIds.add(sub.id);
+          final subName = (sub.data()['nameEn'] as String? ?? '').toLowerCase();
+          final assignTarget = !targetAssigned && subName == catName;
+          if (assignTarget) targetAssigned = true;
+          ops.add(
+            (batch) => batch.set(sub.reference, {
+              'categoryId': parentId,
+              'sortOrder': parentSubSort,
+              if (assignTarget) 'targetAmount': catTarget,
+            }, SetOptions(merge: true)),
+          );
+          parentSubSort++;
+        }
+        if (!targetAssigned) {
+          final first = existingSubs.first;
+          ops.add(
+            (batch) => batch.set(first.reference, {
+              'targetAmount': catTarget,
+            }, SetOptions(merge: true)),
+          );
+        }
+      }
+      ops.add((batch) => batch.delete(catDoc.reference));
+    }
+
+    final parentSubs = [
+      ...(subsByCat[parentId] ?? const []),
+      ...subs.docs.where((d) => movedSubIds.contains(d.id)),
+    ];
+    final subTotals = <String, double>{};
+    if (siblingDocs.any(
+      (d) => (subsByCat[d.id] ?? const []).length > 1,
+    )) {
+      for (final monthDoc in monthsSnap.docs) {
+        final expenses = await monthDoc.reference.collection('expenses').get();
+        for (final exp in expenses.docs) {
+          final subId = exp.data()['subcategoryId'] as String? ?? '';
+          if (!movedSubIds.contains(subId)) continue;
+          final amount = (exp.data()['amount'] as num?)?.toDouble() ?? 0;
+          subTotals[subId] = (subTotals[subId] ?? 0) + amount;
+        }
+      }
+      for (final subId in movedSubIds) {
+        ops.add(
+          (batch) => batch.set(_subcategories(householdId).doc(subId), {
+            'savedTotal': subTotals[subId] ?? 0,
+          }, SetOptions(merge: true)),
+        );
+      }
+    }
+
+    for (final sub in parentSubs) {
+      if (movedSubIds.contains(sub.id)) continue;
+      final hasSaved = sub.data().containsKey('savedTotal');
+      if (hasSaved) continue;
+      ops.add(
+        (batch) => batch.set(sub.reference, {
+          'savedTotal': parentDoc?.data()['savedTotal'] ?? 0,
+          'targetAmount':
+              sub.data()['targetAmount'] ?? parentDoc?.data()['targetAmount'],
+        }, SetOptions(merge: true)),
+      );
+    }
+
+    if (ops.isNotEmpty) {
+      await _commitInChunks(ops);
+    }
+    await householdRef.set({'catalogVersion': 4}, SetOptions(merge: true));
   }
 }

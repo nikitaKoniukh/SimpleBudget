@@ -389,11 +389,10 @@ Future<String?> _addCategoryAndSubcategory(BuildContext context) async {
   final categoryId = await showAddCategoryFlow(context);
   if (categoryId == null || !context.mounted) return null;
   final state = context.read<AppState>();
+  if (state.subcategoryById(categoryId) != null) return categoryId;
   final cat = state.categoryById(categoryId);
-  if (cat != null && cat.isSavings) {
-    return state.ensureImplicitSubcategory(categoryId);
-  }
-  return showAddSubcategorySheet(context, categoryId: categoryId);
+  if (cat == null) return null;
+  return showAddSubcategorySheet(context, categoryId: cat.id);
 }
 
 Future<String?> _pickCategoryAndAddSubcategory(BuildContext context) async {
