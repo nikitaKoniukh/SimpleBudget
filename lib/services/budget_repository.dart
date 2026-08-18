@@ -100,6 +100,15 @@ class BudgetRepository {
     return Household.fromMap(doc.id, {...data, 'memberIds': members});
   }
 
+  Future<void> updateHouseholdName({
+    required String householdId,
+    required String name,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    await _householdRef(householdId).update({'name': trimmed});
+  }
+
   Stream<Household?> watchHousehold(String householdId) {
     return _householdRef(householdId).snapshots().map((s) {
       if (!s.exists || s.data() == null) return null;

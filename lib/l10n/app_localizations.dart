@@ -93,6 +93,8 @@ class AppLocalizations {
       isRu ? 'Создать семью' : 'Create household';
   String get joinHousehold => isRu ? 'Присоединиться' : 'Join household';
   String get householdName => isRu ? 'Название семьи' : 'Household name';
+  String get editHouseholdName =>
+      isRu ? 'Изменить название семьи' : 'Edit household name';
   String get inviteCode => isRu ? 'Код приглашения' : 'Invite code';
   String get invitePartner =>
       isRu ? 'Пригласить партнёра' : 'Invite partner';

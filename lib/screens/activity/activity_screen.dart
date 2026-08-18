@@ -45,16 +45,7 @@ class ActivityScreen extends StatelessWidget {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(l10n.activity),
-          actions: [
-            IconButton(
-              tooltip: l10n.addIncomeSource,
-              onPressed: () => showAddIncomeSourceDialog(context),
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-            ),
-          ],
-        ),
+        appBar: AppBar(title: Text(l10n.activity)),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => showQuickLogSheet(context),
           icon: const Icon(Icons.add),

@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
+import '../../utils/text_format.dart';
 import '../category/categories_screen.dart';
 import '../home/month_actions.dart';
 
@@ -25,6 +26,47 @@ class SettingsScreen extends StatelessWidget {
     await SharePlus.instance.share(ShareParams(text: message));
   }
 
+  Future<void> _editHouseholdName(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final state = context.read<AppState>();
+    final household = state.household;
+    if (household == null) return;
+    final nameCtrl = TextEditingController(text: household.name);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.editHouseholdName),
+        content: TextField(
+          controller: nameCtrl,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(labelText: l10n.householdName),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.save),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final name = sentenceCase(nameCtrl.text);
+    if (name.isEmpty) return;
+    try {
+      await context.read<AppState>().updateHouseholdName(name);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -40,6 +82,8 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             title: Text(l10n.household),
             subtitle: Text(household?.name ?? '—'),
+            trailing: const Icon(Icons.edit_outlined),
+            onTap: household == null ? null : () => _editHouseholdName(context),
           ),
           ListTile(
             title: Text(l10n.members),

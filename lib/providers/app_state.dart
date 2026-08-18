@@ -375,6 +375,12 @@ class AppState extends ChangeNotifier {
     await _attachHousehold(h.id);
   }
 
+  Future<void> updateHouseholdName(String name) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.updateHouseholdName(householdId: hid, name: name);
+  }
+
   Future<void> joinHousehold(String inviteCode) async {
     final uid = _firebaseUser?.uid;
     if (uid == null) return;
