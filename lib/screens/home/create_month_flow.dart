@@ -38,12 +38,29 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     _month = now.month;
   }
 
+  String get _selectedMonthId => monthIdFromDate(DateTime(_year, _month));
+
+  DropdownMenuItem<int> _monthMenuItem(
+    AppLocalizations l10n,
+    Set<String> existingIds,
+    int month,
+  ) {
+    final exists =
+        existingIds.contains(monthIdFromDate(DateTime(_year, month)));
+    final title = l10n.monthTitle(DateTime(_year, month));
+    return DropdownMenuItem(
+      value: month,
+      enabled: !exists,
+      child: Text(exists ? '$title (${l10n.monthAlreadyAdded})' : title),
+    );
+  }
+
   Future<void> _finish() async {
     if (_saving) return;
     final l10n = AppLocalizations.of(context);
     final state = context.read<AppState>();
-    final monthId =
-        '${_year.toString().padLeft(4, '0')}-${_month.toString().padLeft(2, '0')}';
+    final monthId = _selectedMonthId;
+    if (state.months.any((m) => m.id == monthId)) return;
     setState(() => _saving = true);
     try {
       await state.createMonth(monthId: monthId);
@@ -66,11 +83,10 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
     final now = DateTime.now();
-    final willCopy = state.months.any(
-      (m) =>
-          m.id !=
-          '${_year.toString().padLeft(4, '0')}-${_month.toString().padLeft(2, '0')}',
-    );
+    final existingIds = {for (final m in state.months) m.id};
+    final monthId = _selectedMonthId;
+    final alreadyExists = existingIds.contains(monthId);
+    final willCopy = state.months.any((m) => m.id != monthId);
 
     return SyncBackground(
       child: Scaffold(
@@ -116,13 +132,11 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
               Text(l10n.monthLabel),
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
+                key: ValueKey(_year),
                 initialValue: _month,
                 items: [
                   for (var m = 1; m <= 12; m++)
-                    DropdownMenuItem(
-                      value: m,
-                      child: Text(l10n.monthTitle(DateTime(_year, m))),
-                    ),
+                    _monthMenuItem(l10n, existingIds, m),
                 ],
                 onChanged: (v) {
                   if (v == null) return;
@@ -131,7 +145,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
               ),
               const Spacer(),
               FilledButton(
-                onPressed: _saving ? null : _finish,
+                onPressed: _saving || alreadyExists ? null : _finish,
                 child: Text(l10n.done),
               ),
             ],

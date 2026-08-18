@@ -118,6 +118,8 @@ class AppLocalizations {
           ? 'Месяцев пока нет. Создайте первый месяц, чтобы начать.'
           : 'No months yet. Create your first month to get started.';
   String get addMonth => isRu ? 'Добавить месяц' : 'Add month';
+  String get monthAlreadyAdded =>
+      isRu ? 'уже добавлен' : 'already added';
   String get createMonth => isRu ? 'Создать месяц' : 'Create month';
   String get addDefaultCategories =>
       isRu ? 'Добавить категории по умолчанию' : 'Add default categories';
