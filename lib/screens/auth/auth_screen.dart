@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import '../../utils/text_format.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -63,7 +64,7 @@ class _AuthScreenState extends State<AuthScreen> {
         await auth.signUp(
           email: _email.text,
           password: _password.text,
-          displayName: _name.text,
+          displayName: sentenceCase(_name.text),
         );
       } else {
         await auth.signIn(email: _email.text, password: _password.text);
@@ -127,6 +128,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     if (_isSignUp)
                       TextFormField(
                         controller: _name,
+                        textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           labelText: l10n.displayName,
                           border: const OutlineInputBorder(),

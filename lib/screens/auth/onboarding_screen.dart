@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../utils/text_format.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -35,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (_joining) {
         await state.joinHousehold(_code.text);
       } else {
-        await state.createHousehold(_name.text);
+        await state.createHousehold(sentenceCase(_name.text));
       }
     } catch (e) {
       setState(() => _error = e.toString());
@@ -81,6 +82,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             else
               TextField(
                 controller: _name,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   labelText: l10n.householdName,
                   border: const OutlineInputBorder(),

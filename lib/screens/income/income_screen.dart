@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
+import '../../utils/text_format.dart';
 
 class IncomeScreen extends StatelessWidget {
   const IncomeScreen({super.key});
@@ -109,6 +110,7 @@ class IncomeScreen extends StatelessWidget {
             ),
             TextField(
               controller: noteCtrl,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.note),
             ),
           ],
@@ -128,6 +130,7 @@ class IncomeScreen extends StatelessWidget {
     if (ok != true || !context.mounted) return;
     final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
     if (amount <= 0) return;
+    final noteText = sentenceCase(noteCtrl.text);
     final state = context.read<AppState>();
     final hid = state.appUser!.householdId!;
     await state.repo.addIncomeEntry(
@@ -135,7 +138,7 @@ class IncomeScreen extends StatelessWidget {
       monthId: state.monthId!,
       sourceId: sourceId,
       amount: amount,
-      note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+      note: noteText.isEmpty ? null : noteText,
     );
   }
 
@@ -148,6 +151,7 @@ class IncomeScreen extends StatelessWidget {
         title: Text(l10n.addIncomeSource),
         content: TextField(
           controller: nameCtrl,
+          textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(labelText: l10n.description),
         ),
         actions: [
@@ -163,7 +167,7 @@ class IncomeScreen extends StatelessWidget {
       ),
     );
     if (ok != true || !context.mounted) return;
-    final name = nameCtrl.text.trim();
+    final name = sentenceCase(nameCtrl.text);
     if (name.isEmpty) return;
     final state = context.read<AppState>();
     await state.repo.addIncomeSource(

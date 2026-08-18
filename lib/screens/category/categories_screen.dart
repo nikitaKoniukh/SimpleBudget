@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 import 'budget_sheets.dart';
 
@@ -343,6 +344,7 @@ Future<String?> _editCategory(
                 ),
                 TextField(
                   controller: nameCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.categoryName),
                   autofocus: existing == null,
                 ),
@@ -401,7 +403,7 @@ Future<String?> _editCategory(
   );
 
   if (ok != true || !context.mounted) return null;
-  final name = nameCtrl.text.trim();
+  final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return null;
 
   try {

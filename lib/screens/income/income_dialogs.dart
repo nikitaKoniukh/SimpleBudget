@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 
 Future<void> showAddIncomeSourceDialog(BuildContext context) async {
@@ -16,6 +17,7 @@ Future<void> showAddIncomeSourceDialog(BuildContext context) async {
       contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
       content: TextField(
         controller: nameCtrl,
+        textCapitalization: TextCapitalization.sentences,
         decoration: InputDecoration(labelText: l10n.description),
         autofocus: true,
       ),
@@ -32,7 +34,7 @@ Future<void> showAddIncomeSourceDialog(BuildContext context) async {
     ),
   );
   if (ok != true || !context.mounted) return;
-  final name = nameCtrl.text.trim();
+  final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return;
   final state = context.read<AppState>();
   await state.repo.addIncomeSource(
@@ -111,6 +113,7 @@ Future<void> showIncomeEntryEditor(
                 ),
                 TextField(
                   controller: noteCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.note),
                 ),
                 FilledButton(
@@ -151,7 +154,8 @@ Future<void> showIncomeEntryEditor(
 
   final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
   if (amount <= 0) return;
-  final note = noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim();
+  final noteText = sentenceCase(noteCtrl.text);
+  final note = noteText.isEmpty ? null : noteText;
 
   if (entry == null) {
     await state.repo.addIncomeEntry(

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 import 'categories_screen.dart';
 
@@ -148,6 +149,7 @@ Future<void> showExpenseEditor(
                 ),
                 TextField(
                   controller: noteCtrl,
+                  textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.note),
                 ),
                 ListTile(
@@ -199,7 +201,7 @@ Future<void> showExpenseEditor(
   final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
   final subId = selectedSubId;
   if (amount <= 0 || subId == null) return;
-  final note = noteCtrl.text.trim();
+  final note = sentenceCase(noteCtrl.text);
 
   if (expense == null) {
     await state.addExpense(
@@ -333,6 +335,7 @@ Future<String?> showAddSubcategorySheet(
             ),
             TextField(
               controller: nameCtrl,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.subcategoryName),
               autofocus: true,
             ),
@@ -361,7 +364,7 @@ Future<String?> showAddSubcategorySheet(
   );
 
   if (ok != true || !context.mounted) return null;
-  final name = nameCtrl.text.trim();
+  final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return null;
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
