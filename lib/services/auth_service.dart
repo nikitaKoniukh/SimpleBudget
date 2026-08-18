@@ -173,6 +173,12 @@ class AuthService {
     await _db.collection('users').doc(uid).update({'householdId': householdId});
   }
 
+  Future<void> clearHouseholdId(String uid) async {
+    await _db.collection('users').doc(uid).update({
+      'householdId': FieldValue.delete(),
+    });
+  }
+
   static String _generateNonce([int length = 32]) {
     const charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';

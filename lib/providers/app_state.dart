@@ -57,8 +57,7 @@ class AppState extends ChangeNotifier {
   String? get monthId => _monthId;
   String get localeCode => _localeCode;
   bool get isSignedIn => _firebaseUser != null;
-  bool get hasHousehold =>
-      _appUser?.householdId != null && _appUser!.householdId!.isNotEmpty;
+  bool get hasHousehold => _household != null;
   bool get hasMonthSelected => _monthId != null && _monthId!.isNotEmpty;
   List<BudgetMonth> get months => _months;
 
@@ -221,11 +220,33 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
+    final ready = Completer<Household?>();
+    _householdSub = _repo.watchHousehold(householdId).listen(
+      (h) {
+        _household = h;
+        if (!ready.isCompleted) ready.complete(h);
+        if (h == null) {
+          unawaited(_clearStaleHousehold());
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        if (!ready.isCompleted) {
+          ready.complete(null);
+        } else {
+          unawaited(_clearStaleHousehold());
+        }
+      },
+    );
+
+    final household = await ready.future;
+    if (household == null) {
+      await _clearStaleHousehold();
+      return;
+    }
+
     unawaited(_repo.migrateLegacyCatalogIfNeeded(householdId));
-    _householdSub = _repo.watchHousehold(householdId).listen((h) {
-      _household = h;
-      notifyListeners();
-    });
     _categoriesSub = _repo.watchCategories(householdId).listen(
       (v) {
         _categories = v;
@@ -261,6 +282,27 @@ class AppState extends ChangeNotifier {
       }
       notifyListeners();
     });
+    notifyListeners();
+  }
+
+  Future<void> _clearStaleHousehold() async {
+    final uid = _firebaseUser?.uid;
+    await _householdSub?.cancel();
+    _householdSub = null;
+    _household = null;
+    if (_appUser != null) {
+      _appUser = AppUser(
+        id: _appUser!.id,
+        email: _appUser!.email,
+        displayName: _appUser!.displayName,
+        localeCode: _appUser!.localeCode,
+      );
+    }
+    if (uid != null) {
+      try {
+        await _auth.clearHouseholdId(uid);
+      } catch (_) {}
+    }
     notifyListeners();
   }
 
