@@ -474,18 +474,20 @@ class BudgetRepository {
         .delete();
   }
 
-  Future<void> addIncomeSource({
+  Future<String> addIncomeSource({
     required String householdId,
     required String monthId,
     required String nameEn,
     required String nameRu,
     required int sortOrder,
   }) async {
-    await _monthRef(householdId, monthId).collection('incomeSources').add({
+    final doc =
+        await _monthRef(householdId, monthId).collection('incomeSources').add({
       'nameEn': nameEn,
       'nameRu': nameRu,
       'sortOrder': sortOrder,
     });
+    return doc.id;
   }
 
   /// Promotes per-month categories/lineItems into the household catalog.

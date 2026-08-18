@@ -7,7 +7,12 @@ import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 
-Future<void> showAddIncomeSourceDialog(BuildContext context) async {
+Future<String?> showAddIncomeSourceDialog(BuildContext context) async {
+  final source = await _createIncomeSource(context);
+  return source?.id;
+}
+
+Future<IncomeSource?> _createIncomeSource(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
   final nameCtrl = TextEditingController();
   final ok = await showDialog<bool>(
@@ -33,40 +38,54 @@ Future<void> showAddIncomeSourceDialog(BuildContext context) async {
       ],
     ),
   );
-  if (ok != true || !context.mounted) return;
+  if (ok != true || !context.mounted) return null;
   final name = sentenceCase(nameCtrl.text);
-  if (name.isEmpty) return;
+  if (name.isEmpty) return null;
   final state = context.read<AppState>();
-  await state.repo.addIncomeSource(
+  final sortOrder = state.incomeSources.length;
+  final id = await state.repo.addIncomeSource(
     householdId: state.appUser!.householdId!,
     monthId: state.monthId!,
     nameEn: name,
     nameRu: name,
-    sortOrder: state.incomeSources.length,
+    sortOrder: sortOrder,
+  );
+  return IncomeSource(
+    id: id,
+    nameEn: name,
+    nameRu: name,
+    sortOrder: sortOrder,
   );
 }
 
 Future<void> showAddIncomeEntryFlow(BuildContext context) async {
-  final state = context.read<AppState>();
-  if (state.incomeSources.isEmpty) {
-    await showAddIncomeSourceDialog(context);
+  IncomeSource? created;
+  if (context.read<AppState>().incomeSources.isEmpty) {
+    created = await _createIncomeSource(context);
     if (!context.mounted) return;
-    if (context.read<AppState>().incomeSources.isEmpty) return;
+    if (created == null && context.read<AppState>().incomeSources.isEmpty) {
+      return;
+    }
   }
-  final sources = context.read<AppState>().incomeSources;
-  await showIncomeEntryEditor(context, sources: sources);
+  await showIncomeEntryEditor(
+    context,
+    sources: created == null ? null : [created],
+  );
 }
 
 Future<void> showIncomeEntryEditor(
   BuildContext context, {
-  required List<IncomeSource> sources,
+  List<IncomeSource>? sources,
   IncomeEntry? entry,
 }) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
-  if (sources.isEmpty) return;
+  final initialSources = sources ?? state.incomeSources;
 
-  var sourceId = entry?.sourceId ?? sources.first.id;
+  var sourceId = entry?.sourceId ?? initialSources.firstOrNull?.id;
+  IncomeSource? pendingSource = initialSources
+      .where((s) => !state.incomeSources.any((live) => live.id == s.id))
+      .firstOrNull;
   final amountCtrl = TextEditingController(
     text: entry != null ? entry.amount.toStringAsFixed(2) : '',
   );
@@ -80,6 +99,12 @@ Future<void> showIncomeEntryEditor(
       return FormSheet(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
+            final live = ctx.watch<AppState>();
+            var liveSources = List<IncomeSource>.of(live.incomeSources);
+            if (pendingSource != null &&
+                !liveSources.any((s) => s.id == pendingSource!.id)) {
+              liveSources = [...liveSources, pendingSource!];
+            }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
@@ -89,21 +114,38 @@ Future<void> showIncomeEntryEditor(
                   entry == null ? l10n.addEntry : l10n.editIncome,
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
-                DropdownButtonFormField<String>(
-                  initialValue: sourceId,
-                  decoration: InputDecoration(labelText: l10n.income),
-                  items: sources
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s.id,
-                          child: Text(s.localizedName(state.localeCode)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setModal(() => sourceId = v);
-                  },
+                if (liveSources.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(sourceId),
+                    initialValue: sourceId,
+                    decoration: InputDecoration(labelText: l10n.income),
+                    items: liveSources
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.localizedName(live.localeCode)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setModal(() => sourceId = v);
+                    },
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final created = await _createIncomeSource(ctx);
+                      if (created == null || !ctx.mounted) return;
+                      setModal(() {
+                        sourceId = created.id;
+                        pendingSource = created;
+                      });
+                    },
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addIncomeSource),
+                  ),
                 ),
                 TextField(
                   controller: amountCtrl,
@@ -117,7 +159,9 @@ Future<void> showIncomeEntryEditor(
                   decoration: InputDecoration(labelText: l10n.note),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.pop(ctx, 'save'),
+                  onPressed: sourceId == null
+                      ? null
+                      : () => Navigator.pop(ctx, 'save'),
                   child: Text(l10n.save),
                 ),
                 if (entry != null)
@@ -152,6 +196,8 @@ Future<void> showIncomeEntryEditor(
     return;
   }
 
+  final selectedSourceId = sourceId;
+  if (selectedSourceId == null) return;
   final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
   if (amount <= 0) return;
   final noteText = sentenceCase(noteCtrl.text);
@@ -161,7 +207,7 @@ Future<void> showIncomeEntryEditor(
     await state.repo.addIncomeEntry(
       householdId: hid,
       monthId: monthId,
-      sourceId: sourceId,
+      sourceId: selectedSourceId,
       amount: amount,
       note: note,
     );
@@ -170,7 +216,7 @@ Future<void> showIncomeEntryEditor(
       householdId: hid,
       monthId: monthId,
       entry: entry.copyWith(
-        sourceId: sourceId,
+        sourceId: selectedSourceId,
         amount: amount,
         note: note,
       ),
