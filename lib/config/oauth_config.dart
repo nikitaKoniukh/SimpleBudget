@@ -3,8 +3,9 @@
 /// Filled from Firebase / GoogleService-Info.plist after FlutterFire configure
 /// for bundle ID `com.yetzira.syncmonth`.
 ///
-/// After adding Android SHA-1 on the SyncMonth Firebase Android app, re-download
-/// `google-services.json` if OAuth clients change.
+/// Android debug SHA-1 / SHA-256 are registered on the SyncMonth Firebase app.
+/// Re-download `google-services.json` if OAuth clients change. Play Store builds
+/// also need the Play App Signing SHA-1.
 class OAuthConfig {
   /// iOS OAuth client ID (GoogleService-Info.plist `CLIENT_ID`).
   static const String googleIosClientId =

@@ -77,10 +77,7 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       _mapAccountExists(e);
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw StateError('cancelled');
-      }
-      rethrow;
+      _mapGoogleSignInException(e);
     }
   }
 
@@ -121,6 +118,54 @@ class AuthService {
         throw StateError('cancelled');
       }
       rethrow;
+    }
+  }
+
+  Never _mapGoogleSignInException(GoogleSignInException e) {
+    debugPrint(
+      'GoogleSignInException code=${e.code} description=${e.description} '
+      'details=${e.details}',
+    );
+    if (e.code == GoogleSignInExceptionCode.canceled) {
+      if (_looksLikeGoogleConfigFailure(e.description)) {
+        throw StateError(_googleConfigFailureMessage);
+      }
+      throw StateError('cancelled');
+    }
+    throw StateError(_googleSignInUserMessage(e));
+  }
+
+  static const String _googleConfigFailureMessage =
+      'Google Sign-In is not configured for this Android build. '
+      'Add the debug SHA-1 to the Firebase Android app and reinstall.';
+
+  bool _looksLikeGoogleConfigFailure(String? description) {
+    if (description == null || description.isEmpty) return false;
+    final text = description.toLowerCase();
+    return text.contains('account reauth failed') ||
+        text.contains('[16]') ||
+        text.contains('[10]') ||
+        text.contains('developer_error') ||
+        text.contains('apiexception: 10');
+  }
+
+  String _googleSignInUserMessage(GoogleSignInException e) {
+    switch (e.code) {
+      case GoogleSignInExceptionCode.clientConfigurationError:
+      case GoogleSignInExceptionCode.providerConfigurationError:
+        return _googleConfigFailureMessage;
+      case GoogleSignInExceptionCode.unknownError:
+        final desc = (e.description ?? '').toLowerCase();
+        if (desc.contains('no credential')) {
+          return 'Google Sign-In could not find an account. '
+              'Sign in to a Google account on this device, or check that the '
+              'Android SHA-1 is registered in Firebase.';
+        }
+        return 'Google Sign-In failed. Sign in to a Google account on this '
+            'device, or check that the Android SHA-1 is registered in Firebase.';
+      default:
+        return 'Google Sign-In failed. Sign in to a Google account on this '
+            'device, or check that the Android SHA-1 is registered in Firebase.';
     }
   }
 
@@ -208,10 +253,7 @@ class AuthService {
         GoogleAuthProvider.credential(idToken: idToken),
       );
     } on GoogleSignInException catch (e) {
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw StateError('cancelled');
-      }
-      rethrow;
+      _mapGoogleSignInException(e);
     }
   }
 

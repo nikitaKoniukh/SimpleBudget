@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "339787672116-uga7rjp43506lbp2uupbf5356g5hlp61.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.yetzira.syncmonth",
+            "certificate_hash": "0a9501a75240f3ef44fec18f098251fc269c306d"
+          }
+        },
+        {
           "client_id": "339787672116-laasbhap1jh520nj8i6iqlks2kmmcc7e.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -31,10 +39,10 @@
               "client_type": 3
             },
             {
-              "client_id": "339787672116-gh10imd92oavvqn1bqu8c5bore73kati.apps.googleusercontent.com",
+              "client_id": "339787672116-c5i7s1303msvea8qgmv4slvqv6vh2b0p.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.yetzira.syncmonth"
+                "bundle_id": "com.simplebudget.simpleBudget"
               }
             }
           ]
