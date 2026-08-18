@@ -13,8 +13,8 @@ import '../models/models.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _db = firestore ?? FirebaseFirestore.instance;
+    : _auth = auth ?? FirebaseAuth.instance,
+      _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _db;
@@ -134,13 +134,111 @@ class AuthService {
     throw e;
   }
 
+  List<String> get providerIds =>
+      _auth.currentUser?.providerData.map((p) => p.providerId).toList() ??
+      const [];
+
   Future<void> signOut() async {
+    await _auth.signOut();
+    if (!_googleReady) return;
     try {
       await GoogleSignIn.instance.signOut();
     } catch (_) {
-      // Ignore if Google was never used.
+      // Ignore if Google sign-out is unavailable.
     }
-    await _auth.signOut();
+  }
+
+  Future<void> deleteUserDoc(String uid) async {
+    await _db.collection('users').doc(uid).delete();
+  }
+
+  Future<void> deleteAuthUser({String? password}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Not signed in');
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code != 'requires-recent-login') rethrow;
+      await reauthenticate(password: password);
+      await user.delete();
+    }
+    if (!_googleReady) return;
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+  }
+
+  Future<void> reauthenticate({String? password}) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('Not signed in');
+    final ids = providerIds;
+    if (ids.contains('google.com')) {
+      await _reauthenticateGoogle(user);
+      return;
+    }
+    if (ids.contains('apple.com')) {
+      await _reauthenticateApple(user);
+      return;
+    }
+    if (ids.contains('password')) {
+      if (password == null || password.isEmpty) {
+        throw FirebaseAuthException(code: 'requires-recent-login');
+      }
+      final email = user.email;
+      if (email == null || email.isEmpty) {
+        throw StateError('No email on account');
+      }
+      await user.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: email, password: password),
+      );
+      return;
+    }
+    throw FirebaseAuthException(code: 'requires-recent-login');
+  }
+
+  Future<void> _reauthenticateGoogle(User user) async {
+    await _ensureGoogleInitialized();
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw StateError('Google Sign-In did not return an ID token.');
+      }
+      await user.reauthenticateWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        throw StateError('cancelled');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _reauthenticateApple(User user) async {
+    final rawNonce = _generateNonce();
+    final nonce = _sha256ofString(rawNonce);
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+      await user.reauthenticateWithCredential(
+        OAuthProvider('apple.com').credential(
+          idToken: appleCredential.identityToken,
+          rawNonce: rawNonce,
+          accessToken: appleCredential.authorizationCode,
+        ),
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw StateError('cancelled');
+      }
+      rethrow;
+    }
   }
 
   Future<AppUser> ensureUserDoc(User firebaseUser) async {

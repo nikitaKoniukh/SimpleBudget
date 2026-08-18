@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
+import '../settings/account_actions.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -50,59 +51,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.household)),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: false,
-                  label: Text(l10n.createHousehold),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                    value: false,
+                    label: Text(l10n.createHousehold),
+                  ),
+                  ButtonSegment(value: true, label: Text(l10n.joinHousehold)),
+                ],
+                selected: {_joining},
+                onSelectionChanged: (s) => setState(() => _joining = s.first),
+              ),
+              const SizedBox(height: 24),
+              if (_joining)
+                TextField(
+                  controller: _code,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    labelText: l10n.inviteCode,
+                    border: const OutlineInputBorder(),
+                  ),
+                )
+              else
+                TextField(
+                  controller: _name,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    labelText: l10n.householdName,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
-                ButtonSegment(
-                  value: true,
-                  label: Text(l10n.joinHousehold),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
-              selected: {_joining},
-              onSelectionChanged: (s) => setState(() => _joining = s.first),
-            ),
-            const SizedBox(height: 24),
-            if (_joining)
-              TextField(
-                controller: _code,
-                textCapitalization: TextCapitalization.characters,
-                decoration: InputDecoration(
-                  labelText: l10n.inviteCode,
-                  border: const OutlineInputBorder(),
-                ),
-              )
-            else
-              TextField(
-                controller: _name,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: l10n.householdName,
-                  border: const OutlineInputBorder(),
-                ),
+              const Spacer(),
+              FilledButton(
+                onPressed: _busy ? null : _submit,
+                child: _busy
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        _joining ? l10n.joinHousehold : l10n.createHousehold,
+                      ),
               ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _busy ? null : () => signOutAndReturnToAuth(context),
+                child: Text(l10n.signOut),
+              ),
+              TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => confirmAndDeleteAccount(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: Text(l10n.deleteAccount),
               ),
             ],
-            const Spacer(),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: _busy
-                  ? const CircularProgressIndicator()
-                  : Text(_joining ? l10n.joinHousehold : l10n.createHousehold),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -9,7 +9,7 @@ import '../utils/money.dart';
 
 class BudgetRepository {
   BudgetRepository({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
   final _uuid = const Uuid();
@@ -23,16 +23,14 @@ class BudgetRepository {
   DocumentReference<Map<String, dynamic>> _monthRef(
     String householdId,
     String monthId,
-  ) =>
-      _months(householdId).doc(monthId);
+  ) => _months(householdId).doc(monthId);
 
   CollectionReference<Map<String, dynamic>> _categories(String householdId) =>
       _householdRef(householdId).collection('categories');
 
   CollectionReference<Map<String, dynamic>> _subcategories(
     String householdId,
-  ) =>
-      _householdRef(householdId).collection('subcategories');
+  ) => _householdRef(householdId).collection('subcategories');
 
   String _generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -66,10 +64,7 @@ class BudgetRepository {
       inviteCode: _generateInviteCode(),
       createdBy: creatorUid,
     );
-    await ref.set({
-      ...household.toMap(),
-      'catalogVersion': 3,
-    });
+    await ref.set({...household.toMap(), 'catalogVersion': 3});
     await _db.collection('users').doc(creatorUid).update({
       'householdId': household.id,
     });
@@ -107,6 +102,61 @@ class BudgetRepository {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
     await _householdRef(householdId).update({'name': trimmed});
+  }
+
+  Future<void> _deleteQueryDocs(
+    CollectionReference<Map<String, dynamic>> col,
+  ) async {
+    final snap = await col.get();
+    if (snap.docs.isEmpty) return;
+    await _commitInChunks([
+      for (final doc in snap.docs) (batch) => batch.delete(doc.reference),
+    ]);
+  }
+
+  Future<void> deleteHousehold({
+    required String householdId,
+    required String ownerUid,
+  }) async {
+    const monthSubs = [
+      'incomeSources',
+      'incomeEntries',
+      'plans',
+      'expenses',
+      'categories',
+      'lineItems',
+    ];
+    final months = await _months(householdId).get();
+    for (final month in months.docs) {
+      for (final name in monthSubs) {
+        await _deleteQueryDocs(month.reference.collection(name));
+      }
+    }
+    await _deleteQueryDocs(_months(householdId));
+    await _deleteQueryDocs(_categories(householdId));
+    await _deleteQueryDocs(_subcategories(householdId));
+    await _householdRef(householdId).delete();
+    await _db.collection('users').doc(ownerUid).update({
+      'householdId': FieldValue.delete(),
+    });
+  }
+
+  Future<void> leaveHousehold({
+    required String householdId,
+    required String uid,
+  }) async {
+    final ref = _householdRef(householdId);
+    final snap = await ref.get();
+    if (snap.exists) {
+      final members = List<String>.from(
+        snap.data()?['memberIds'] as List? ?? const [],
+      );
+      members.remove(uid);
+      await ref.update({'memberIds': members});
+    }
+    await _db.collection('users').doc(uid).update({
+      'householdId': FieldValue.delete(),
+    });
   }
 
   Stream<Household?> watchHousehold(String householdId) {
@@ -215,7 +265,10 @@ class BudgetRepository {
   }
 
   Stream<List<BudgetCategory>> watchCategories(String householdId) {
-    return _categories(householdId).orderBy('sortOrder').snapshots().map(
+    return _categories(householdId)
+        .orderBy('sortOrder')
+        .snapshots()
+        .map(
           (s) => s.docs
               .map((d) => BudgetCategory.fromMap(d.id, d.data()))
               .toList(),
@@ -223,17 +276,21 @@ class BudgetRepository {
   }
 
   Stream<List<Subcategory>> watchSubcategories(String householdId) {
-    return _subcategories(householdId).orderBy('sortOrder').snapshots().map(
-          (s) => s.docs
-              .map((d) => Subcategory.fromMap(d.id, d.data()))
-              .toList(),
+    return _subcategories(householdId)
+        .orderBy('sortOrder')
+        .snapshots()
+        .map(
+          (s) =>
+              s.docs.map((d) => Subcategory.fromMap(d.id, d.data())).toList(),
         );
   }
 
   Stream<List<MonthPlan>> watchPlans(String householdId, String monthId) {
-    return _monthRef(householdId, monthId).collection('plans').snapshots().map(
-          (s) =>
-              s.docs.map((d) => MonthPlan.fromMap(d.id, d.data())).toList(),
+    return _monthRef(householdId, monthId)
+        .collection('plans')
+        .snapshots()
+        .map(
+          (s) => s.docs.map((d) => MonthPlan.fromMap(d.id, d.data())).toList(),
         );
   }
 
@@ -255,9 +312,8 @@ class BudgetRepository {
         .orderBy('sortOrder')
         .snapshots()
         .map(
-          (s) => s.docs
-              .map((d) => IncomeSource.fromMap(d.id, d.data()))
-              .toList(),
+          (s) =>
+              s.docs.map((d) => IncomeSource.fromMap(d.id, d.data())).toList(),
         );
   }
 
@@ -310,27 +366,27 @@ class BudgetRepository {
     required double delta,
   }) async {
     if (delta == 0) return;
-    await _categories(householdId).doc(categoryId).update({
-      'savedTotal': FieldValue.increment(delta),
-    });
+    await _categories(
+      householdId,
+    ).doc(categoryId).update({'savedTotal': FieldValue.increment(delta)});
   }
 
   Future<void> updateCategory({
     required String householdId,
     required BudgetCategory category,
   }) async {
-    await _categories(householdId)
-        .doc(category.id)
-        .set(category.toMap(), SetOptions(merge: true));
+    await _categories(
+      householdId,
+    ).doc(category.id).set(category.toMap(), SetOptions(merge: true));
   }
 
   Future<void> deleteCategory({
     required String householdId,
     required String categoryId,
   }) async {
-    final subs = await _subcategories(householdId)
-        .where('categoryId', isEqualTo: categoryId)
-        .get();
+    final subs = await _subcategories(
+      householdId,
+    ).where('categoryId', isEqualTo: categoryId).get();
     final ops = <void Function(WriteBatch)>[];
     for (final doc in subs.docs) {
       ops.add((batch) => batch.delete(doc.reference));
@@ -391,10 +447,9 @@ class BudgetRepository {
     required String nameEn,
     required String nameRu,
   }) async {
-    final existing = await _subcategories(householdId)
-        .where('categoryId', isEqualTo: categoryId)
-        .limit(1)
-        .get();
+    final existing = await _subcategories(
+      householdId,
+    ).where('categoryId', isEqualTo: categoryId).limit(1).get();
     if (existing.docs.isNotEmpty) return existing.docs.first.id;
     return addSubcategory(
       householdId: householdId,
@@ -428,9 +483,9 @@ class BudgetRepository {
     required String householdId,
     required Subcategory subcategory,
   }) async {
-    await _subcategories(householdId)
-        .doc(subcategory.id)
-        .set(subcategory.toMap(), SetOptions(merge: true));
+    await _subcategories(
+      householdId,
+    ).doc(subcategory.id).set(subcategory.toMap(), SetOptions(merge: true));
   }
 
   Future<void> deleteSubcategory({
@@ -456,10 +511,10 @@ class BudgetRepository {
     required String monthId,
     required String subcategoryId,
   }) async {
-    await _monthRef(householdId, monthId)
-        .collection('plans')
-        .doc(subcategoryId)
-        .delete();
+    await _monthRef(
+      householdId,
+      monthId,
+    ).collection('plans').doc(subcategoryId).delete();
   }
 
   Future<String> addExpense({
@@ -470,13 +525,15 @@ class BudgetRepository {
     required DateTime date,
     String? note,
   }) async {
-    final doc = await _monthRef(householdId, monthId).collection('expenses').add({
-      'subcategoryId': subcategoryId,
-      'amount': amount,
-      'date': date.toIso8601String(),
-      'note': note,
-      'createdAt': DateTime.now().toIso8601String(),
-    });
+    final doc = await _monthRef(householdId, monthId)
+        .collection('expenses')
+        .add({
+          'subcategoryId': subcategoryId,
+          'amount': amount,
+          'date': date.toIso8601String(),
+          'note': note,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
     return doc.id;
   }
 
@@ -496,10 +553,10 @@ class BudgetRepository {
     required String monthId,
     required String expenseId,
   }) async {
-    await _monthRef(householdId, monthId)
-        .collection('expenses')
-        .doc(expenseId)
-        .delete();
+    await _monthRef(
+      householdId,
+      monthId,
+    ).collection('expenses').doc(expenseId).delete();
   }
 
   Future<void> addIncomeEntry({
@@ -533,10 +590,10 @@ class BudgetRepository {
     required String monthId,
     required String entryId,
   }) async {
-    await _monthRef(householdId, monthId)
-        .collection('incomeEntries')
-        .doc(entryId)
-        .delete();
+    await _monthRef(
+      householdId,
+      monthId,
+    ).collection('incomeEntries').doc(entryId).delete();
   }
 
   Future<String> addIncomeSource({
@@ -546,12 +603,9 @@ class BudgetRepository {
     required String nameRu,
     required int sortOrder,
   }) async {
-    final doc =
-        await _monthRef(householdId, monthId).collection('incomeSources').add({
-      'nameEn': nameEn,
-      'nameRu': nameRu,
-      'sortOrder': sortOrder,
-    });
+    final doc = await _monthRef(householdId, monthId)
+        .collection('incomeSources')
+        .add({'nameEn': nameEn, 'nameRu': nameRu, 'sortOrder': sortOrder});
     return doc.id;
   }
 
@@ -585,8 +639,10 @@ class BudgetRepository {
       return;
     }
 
-    final monthCats = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
-    final monthItems = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    final monthCats =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    final monthItems =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
     var hasLegacy = false;
     for (final monthDoc in monthsSnap.docs) {
       final cats = await monthDoc.reference.collection('categories').get();
@@ -655,30 +711,28 @@ class BudgetRepository {
           final createdSubId = subId;
           final sort = subSort;
           ops.add(
-            (batch) => batch.set(_subcategories(householdId).doc(createdSubId), {
-              'categoryId': newCatId,
-              'nameEn': label,
-              'nameRu': descRu.isEmpty ? label : descRu,
-              'installmentTotal':
-                  (data['installmentTotal'] as num?)?.toInt(),
-              'sortOrder': sort,
-              'archived': false,
-            }),
+            (batch) =>
+                batch.set(_subcategories(householdId).doc(createdSubId), {
+                  'categoryId': newCatId,
+                  'nameEn': label,
+                  'nameRu': descRu.isEmpty ? label : descRu,
+                  'installmentTotal': (data['installmentTotal'] as num?)
+                      ?.toInt(),
+                  'sortOrder': sort,
+                  'archived': false,
+                }),
           );
           subSort++;
         }
 
         final planSubId = subId;
         final planned = (data['planned'] as num?)?.toDouble() ?? 0;
-        final installmentCurrent =
-            (data['installmentCurrent'] as num?)?.toInt();
+        final installmentCurrent = (data['installmentCurrent'] as num?)
+            ?.toInt();
         ops.add(
           (batch) => batch.set(
             monthDoc.reference.collection('plans').doc(planSubId),
-            {
-              'planned': planned,
-              'installmentCurrent': installmentCurrent,
-            },
+            {'planned': planned, 'installmentCurrent': installmentCurrent},
           ),
         );
 
@@ -711,14 +765,16 @@ class BudgetRepository {
     final subs = await _subcategories(householdId).get();
     final monthsSnap = await _months(householdId).get();
 
-    final subsByCat = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    final subsByCat =
+        <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
     for (final sub in subs.docs) {
       final catId = sub.data()['categoryId'] as String? ?? '';
       subsByCat.putIfAbsent(catId, () => []).add(sub);
     }
 
-    final savingsDocs =
-        cats.docs.where((d) => d.data()['type'] == 'savings').toList();
+    final savingsDocs = cats.docs
+        .where((d) => d.data()['type'] == 'savings')
+        .toList();
     final subIdToCatId = <String, String>{};
     final ops = <void Function(WriteBatch)>[];
 
@@ -760,11 +816,9 @@ class BudgetRepository {
     for (final catDoc in savingsDocs) {
       final total = totals[catDoc.id] ?? 0;
       ops.add(
-        (batch) => batch.set(
-          catDoc.reference,
-          {'savedTotal': total},
-          SetOptions(merge: true),
-        ),
+        (batch) => batch.set(catDoc.reference, {
+          'savedTotal': total,
+        }, SetOptions(merge: true)),
       );
     }
 

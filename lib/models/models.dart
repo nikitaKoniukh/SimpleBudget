@@ -28,11 +28,11 @@ class AppUser {
   }
 
   Map<String, dynamic> toMap() => {
-        'email': email,
-        'displayName': displayName,
-        'householdId': householdId,
-        'localeCode': localeCode,
-      };
+    'email': email,
+    'displayName': displayName,
+    'householdId': householdId,
+    'localeCode': localeCode,
+  };
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
     return AppUser(
@@ -62,13 +62,19 @@ class Household {
   final String currency;
   final String? createdBy;
 
+  bool isOwnedBy(String uid) {
+    if (createdBy == uid) return true;
+    final missingOwner = createdBy == null || createdBy!.isEmpty;
+    return missingOwner && memberIds.length == 1 && memberIds.contains(uid);
+  }
+
   Map<String, dynamic> toMap() => {
-        'name': name,
-        'memberIds': memberIds,
-        'inviteCode': inviteCode,
-        'currency': currency,
-        'createdBy': createdBy,
-      };
+    'name': name,
+    'memberIds': memberIds,
+    'inviteCode': inviteCode,
+    'currency': currency,
+    'createdBy': createdBy,
+  };
 
   factory Household.fromMap(String id, Map<String, dynamic> map) {
     return Household(
@@ -83,21 +89,14 @@ class Household {
 }
 
 class BudgetMonth {
-  const BudgetMonth({
-    required this.id,
-    this.notes,
-    this.status = 'active',
-  });
+  const BudgetMonth({required this.id, this.notes, this.status = 'active'});
 
   /// Format: yyyy-MM
   final String id;
   final String? notes;
   final String status;
 
-  Map<String, dynamic> toMap() => {
-        'notes': notes,
-        'status': status,
-      };
+  Map<String, dynamic> toMap() => {'notes': notes, 'status': status};
 
   factory BudgetMonth.fromMap(String id, Map<String, dynamic> map) {
     return BudgetMonth(
@@ -125,10 +124,10 @@ class IncomeSource {
       localeCode == 'ru' ? nameRu : nameEn;
 
   Map<String, dynamic> toMap() => {
-        'nameEn': nameEn,
-        'nameRu': nameRu,
-        'sortOrder': sortOrder,
-      };
+    'nameEn': nameEn,
+    'nameRu': nameRu,
+    'sortOrder': sortOrder,
+  };
 
   factory IncomeSource.fromMap(String id, Map<String, dynamic> map) {
     return IncomeSource(
@@ -156,17 +155,13 @@ class IncomeEntry {
   final DateTime? createdAt;
 
   Map<String, dynamic> toMap() => {
-        'sourceId': sourceId,
-        'amount': amount,
-        'note': note,
-        'createdAt': createdAt?.toIso8601String(),
-      };
+    'sourceId': sourceId,
+    'amount': amount,
+    'note': note,
+    'createdAt': createdAt?.toIso8601String(),
+  };
 
-  IncomeEntry copyWith({
-    String? sourceId,
-    double? amount,
-    String? note,
-  }) {
+  IncomeEntry copyWith({String? sourceId, double? amount, String? note}) {
     return IncomeEntry(
       id: id,
       sourceId: sourceId ?? this.sourceId,
@@ -207,8 +202,10 @@ class BudgetCategory {
   final int colorValue;
   final String type; // expense | savings | debt
   final int sortOrder;
+
   /// Optional lifetime goal for savings pots. Null means no target.
   final double? targetAmount;
+
   /// Cumulative deposits. Written via increment, not [toMap].
   final double savedTotal;
 
@@ -243,13 +240,13 @@ class BudgetCategory {
 
   /// Does not include [savedTotal] so merge-updates cannot clobber increments.
   Map<String, dynamic> toMap() => {
-        'nameEn': nameEn,
-        'nameRu': nameRu,
-        'colorValue': colorValue,
-        'type': type,
-        'sortOrder': sortOrder,
-        'targetAmount': targetAmount,
-      };
+    'nameEn': nameEn,
+    'nameRu': nameRu,
+    'colorValue': colorValue,
+    'type': type,
+    'sortOrder': sortOrder,
+    'targetAmount': targetAmount,
+  };
 
   factory BudgetCategory.fromMap(String id, Map<String, dynamic> map) {
     return BudgetCategory(
@@ -310,13 +307,13 @@ class Subcategory {
   }
 
   Map<String, dynamic> toMap() => {
-        'categoryId': categoryId,
-        'nameEn': nameEn,
-        'nameRu': nameRu,
-        'installmentTotal': installmentTotal,
-        'sortOrder': sortOrder,
-        'archived': archived,
-      };
+    'categoryId': categoryId,
+    'nameEn': nameEn,
+    'nameRu': nameRu,
+    'installmentTotal': installmentTotal,
+    'sortOrder': sortOrder,
+    'archived': archived,
+  };
 
   factory Subcategory.fromMap(String id, Map<String, dynamic> map) {
     return Subcategory(
@@ -357,9 +354,9 @@ class MonthPlan {
   }
 
   Map<String, dynamic> toMap() => {
-        'planned': planned,
-        'installmentCurrent': installmentCurrent,
-      };
+    'planned': planned,
+    'installmentCurrent': installmentCurrent,
+  };
 
   factory MonthPlan.fromMap(String subcategoryId, Map<String, dynamic> map) {
     return MonthPlan(
@@ -404,12 +401,12 @@ class Expense {
   }
 
   Map<String, dynamic> toMap() => {
-        'subcategoryId': subcategoryId,
-        'amount': amount,
-        'date': date.toIso8601String(),
-        'note': note,
-        'createdAt': createdAt?.toIso8601String(),
-      };
+    'subcategoryId': subcategoryId,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'note': note,
+    'createdAt': createdAt?.toIso8601String(),
+  };
 
   factory Expense.fromMap(String id, Map<String, dynamic> map) {
     return Expense(

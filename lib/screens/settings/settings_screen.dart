@@ -10,6 +10,7 @@ import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../category/categories_screen.dart';
 import '../home/month_actions.dart';
+import 'account_actions.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -61,9 +62,9 @@ class SettingsScreen extends StatelessWidget {
       await context.read<AppState>().updateHouseholdName(name);
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${l10n.errorGeneric}: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${l10n.errorGeneric}: $e')));
     }
   }
 
@@ -78,108 +79,130 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         appBar: AppBar(title: Text(l10n.settings)),
         body: ListView(
-        children: [
-          ListTile(
-            title: Text(l10n.household),
-            subtitle: Text(household?.name ?? '—'),
-            trailing: const Icon(Icons.edit_outlined),
-            onTap: household == null ? null : () => _editHouseholdName(context),
-          ),
-          ListTile(
-            title: Text(l10n.members),
-            subtitle: Text('${household?.memberIds.length ?? 0}'),
-          ),
-          ListTile(
-            title: Text(l10n.invitePartner),
-            subtitle: Text(household?.inviteCode ?? '—'),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy),
-              onPressed: household == null
+          children: [
+            ListTile(
+              title: Text(l10n.household),
+              subtitle: Text(household?.name ?? '—'),
+              trailing: const Icon(Icons.edit_outlined),
+              onTap: household == null
+                  ? null
+                  : () => _editHouseholdName(context),
+            ),
+            ListTile(
+              title: Text(l10n.members),
+              subtitle: Text('${household?.memberIds.length ?? 0}'),
+            ),
+            ListTile(
+              title: Text(l10n.invitePartner),
+              subtitle: Text(household?.inviteCode ?? '—'),
+              trailing: IconButton(
+                icon: const Icon(Icons.copy),
+                onPressed: household == null
+                    ? null
+                    : () async {
+                        await Clipboard.setData(
+                          ClipboardData(text: household.inviteCode),
+                        );
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.inviteCopied)),
+                        );
+                      },
+              ),
+            ),
+            ListTile(
+              title: Text(l10n.shareInvite),
+              leading: const Icon(Icons.ios_share),
+              onTap: household == null ? null : () => _shareInvite(context),
+            ),
+            ListTile(
+              title: Text(l10n.exportCsv),
+              leading: const Icon(Icons.table_view_outlined),
+              onTap: !state.hasMonthSelected
+                  ? null
+                  : () => exportAndShareMonthCsv(context),
+            ),
+            const Divider(),
+            ListTile(
+              title: Text(l10n.language),
+              subtitle: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'en', label: Text('English')),
+                  ButtonSegment(value: 'ru', label: Text('Русский')),
+                ],
+                selected: {state.localeCode},
+                onSelectionChanged: (s) => state.setLocale(s.first),
+              ),
+            ),
+            ListTile(title: Text(l10n.currency), subtitle: const Text('₪ ILS')),
+            ListTile(
+              title: Text(l10n.manageCategories),
+              subtitle: Text('${state.categories.length}'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+                );
+              },
+            ),
+            ListTile(
+              title: Text(l10n.addMonth),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showCreateMonthDialog(context),
+            ),
+            ListTile(
+              title: Text(l10n.startNextMonth),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: !state.hasMonthSelected
                   ? null
                   : () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: household.inviteCode),
-                      );
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.inviteCopied)),
-                      );
+                      try {
+                        final next = await state.duplicateCurrentMonth();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${l10n.monthCreated}: $next'),
+                          ),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+                        );
+                      }
                     },
             ),
-          ),
-          ListTile(
-            title: Text(l10n.shareInvite),
-            leading: const Icon(Icons.ios_share),
-            onTap: household == null ? null : () => _shareInvite(context),
-          ),
-          ListTile(
-            title: Text(l10n.exportCsv),
-            leading: const Icon(Icons.table_view_outlined),
-            onTap: !state.hasMonthSelected
-                ? null
-                : () => exportAndShareMonthCsv(context),
-          ),
-          const Divider(),
-          ListTile(
-            title: Text(l10n.language),
-            subtitle: SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'en', label: Text('English')),
-                ButtonSegment(value: 'ru', label: Text('Русский')),
-              ],
-              selected: {state.localeCode},
-              onSelectionChanged: (s) => state.setLocale(s.first),
+            const Divider(),
+            ListTile(
+              title: Text(l10n.signOut),
+              leading: const Icon(Icons.logout),
+              onTap: () => signOutAndReturnToAuth(context),
             ),
-          ),
-          ListTile(
-            title: Text(l10n.currency),
-            subtitle: const Text('₪ ILS'),
-          ),
-          ListTile(
-            title: Text(l10n.manageCategories),
-            subtitle: Text('${state.categories.length}'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CategoriesScreen(),
+            if (state.isHouseholdOwner)
+              ListTile(
+                title: Text(
+                  l10n.deleteHousehold,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
-              );
-            },
-          ),
-          ListTile(
-            title: Text(l10n.addMonth),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showCreateMonthDialog(context),
-          ),
-          ListTile(
-            title: Text(l10n.startNextMonth),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: !state.hasMonthSelected
-                ? null
-                : () async {
-              try {
-                final next = await state.duplicateCurrentMonth();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${l10n.monthCreated}: $next')),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${l10n.errorGeneric}: $e')),
-                );
-              }
-            },
-          ),
-          const Divider(),
-          ListTile(
-            title: Text(l10n.signOut),
-            leading: const Icon(Icons.logout),
-            onTap: () => state.auth.signOut(),
-          ),
-        ],
-      ),
+                leading: Icon(
+                  Icons.home_work_outlined,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onTap: () => confirmAndDeleteHousehold(context),
+              ),
+            ListTile(
+              title: Text(
+                l10n.deleteAccount,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              leading: Icon(
+                Icons.person_remove_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              onTap: () => confirmAndDeleteAccount(context),
+            ),
+          ],
+        ),
       ),
     );
   }

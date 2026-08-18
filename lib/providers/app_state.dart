@@ -9,11 +9,9 @@ import '../services/budget_repository.dart';
 import '../data/default_categories.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({
-    AuthService? authService,
-    BudgetRepository? budgetRepository,
-  })  : _auth = authService ?? AuthService(),
-        _repo = budgetRepository ?? BudgetRepository() {
+  AppState({AuthService? authService, BudgetRepository? budgetRepository})
+    : _auth = authService ?? AuthService(),
+      _repo = budgetRepository ?? BudgetRepository() {
     _authSub = _auth.authStateChanges.listen(_onAuthChanged);
   }
 
@@ -58,6 +56,13 @@ class AppState extends ChangeNotifier {
   String get localeCode => _localeCode;
   bool get isSignedIn => _firebaseUser != null;
   bool get hasHousehold => _household != null;
+  bool get isHouseholdOwner {
+    final uid = _firebaseUser?.uid;
+    final household = _household;
+    if (uid == null || household == null) return false;
+    return household.isOwnedBy(uid);
+  }
+
   bool get hasMonthSelected => _monthId != null && _monthId!.isNotEmpty;
   List<BudgetMonth> get months => _months;
 
@@ -84,9 +89,8 @@ class AppState extends ChangeNotifier {
     return MonthTotals(income: income, planned: planned, actual: actual);
   }
 
-  List<Subcategory> subcategoriesFor(String categoryId) => subcategories
-      .where((s) => s.categoryId == categoryId)
-      .toList();
+  List<Subcategory> subcategoriesFor(String categoryId) =>
+      subcategories.where((s) => s.categoryId == categoryId).toList();
 
   MonthPlan? planFor(String subcategoryId) {
     for (final plan in _plans) {
@@ -103,22 +107,24 @@ class AppState extends ChangeNotifier {
       .fold(0, (s, e) => s + e.amount);
 
   List<Expense> expensesFor(String subcategoryId) {
-    final list =
-        _expenses.where((e) => e.subcategoryId == subcategoryId).toList();
+    final list = _expenses
+        .where((e) => e.subcategoryId == subcategoryId)
+        .toList();
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
   }
 
-  double categoryPlanned(String categoryId) => subcategoriesFor(categoryId)
-      .fold(0, (s, sub) => s + plannedFor(sub.id));
+  double categoryPlanned(String categoryId) =>
+      subcategoriesFor(categoryId).fold(0, (s, sub) => s + plannedFor(sub.id));
 
   double categoryActual(String categoryId) =>
       subcategoriesFor(categoryId).fold(0, (s, sub) => s + spentFor(sub.id));
 
   List<Expense> expensesForCategory(String categoryId) {
     final subIds = subcategoriesFor(categoryId).map((s) => s.id).toSet();
-    final list =
-        _expenses.where((e) => subIds.contains(e.subcategoryId)).toList();
+    final list = _expenses
+        .where((e) => subIds.contains(e.subcategoryId))
+        .toList();
     list.sort((a, b) => b.date.compareTo(a.date));
     return list;
   }
@@ -273,23 +279,25 @@ class AppState extends ChangeNotifier {
     }
 
     final ready = Completer<Household?>();
-    _householdSub = _repo.watchHousehold(householdId).listen(
-      (h) {
-        _household = h;
-        if (!ready.isCompleted) ready.complete(h);
-        if (h == null) {
-          unawaited(_clearStaleHousehold());
-        }
-        notifyListeners();
-      },
-      onError: (Object e) {
-        if (!ready.isCompleted) {
-          ready.complete(null);
-        } else {
-          unawaited(_clearStaleHousehold());
-        }
-      },
-    );
+    _householdSub = _repo
+        .watchHousehold(householdId)
+        .listen(
+          (h) {
+            _household = h;
+            if (!ready.isCompleted) ready.complete(h);
+            if (h == null) {
+              unawaited(_clearStaleHousehold());
+            }
+            notifyListeners();
+          },
+          onError: (Object e) {
+            if (!ready.isCompleted) {
+              ready.complete(null);
+            } else {
+              unawaited(_clearStaleHousehold());
+            }
+          },
+        );
 
     final household = await ready.future;
     if (household == null) {
@@ -298,26 +306,30 @@ class AppState extends ChangeNotifier {
     }
 
     unawaited(_repo.migrateLegacyCatalogIfNeeded(householdId));
-    _categoriesSub = _repo.watchCategories(householdId).listen(
-      (v) {
-        _categories = v;
-        notifyListeners();
-      },
-      onError: (Object e) {
-        _error = e.toString();
-        notifyListeners();
-      },
-    );
-    _subcategoriesSub = _repo.watchSubcategories(householdId).listen(
-      (v) {
-        _subcategories = v;
-        notifyListeners();
-      },
-      onError: (Object e) {
-        _error = e.toString();
-        notifyListeners();
-      },
-    );
+    _categoriesSub = _repo
+        .watchCategories(householdId)
+        .listen(
+          (v) {
+            _categories = v;
+            notifyListeners();
+          },
+          onError: (Object e) {
+            _error = e.toString();
+            notifyListeners();
+          },
+        );
+    _subcategoriesSub = _repo
+        .watchSubcategories(householdId)
+        .listen(
+          (v) {
+            _subcategories = v;
+            notifyListeners();
+          },
+          onError: (Object e) {
+            _error = e.toString();
+            notifyListeners();
+          },
+        );
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
       _months = list;
       if (_monthId != null && !list.any((m) => m.id == _monthId)) {
@@ -395,7 +407,8 @@ class AppState extends ChangeNotifier {
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
-    final copyFrom = copyFromMonthId ??
+    final copyFrom =
+        copyFromMonthId ??
         _months.where((m) => m.id != monthId).firstOrNull?.id;
     if (copyFrom != null && copyFrom.isNotEmpty) {
       await _repo.createMonthFromCopy(
@@ -438,6 +451,43 @@ class AppState extends ChangeNotifier {
     final h = await _repo.joinHousehold(inviteCode: inviteCode, uid: uid);
     _appUser = _appUser?.copyWith(householdId: h.id);
     await _attachHousehold(h.id);
+  }
+
+  Future<void> signOut() => _auth.signOut();
+
+  Future<void> deleteHousehold() async {
+    final uid = _firebaseUser?.uid;
+    final household = _household;
+    if (uid == null || household == null) throw StateError('No household');
+    if (!household.isOwnedBy(uid)) {
+      throw StateError('Only the owner can delete the household');
+    }
+    await _detachBudgetListeners();
+    try {
+      await _repo.deleteHousehold(householdId: household.id, ownerUid: uid);
+    } catch (e) {
+      await _attachHousehold(household.id);
+      rethrow;
+    }
+    await _clearStaleHousehold();
+  }
+
+  Future<void> deleteAccount({String? password}) async {
+    if (isHouseholdOwner) {
+      throw StateError('must-delete-household-first');
+    }
+    final uid = _firebaseUser?.uid;
+    if (uid == null) throw StateError('Not signed in');
+    final hid = _household?.id ?? _appUser?.householdId;
+    if (hid != null) {
+      try {
+        await _repo.leaveHousehold(householdId: hid, uid: uid);
+      } catch (_) {}
+      await _detachBudgetListeners();
+      _household = null;
+    }
+    await _auth.deleteUserDoc(uid);
+    await _auth.deleteAuthUser(password: password);
   }
 
   Future<String> duplicateCurrentMonth() async {
@@ -563,10 +613,7 @@ class AppState extends ChangeNotifier {
   Future<void> updateSubcategory(Subcategory subcategory) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
-    await _repo.updateSubcategory(
-      householdId: hid,
-      subcategory: subcategory,
-    );
+    await _repo.updateSubcategory(householdId: hid, subcategory: subcategory);
   }
 
   Future<void> deleteSubcategory(String subcategoryId) async {
@@ -593,8 +640,7 @@ class AppState extends ChangeNotifier {
       plan: MonthPlan(
         subcategoryId: subcategoryId,
         planned: planned,
-        installmentCurrent:
-            clearInstallmentCurrent ? null : installmentCurrent,
+        installmentCurrent: clearInstallmentCurrent ? null : installmentCurrent,
       ),
     );
   }
@@ -645,11 +691,7 @@ class AppState extends ChangeNotifier {
         break;
       }
     }
-    await _repo.updateExpense(
-      householdId: hid,
-      monthId: mid,
-      expense: expense,
-    );
+    await _repo.updateExpense(householdId: hid, monthId: mid, expense: expense);
     if (old != null) {
       if (old.subcategoryId == expense.subcategoryId) {
         await _adjustSavedTotal(

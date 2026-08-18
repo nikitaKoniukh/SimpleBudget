@@ -73,11 +73,7 @@ void main() {
         ),
       ],
       plans: const [
-        MonthPlan(
-          subcategoryId: 'sub1',
-          planned: 400,
-          installmentCurrent: 3,
-        ),
+        MonthPlan(subcategoryId: 'sub1', planned: 400, installmentCurrent: 3),
       ],
       expenses: [
         Expense(
@@ -99,44 +95,76 @@ void main() {
     expect(csv.contains('TOTALS'), isTrue);
   });
 
-  test('BudgetCategory serializes optional target and ignores savedTotal in toMap',
-      () {
-    const cat = BudgetCategory(
-      id: 'c1',
-      nameEn: 'Emergency fund',
-      nameRu: 'Резервный фонд',
-      colorValue: 0xFFFFCC80,
-      type: 'savings',
-      sortOrder: 0,
-      targetAmount: 30000,
-      savedTotal: 1200,
-    );
-    expect(cat.isSavings, isTrue);
-    final map = cat.toMap();
-    expect(map['targetAmount'], 30000);
-    expect(map.containsKey('savedTotal'), isFalse);
+  test(
+    'BudgetCategory serializes optional target and ignores savedTotal in toMap',
+    () {
+      const cat = BudgetCategory(
+        id: 'c1',
+        nameEn: 'Emergency fund',
+        nameRu: 'Резервный фонд',
+        colorValue: 0xFFFFCC80,
+        type: 'savings',
+        sortOrder: 0,
+        targetAmount: 30000,
+        savedTotal: 1200,
+      );
+      expect(cat.isSavings, isTrue);
+      final map = cat.toMap();
+      expect(map['targetAmount'], 30000);
+      expect(map.containsKey('savedTotal'), isFalse);
 
-    final parsed = BudgetCategory.fromMap('c1', {
-      ...map,
-      'savedTotal': 1200,
-    });
-    expect(parsed.targetAmount, 30000);
-    expect(parsed.savedTotal, 1200);
+      final parsed = BudgetCategory.fromMap('c1', {...map, 'savedTotal': 1200});
+      expect(parsed.targetAmount, 30000);
+      expect(parsed.savedTotal, 1200);
 
-    final noTarget = BudgetCategory.fromMap('c2', {
-      'nameEn': 'Savings',
-      'nameRu': 'Накопления',
-      'colorValue': 0,
-      'type': 'savings',
-      'sortOrder': 1,
-    });
-    expect(noTarget.targetAmount, isNull);
-    expect(noTarget.savedTotal, 0);
-  });
+      final noTarget = BudgetCategory.fromMap('c2', {
+        'nameEn': 'Savings',
+        'nameRu': 'Накопления',
+        'colorValue': 0,
+        'type': 'savings',
+        'sortOrder': 1,
+      });
+      expect(noTarget.targetAmount, isNull);
+      expect(noTarget.savedTotal, 0);
+    },
+  );
 
   test('invite share message shape via localizations is not empty', () {
     final totals = MonthTotals(income: 100, planned: 80, actual: 50);
     expect(totals.remaining, 30);
     expect(totals.planExceedsIncome, isFalse);
   });
+
+  test(
+    'Household.isOwnedBy uses createdBy, or sole member if owner is missing',
+    () {
+      const owned = Household(
+        id: 'h1',
+        name: 'Ours',
+        memberIds: ['a', 'b'],
+        inviteCode: 'ABC123',
+        createdBy: 'a',
+      );
+      expect(owned.isOwnedBy('a'), isTrue);
+      expect(owned.isOwnedBy('b'), isFalse);
+
+      const legacySole = Household(
+        id: 'h2',
+        name: 'Mine',
+        memberIds: ['a'],
+        inviteCode: 'XYZ789',
+      );
+      expect(legacySole.isOwnedBy('a'), isTrue);
+      expect(legacySole.isOwnedBy('b'), isFalse);
+
+      const legacyShared = Household(
+        id: 'h3',
+        name: 'Shared',
+        memberIds: ['a', 'b'],
+        inviteCode: 'QWE456',
+      );
+      expect(legacyShared.isOwnedBy('a'), isFalse);
+      expect(legacyShared.isOwnedBy('b'), isFalse);
+    },
+  );
 }
