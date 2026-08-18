@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import 'budget_sheets.dart';
 
 const _palette = <int>[
   0xFF81C784,
@@ -35,13 +36,6 @@ class CategoriesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
-
-    if (!state.hasMonthSelected) {
-      return Scaffold(
-        appBar: AppBar(title: Text(l10n.manageCategories)),
-        body: Center(child: Text(l10n.noMonthSelected)),
-      );
-    }
 
     return SyncBackground(
       child: Scaffold(
@@ -112,47 +106,87 @@ class CategoriesScreen extends StatelessWidget {
                 itemCount: state.categories.length,
                 itemBuilder: (context, index) {
                   final cat = state.categories[index];
+                  final subs = state.subcategoriesFor(cat.id);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 8),
-                    color: Color(cat.colorValue).withValues(alpha: 0.35),
-                    child: ListTile(
-                      title: Text(cat.localizedName(state.localeCode)),
-                      subtitle: Text(_typeLabel(l10n, cat.type)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                    color: Color(cat.colorValue).withValues(alpha: 0.28),
+                    clipBehavior: Clip.antiAlias,
+                    child: Theme(
+                      data: Theme.of(context)
+                          .copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        title: Text(cat.localizedName(state.localeCode)),
+                        subtitle: Text(
+                          '${_typeLabel(l10n, cat.type)} · ${subs.length}',
+                        ),
                         children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit_outlined),
-                            onPressed: () => _editCategory(context, cat),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                onPressed: () => _editCategory(context, cat),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () async {
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text(l10n.delete),
+                                      content: Text(
+                                        cat.localizedName(state.localeCode),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: Text(l10n.cancel),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          child: Text(l10n.delete),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  if (ok == true && context.mounted) {
+                                    await state.deleteCategory(cat.id);
+                                  }
+                                },
+                              ),
+                            ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () async {
-                              final ok = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: Text(l10n.delete),
-                                  content: Text(
-                                    cat.localizedName(state.localeCode),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, false),
-                                      child: Text(l10n.cancel),
-                                    ),
-                                    FilledButton(
-                                      onPressed: () =>
-                                          Navigator.pop(ctx, true),
-                                      child: Text(l10n.delete),
-                                    ),
-                                  ],
+                          if (subs.isEmpty)
+                            ListTile(
+                              title: Text(l10n.noSubcategories),
+                            )
+                          else
+                            ...subs.map(
+                              (sub) => ListTile(
+                                title: Text(
+                                  sub.localizedName(state.localeCode),
                                 ),
-                              );
-                              if (ok == true && context.mounted) {
-                                await state.deleteCategory(cat.id);
-                              }
-                            },
+                                subtitle: sub.installmentTotal != null
+                                    ? Text(
+                                        '${l10n.installment} ${sub.installmentTotal}',
+                                      )
+                                    : null,
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () =>
+                                      state.deleteSubcategory(sub.id),
+                                ),
+                              ),
+                            ),
+                          ListTile(
+                            leading: const Icon(Icons.add),
+                            title: Text(l10n.addSubcategory),
+                            onTap: () => showAddSubcategorySheet(
+                              context,
+                              categoryId: cat.id,
+                            ),
                           ),
                         ],
                       ),
@@ -178,16 +212,24 @@ class CategoriesScreen extends StatelessWidget {
 
 /// Opens picker: choose from suggested list, or create a custom category.
 Future<void> showAddCategoryFlow(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
   final choice = await showCategorySourceSheet(context);
   if (choice == null || !context.mounted) return;
 
-  if (choice.suggested != null) {
-    await context.read<AppState>().addSuggestedCategory(choice.suggested!);
-    return;
-  }
+  try {
+    if (choice.suggested != null) {
+      await context.read<AppState>().addSuggestedCategory(choice.suggested!);
+      return;
+    }
 
-  if (choice.wantsCustom) {
-    await _editCategory(context);
+    if (choice.wantsCustom) {
+      await _editCategory(context);
+    }
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+    );
   }
 }
 
@@ -208,21 +250,21 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (ctx) {
+    builder: (modalContext) {
       return SafeArea(
         child: DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.65,
           minChildSize: 0.4,
           maxChildSize: 0.92,
-          builder: (ctx, scrollController) {
+          builder: (context, scrollController) {
             return ListView(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               children: [
                 Text(
                   l10n.chooseFromList,
-                  style: Theme.of(ctx).textTheme.titleLarge,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 12),
                 if (available.isEmpty)
@@ -242,7 +284,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
                         ),
                         label: Text(cat.localizedName(state.localeCode)),
                         onPressed: () => Navigator.pop(
-                          ctx,
+                          modalContext,
                           CategorySourceChoice.suggested(cat),
                         ),
                       );
@@ -256,7 +298,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
                   title: Text(l10n.customCategory),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.pop(
-                    ctx,
+                    modalContext,
                     const CategorySourceChoice.custom(),
                   ),
                 ),
@@ -370,22 +412,29 @@ Future<void> _editCategory(
   final name = nameCtrl.text.trim();
   if (name.isEmpty) return;
 
-  if (existing == null) {
-    await state.addCategory(
-      name: name,
-      colorValue: colorValue,
-      type: type,
-    );
-  } else {
-    await state.updateCategory(
-      BudgetCategory(
-        id: existing.id,
-        nameEn: name,
-        nameRu: name,
+  try {
+    if (existing == null) {
+      await state.addCategory(
+        name: name,
         colorValue: colorValue,
         type: type,
-        sortOrder: existing.sortOrder,
-      ),
+      );
+    } else {
+      await state.updateCategory(
+        BudgetCategory(
+          id: existing.id,
+          nameEn: name,
+          nameRu: name,
+          colorValue: colorValue,
+          type: type,
+          sortOrder: existing.sortOrder,
+        ),
+      );
+    }
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${l10n.errorGeneric}: $e')),
     );
   }
 }

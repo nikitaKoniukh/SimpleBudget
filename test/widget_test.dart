@@ -25,7 +25,9 @@ void main() {
       expect(['expense', 'savings', 'debt'], contains(cat.type));
     }
     expect(
-      DefaultCategories.all.any((c) => c.nameEn == 'Food' && c.nameRu == 'Еда'),
+      DefaultCategories.all.any(
+        (c) => c.nameEn == 'Groceries' && c.nameRu == 'Продукты',
+      ),
       isTrue,
     );
     expect(
@@ -36,7 +38,7 @@ void main() {
     );
   });
 
-  test('buildMonthCsv includes income and expense sections', () {
+  test('buildMonthCsv includes income, plans, and expenses', () {
     final csv = buildMonthCsv(
       monthId: '2026-08',
       householdName: 'Our Family',
@@ -54,28 +56,46 @@ void main() {
       categories: const [
         BudgetCategory(
           id: 'c1',
-          nameEn: 'Home',
-          nameRu: 'Дом',
+          nameEn: 'Car',
+          nameRu: 'Автомобиль',
           colorValue: 0xFF00FF00,
           type: 'expense',
           sortOrder: 0,
         ),
       ],
-      lineItems: const [
-        LineItem(
-          id: 'i1',
+      subcategories: const [
+        Subcategory(
+          id: 'sub1',
           categoryId: 'c1',
-          descriptionEn: 'Rent',
-          descriptionRu: 'Аренда',
-          planned: 4650,
-          actual: 4650,
+          nameEn: 'Insurance',
+          nameRu: 'Страховка',
+          installmentTotal: 12,
+        ),
+      ],
+      plans: const [
+        MonthPlan(
+          subcategoryId: 'sub1',
+          planned: 400,
+          installmentCurrent: 3,
+        ),
+      ],
+      expenses: [
+        Expense(
+          id: 'x1',
+          subcategoryId: 'sub1',
+          amount: 400,
+          date: DateTime(2026, 8, 12),
+          note: 'Phoenix',
         ),
       ],
     );
     expect(csv.contains('INCOME'), isTrue);
+    expect(csv.contains('PLANS'), isTrue);
     expect(csv.contains('EXPENSES'), isTrue);
     expect(csv.contains('Salary'), isTrue);
-    expect(csv.contains('Rent'), isTrue);
+    expect(csv.contains('Insurance'), isTrue);
+    expect(csv.contains('Phoenix'), isTrue);
+    expect(csv.contains('3/12'), isTrue);
     expect(csv.contains('TOTALS'), isTrue);
   });
 

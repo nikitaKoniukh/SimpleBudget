@@ -7,7 +7,9 @@ String buildMonthCsv({
   required List<IncomeSource> incomeSources,
   required List<IncomeEntry> incomeEntries,
   required List<BudgetCategory> categories,
-  required List<LineItem> lineItems,
+  required List<Subcategory> subcategories,
+  required List<MonthPlan> plans,
+  required List<Expense> expenses,
   String localeCode = 'en',
 }) {
   final buf = StringBuffer();
@@ -31,27 +33,54 @@ String buildMonthCsv({
     }
   }
   buf.writeln();
-  buf.writeln('EXPENSES');
-  buf.writeln('Category,Type,Description,Budget,Actual,Difference,Installment');
+  buf.writeln('PLANS');
+  buf.writeln('Category,Subcategory,Planned,Spent,Installment');
+  final planBySub = {for (final p in plans) p.subcategoryId: p};
   for (final cat in categories) {
-    final items = lineItems.where((i) => i.categoryId == cat.id).toList();
-    for (final item in items) {
+    final subs = subcategories.where((s) => s.categoryId == cat.id);
+    for (final sub in subs) {
+      final planned = planBySub[sub.id]?.planned ?? 0;
+      final spent = expenses
+          .where((e) => e.subcategoryId == sub.id)
+          .fold<double>(0, (s, e) => s + e.amount);
+      final current = planBySub[sub.id]?.installmentCurrent;
+      final installment = current != null && sub.installmentTotal != null
+          ? '$current/${sub.installmentTotal}'
+          : '';
       buf.writeln(
         [
           _csv(cat.localizedName(localeCode)),
-          cat.type,
-          _csv(item.localizedDescription(localeCode)),
-          item.planned,
-          item.actual,
-          item.difference,
-          item.installmentHint ?? '',
+          _csv(sub.localizedName(localeCode)),
+          planned,
+          spent,
+          installment,
         ].join(','),
       );
     }
   }
+  buf.writeln();
+  buf.writeln('EXPENSES');
+  buf.writeln('Category,Subcategory,Date,Amount,Note');
+  for (final expense in expenses) {
+    final sub = subcategories
+        .where((s) => s.id == expense.subcategoryId)
+        .firstOrNull;
+    final cat = sub == null
+        ? null
+        : categories.where((c) => c.id == sub.categoryId).firstOrNull;
+    buf.writeln(
+      [
+        _csv(cat?.localizedName(localeCode) ?? ''),
+        _csv(sub?.localizedName(localeCode) ?? ''),
+        expense.date.toIso8601String().split('T').first,
+        expense.amount,
+        _csv(expense.note ?? ''),
+      ].join(','),
+    );
+  }
   final income = incomeEntries.fold<double>(0, (s, e) => s + e.amount);
-  final planned = lineItems.fold<double>(0, (s, e) => s + e.planned);
-  final actual = lineItems.fold<double>(0, (s, e) => s + e.actual);
+  final planned = plans.fold<double>(0, (s, e) => s + e.planned);
+  final actual = expenses.fold<double>(0, (s, e) => s + e.amount);
   buf.writeln();
   buf.writeln('TOTALS');
   buf.writeln('Income,${formatIls(income).replaceAll(',', '')}');

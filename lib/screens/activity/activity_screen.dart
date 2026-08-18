@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../category/category_detail_screen.dart';
+import '../category/budget_sheets.dart';
 import '../home/quick_log_sheet.dart';
 import '../income/income_dialogs.dart';
 
@@ -36,8 +37,8 @@ class ActivityScreen extends StatelessWidget {
         final bAt = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
         return bAt.compareTo(aAt);
       });
-    final expenses = state.lineItems.where((i) => i.actual > 0).toList()
-      ..sort((a, b) => b.actual.compareTo(a.actual));
+    final expenses = List.of(state.expenses)
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     final empty = entries.isEmpty && expenses.isEmpty;
 
@@ -151,10 +152,21 @@ class ActivityScreen extends StatelessWidget {
                       style: TextStyle(color: SyncColors.textMuted),
                     )
                   else
-                    ...expenses.map((item) {
-                      final cat = state.categories
-                          .where((c) => c.id == item.categoryId)
-                          .firstOrNull;
+                    ...expenses.map((expense) {
+                      final sub = state.subcategoryById(expense.subcategoryId);
+                      final cat = sub == null
+                          ? null
+                          : state.categoryById(sub.categoryId);
+                      final title = expense.note?.trim().isNotEmpty == true
+                          ? expense.note!
+                          : (sub?.localizedName(state.localeCode) ??
+                              l10n.expense);
+                      final subtitleParts = <String>[
+                        if (cat != null) cat.localizedName(state.localeCode),
+                        if (sub != null && expense.note?.trim().isNotEmpty == true)
+                          sub.localizedName(state.localeCode),
+                        DateFormat.MMMd().format(expense.date),
+                      ];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
@@ -167,29 +179,17 @@ class ActivityScreen extends StatelessWidget {
                               color: SyncColors.accent,
                             ),
                           ),
-                          title: Text(
-                            item.localizedDescription(state.localeCode),
-                          ),
-                          subtitle: cat == null
-                              ? null
-                              : Text(cat.localizedName(state.localeCode)),
+                          title: Text(title),
+                          subtitle: Text(subtitleParts.join(' · ')),
                           trailing: Text(
-                            formatIls(item.actual),
+                            formatIls(expense.amount),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          onTap: () {
-                            if (cat == null) {
-                              showLineItemEditor(context, item: item);
-                              return;
-                            }
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => CategoryDetailScreen(
-                                  categoryId: cat.id,
-                                ),
-                              ),
-                            );
-                          },
+                          onTap: () => showExpenseEditor(
+                            context,
+                            expense: expense,
+                            subcategoryId: expense.subcategoryId,
+                          ),
                         ),
                       );
                     }),

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
-import '../category/category_detail_screen.dart';
+import '../category/budget_sheets.dart';
 import '../income/income_dialogs.dart';
 
 Future<void> showQuickLogSheet(BuildContext context) async {
@@ -48,7 +48,7 @@ Future<void> showQuickLogSheet(BuildContext context) async {
                 subtitle: Text(l10n.addExpense),
                 onTap: () {
                   Navigator.pop(ctx);
-                  showLineItemEditor(context);
+                  showExpenseEditor(context);
                 },
               ),
             ],

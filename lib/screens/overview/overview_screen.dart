@@ -22,10 +22,15 @@ class OverviewScreen extends StatelessWidget {
       );
     }
 
-    final overspent =
-        state.lineItems.where((i) => i.difference < 0).toList();
-    final underspent = state.lineItems
-        .where((i) => i.difference > 0 && i.planned > 0)
+    final overspent = state.subcategories
+        .where((s) => state.spentFor(s.id) > state.plannedFor(s.id) && state.plannedFor(s.id) > 0)
+        .toList();
+    final underspent = state.subcategories
+        .where((s) {
+          final planned = state.plannedFor(s.id);
+          final spent = state.spentFor(s.id);
+          return planned > spent && planned > 0;
+        })
         .toList();
     final savingsCats =
         state.categories.where((c) => c.type == 'savings').toList();
@@ -84,9 +89,11 @@ class OverviewScreen extends StatelessWidget {
             ListTile(title: Text(l10n.noData))
           else
             ...overspent.map(
-              (i) => ListTile(
-                title: Text(i.localizedDescription(state.localeCode)),
-                trailing: DifferenceText(value: i.difference),
+              (s) => ListTile(
+                title: Text(s.localizedName(state.localeCode)),
+                trailing: DifferenceText(
+                  value: state.plannedFor(s.id) - state.spentFor(s.id),
+                ),
               ),
             ),
           const SizedBox(height: 12),
@@ -98,9 +105,11 @@ class OverviewScreen extends StatelessWidget {
             ListTile(title: Text(l10n.noData))
           else
             ...underspent.take(12).map(
-                  (i) => ListTile(
-                    title: Text(i.localizedDescription(state.localeCode)),
-                    trailing: DifferenceText(value: i.difference),
+                  (s) => ListTile(
+                    title: Text(s.localizedName(state.localeCode)),
+                    trailing: DifferenceText(
+                      value: state.plannedFor(s.id) - state.spentFor(s.id),
+                    ),
                   ),
                 ),
           const SizedBox(height: 24),

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../category/category_detail_screen.dart';
+import '../category/budget_sheets.dart';
+import '../category/categories_screen.dart';
 import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
@@ -193,102 +196,250 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () => showQuickLogSheet(context),
-                        child: Text(l10n.log),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CategoriesScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(l10n.addCategory),
                       ),
                     ],
                   ),
                 ),
               )
             else
-              ...state.categories.map((cat) {
-                final planned = state.categoryPlanned(cat.id);
-                final actual = state.categoryActual(cat.id);
-                final ratio = planned <= 0
-                    ? (actual > 0 ? 1.0 : 0.0)
-                    : (actual / planned).clamp(0.0, 1.0);
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Material(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(18),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CategoryDetailScreen(categoryId: cat.id),
-                          ),
-                        );
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: Color(cat.colorValue),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    cat.localizedName(state.localeCode),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  formatIls(actual),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(6),
-                              child: TweenAnimationBuilder<double>(
-                                tween: Tween(begin: 0, end: ratio),
-                                duration: const Duration(milliseconds: 450),
-                                curve: Curves.easeOutCubic,
-                                builder: (context, value, _) {
-                                  return LinearProgressIndicator(
-                                    value: value,
-                                    minHeight: 8,
-                                    backgroundColor: Color(cat.colorValue)
-                                        .withValues(alpha: 0.18),
-                                    color: Color(cat.colorValue),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${formatIls(actual)} / ${formatIls(planned)}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(color: SyncColors.textMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }),
+              ...state.categories.map(
+                (cat) => _CategoryTreeCard(category: cat),
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CategoryTreeCard extends StatelessWidget {
+  const _CategoryTreeCard({required this.category});
+
+  final BudgetCategory category;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final state = context.watch<AppState>();
+    final cat = category;
+    final planned = state.categoryPlanned(cat.id);
+    final actual = state.categoryActual(cat.id);
+    final ratio = planned <= 0
+        ? (actual > 0 ? 1.0 : 0.0)
+        : (actual / planned).clamp(0.0, 1.0);
+    final subs = state.subcategoriesFor(cat.id);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+            childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Color(cat.colorValue),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        cat.localizedName(state.localeCode),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    Text(
+                      formatIls(actual),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: ratio,
+                    minHeight: 8,
+                    backgroundColor:
+                        Color(cat.colorValue).withValues(alpha: 0.18),
+                    color: Color(cat.colorValue),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${formatIls(actual)} / ${formatIls(planned)}',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(color: SyncColors.textMuted),
+                ),
+              ],
+            ),
+            children: [
+              if (subs.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                  child: Text(
+                    l10n.noSubcategories,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: SyncColors.textMuted),
+                  ),
+                )
+              else
+                ...subs.map((sub) => _SubcategoryTile(subcategory: sub)),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => showAddSubcategorySheet(
+                    context,
+                    categoryId: cat.id,
+                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.addSubcategory),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SubcategoryTile extends StatelessWidget {
+  const _SubcategoryTile({required this.subcategory});
+
+  final Subcategory subcategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final state = context.watch<AppState>();
+    final sub = subcategory;
+    final planned = state.plannedFor(sub.id);
+    final spent = state.spentFor(sub.id);
+    final hint = state.installmentHint(sub);
+    final expenses = state.expensesFor(sub.id);
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
+        childrenPadding: const EdgeInsets.only(left: 12, right: 4, bottom: 8),
+        title: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    sub.localizedName(state.localeCode),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  if (hint != null)
+                    Text(
+                      hint,
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: SyncColors.textMuted),
+                    ),
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: () => showPlanEditor(context, subcategory: sub),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Text(
+                  '${formatIls(spent)} / ${formatIls(planned)}',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: spent > planned && planned > 0
+                            ? SyncColors.accent
+                            : SyncColors.text,
+                      ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          tooltip: l10n.editPlan,
+          icon: const Icon(Icons.edit_outlined, size: 18),
+          onPressed: () => showPlanEditor(context, subcategory: sub),
+        ),
+        children: [
+          if (expenses.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 8, bottom: 4),
+              child: Text(
+                l10n.noData,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: SyncColors.textMuted),
+              ),
+            )
+          else
+            ...expenses.map((expense) {
+              final note = expense.note?.trim();
+              return ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.only(left: 8, right: 4),
+                title: Text(
+                  note == null || note.isEmpty
+                      ? DateFormat.MMMd().format(expense.date)
+                      : note,
+                ),
+                subtitle: note == null || note.isEmpty
+                    ? null
+                    : Text(DateFormat.MMMd().format(expense.date)),
+                trailing: Text(
+                  formatIls(expense.amount),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                onTap: () => showExpenseEditor(
+                  context,
+                  expense: expense,
+                  subcategoryId: sub.id,
+                ),
+              );
+            }),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => showExpenseEditor(
+                context,
+                subcategoryId: sub.id,
+              ),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.addExpense),
+            ),
+          ),
+        ],
       ),
     );
   }

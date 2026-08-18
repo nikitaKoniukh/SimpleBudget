@@ -22,7 +22,9 @@ Future<void> exportAndShareMonthCsv(BuildContext context) async {
     incomeSources: state.incomeSources,
     incomeEntries: state.incomeEntries,
     categories: state.categories,
-    lineItems: state.lineItems,
+    subcategories: state.subcategories,
+    plans: state.plans,
+    expenses: state.expenses,
     localeCode: state.localeCode,
   );
 

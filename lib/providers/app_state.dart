@@ -35,16 +35,20 @@ class AppState extends ChangeNotifier {
   List<IncomeSource> _incomeSources = [];
   List<IncomeEntry> _incomeEntries = [];
   List<BudgetCategory> _categories = [];
-  List<LineItem> _lineItems = [];
+  List<Subcategory> _subcategories = [];
+  List<MonthPlan> _plans = [];
+  List<Expense> _expenses = [];
 
   StreamSubscription<User?>? _authSub;
   StreamSubscription<AppUser?>? _userSub;
   StreamSubscription<Household?>? _householdSub;
   StreamSubscription<List<BudgetMonth>>? _monthsSub;
+  StreamSubscription<List<BudgetCategory>>? _categoriesSub;
+  StreamSubscription<List<Subcategory>>? _subcategoriesSub;
   StreamSubscription<List<IncomeSource>>? _sourcesSub;
   StreamSubscription<List<IncomeEntry>>? _entriesSub;
-  StreamSubscription<List<BudgetCategory>>? _categoriesSub;
-  StreamSubscription<List<LineItem>>? _itemsSub;
+  StreamSubscription<List<MonthPlan>>? _plansSub;
+  StreamSubscription<List<Expense>>? _expensesSub;
 
   bool get loading => _loading;
   String? get error => _error;
@@ -61,25 +65,74 @@ class AppState extends ChangeNotifier {
   List<IncomeSource> get incomeSources => _incomeSources;
   List<IncomeEntry> get incomeEntries => _incomeEntries;
   List<BudgetCategory> get categories => _categories;
-  List<LineItem> get lineItems => _lineItems;
+  List<Subcategory> get subcategories =>
+      _subcategories.where((s) => !s.archived).toList();
+  List<MonthPlan> get plans => _plans;
+  List<Expense> get expenses => _expenses;
 
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
-    final planned = _lineItems.fold<double>(0, (s, e) => s + e.planned);
-    final actual = _lineItems.fold<double>(0, (s, e) => s + e.actual);
+    final liveSubIds = subcategories.map((s) => s.id).toSet();
+    final planned = _plans
+        .where((p) => liveSubIds.contains(p.subcategoryId))
+        .fold<double>(0, (s, p) => s + p.planned);
+    final actual = _expenses
+        .where((e) => liveSubIds.contains(e.subcategoryId))
+        .fold<double>(0, (s, e) => s + e.amount);
     return MonthTotals(income: income, planned: planned, actual: actual);
   }
 
-  double categoryPlanned(String categoryId) => _lineItems
-      .where((i) => i.categoryId == categoryId)
-      .fold(0, (s, i) => s + i.planned);
+  List<Subcategory> subcategoriesFor(String categoryId) => subcategories
+      .where((s) => s.categoryId == categoryId)
+      .toList();
 
-  double categoryActual(String categoryId) => _lineItems
-      .where((i) => i.categoryId == categoryId)
-      .fold(0, (s, i) => s + i.actual);
+  MonthPlan? planFor(String subcategoryId) {
+    for (final plan in _plans) {
+      if (plan.subcategoryId == subcategoryId) return plan;
+    }
+    return null;
+  }
 
-  List<LineItem> itemsForCategory(String categoryId) =>
-      _lineItems.where((i) => i.categoryId == categoryId).toList();
+  double plannedFor(String subcategoryId) =>
+      planFor(subcategoryId)?.planned ?? 0;
+
+  double spentFor(String subcategoryId) => _expenses
+      .where((e) => e.subcategoryId == subcategoryId)
+      .fold(0, (s, e) => s + e.amount);
+
+  List<Expense> expensesFor(String subcategoryId) {
+    final list =
+        _expenses.where((e) => e.subcategoryId == subcategoryId).toList();
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
+  }
+
+  double categoryPlanned(String categoryId) => subcategoriesFor(categoryId)
+      .fold(0, (s, sub) => s + plannedFor(sub.id));
+
+  double categoryActual(String categoryId) =>
+      subcategoriesFor(categoryId).fold(0, (s, sub) => s + spentFor(sub.id));
+
+  String? installmentHint(Subcategory sub) {
+    final current = planFor(sub.id)?.installmentCurrent;
+    final total = sub.installmentTotal;
+    if (current == null || total == null) return null;
+    return '$current/$total';
+  }
+
+  Subcategory? subcategoryById(String id) {
+    for (final sub in _subcategories) {
+      if (sub.id == id) return sub;
+    }
+    return null;
+  }
+
+  BudgetCategory? categoryById(String id) {
+    for (final cat in _categories) {
+      if (cat.id == id) return cat;
+    }
+    return null;
+  }
 
   double incomeForSource(String sourceId) => _incomeEntries
       .where((e) => e.sourceId == sourceId)
@@ -125,26 +178,32 @@ class AppState extends ChangeNotifier {
   Future<void> _detachMonthDataListeners() async {
     await _sourcesSub?.cancel();
     await _entriesSub?.cancel();
-    await _categoriesSub?.cancel();
-    await _itemsSub?.cancel();
+    await _plansSub?.cancel();
+    await _expensesSub?.cancel();
     _sourcesSub = null;
     _entriesSub = null;
-    _categoriesSub = null;
-    _itemsSub = null;
+    _plansSub = null;
+    _expensesSub = null;
     _incomeSources = [];
     _incomeEntries = [];
-    _categories = [];
-    _lineItems = [];
+    _plans = [];
+    _expenses = [];
   }
 
   Future<void> _detachBudgetListeners() async {
     await _householdSub?.cancel();
     await _monthsSub?.cancel();
+    await _categoriesSub?.cancel();
+    await _subcategoriesSub?.cancel();
     await _detachMonthDataListeners();
     _householdSub = null;
     _monthsSub = null;
+    _categoriesSub = null;
+    _subcategoriesSub = null;
     _household = null;
     _months = [];
+    _categories = [];
+    _subcategories = [];
     _monthId = null;
   }
 
@@ -162,10 +221,31 @@ class AppState extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    unawaited(_repo.migrateLegacyCatalogIfNeeded(householdId));
     _householdSub = _repo.watchHousehold(householdId).listen((h) {
       _household = h;
       notifyListeners();
     });
+    _categoriesSub = _repo.watchCategories(householdId).listen(
+      (v) {
+        _categories = v;
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        notifyListeners();
+      },
+    );
+    _subcategoriesSub = _repo.watchSubcategories(householdId).listen(
+      (v) {
+        _subcategories = v;
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        notifyListeners();
+      },
+    );
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
       _months = list;
       if (_monthId != null && !list.any((m) => m.id == _monthId)) {
@@ -194,12 +274,12 @@ class AppState extends ChangeNotifier {
       _incomeEntries = v;
       notifyListeners();
     });
-    _categoriesSub = _repo.watchCategories(hid, monthId).listen((v) {
-      _categories = v;
+    _plansSub = _repo.watchPlans(hid, monthId).listen((v) {
+      _plans = v;
       notifyListeners();
     });
-    _itemsSub = _repo.watchLineItems(hid, monthId).listen((v) {
-      _lineItems = v;
+    _expensesSub = _repo.watchExpenses(hid, monthId).listen((v) {
+      _expenses = v;
       notifyListeners();
     });
   }
@@ -219,21 +299,16 @@ class AppState extends ChangeNotifier {
   Future<void> createMonth({
     required String monthId,
     String? copyFromMonthId,
-    List<DefaultCategory> selectedCategories = const [],
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
-    if (copyFromMonthId != null && copyFromMonthId.isNotEmpty) {
+    final copyFrom = copyFromMonthId ??
+        _months.where((m) => m.id != monthId).firstOrNull?.id;
+    if (copyFrom != null && copyFrom.isNotEmpty) {
       await _repo.createMonthFromCopy(
         householdId: hid,
-        fromMonthId: copyFromMonthId,
+        fromMonthId: copyFrom,
         toMonthId: monthId,
-      );
-    } else if (selectedCategories.isNotEmpty) {
-      await _repo.createMonthWithCategories(
-        householdId: hid,
-        monthId: monthId,
-        categories: selectedCategories,
       );
     } else {
       await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
@@ -286,21 +361,18 @@ class AppState extends ChangeNotifier {
     String? nameRu,
   }) async {
     final hid = _appUser?.householdId;
-    final mid = _monthId;
-    if (hid == null || mid == null) throw StateError('No month selected');
+    if (hid == null) throw StateError('No household');
     final trimmed = name.trim();
     final en = (nameEn ?? trimmed).trim();
     final ru = (nameRu ?? trimmed).trim();
     final id = await _repo.addCategory(
       householdId: hid,
-      monthId: mid,
       nameEn: en,
       nameRu: ru,
       colorValue: colorValue,
       type: type,
       sortOrder: _categories.length,
     );
-    // Optimistic local insert so expense logging can use the id immediately.
     if (!_categories.any((c) => c.id == id)) {
       _categories = [
         ..._categories,
@@ -318,8 +390,6 @@ class AppState extends ChangeNotifier {
     return id;
   }
 
-  /// Adds one suggested category if not already present (match by EN name).
-  /// Returns the category id (existing or newly created).
   Future<String?> addSuggestedCategory(DefaultCategory suggested) async {
     for (final c in _categories) {
       if (c.nameEn.toLowerCase() == suggested.nameEn.toLowerCase()) {
@@ -337,30 +407,131 @@ class AppState extends ChangeNotifier {
 
   Future<int> addDefaultCategories() async {
     final hid = _appUser?.householdId;
-    final mid = _monthId;
-    if (hid == null || mid == null) throw StateError('No month selected');
-    return _repo.addDefaultCategories(householdId: hid, monthId: mid);
+    if (hid == null) throw StateError('No household');
+    return _repo.addDefaultCategories(householdId: hid);
   }
 
   Future<void> updateCategory(BudgetCategory category) async {
     final hid = _appUser?.householdId;
-    final mid = _monthId;
-    if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.updateCategory(
-      householdId: hid,
-      monthId: mid,
-      category: category,
-    );
+    if (hid == null) throw StateError('No household');
+    await _repo.updateCategory(householdId: hid, category: category);
   }
 
   Future<void> deleteCategory(String categoryId) async {
     final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.deleteCategory(householdId: hid, categoryId: categoryId);
+  }
+
+  Future<String> addSubcategory({
+    required String categoryId,
+    required String name,
+    double planned = 0,
+    int? installmentCurrent,
+    int? installmentTotal,
+  }) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    final trimmed = name.trim();
+    final id = await _repo.addSubcategory(
+      householdId: hid,
+      categoryId: categoryId,
+      nameEn: trimmed,
+      nameRu: trimmed,
+      sortOrder: _subcategories.length,
+      installmentTotal: installmentTotal,
+    );
+    if (_monthId != null && (planned > 0 || installmentCurrent != null)) {
+      await _repo.upsertPlan(
+        householdId: hid,
+        monthId: _monthId!,
+        plan: MonthPlan(
+          subcategoryId: id,
+          planned: planned,
+          installmentCurrent: installmentCurrent,
+        ),
+      );
+    }
+    return id;
+  }
+
+  Future<void> updateSubcategory(Subcategory subcategory) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.updateSubcategory(
+      householdId: hid,
+      subcategory: subcategory,
+    );
+  }
+
+  Future<void> deleteSubcategory(String subcategoryId) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.deleteSubcategory(
+      householdId: hid,
+      subcategoryId: subcategoryId,
+    );
+  }
+
+  Future<void> upsertPlan({
+    required String subcategoryId,
+    required double planned,
+    int? installmentCurrent,
+    bool clearInstallmentCurrent = false,
+  }) async {
+    final hid = _appUser?.householdId;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.deleteCategory(
+    await _repo.upsertPlan(
       householdId: hid,
       monthId: mid,
-      categoryId: categoryId,
+      plan: MonthPlan(
+        subcategoryId: subcategoryId,
+        planned: planned,
+        installmentCurrent:
+            clearInstallmentCurrent ? null : installmentCurrent,
+      ),
+    );
+  }
+
+  Future<void> addExpense({
+    required String subcategoryId,
+    required double amount,
+    required DateTime date,
+    String? note,
+  }) async {
+    final hid = _appUser?.householdId;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    await _repo.addExpense(
+      householdId: hid,
+      monthId: mid,
+      subcategoryId: subcategoryId,
+      amount: amount,
+      date: date,
+      note: note,
+    );
+  }
+
+  Future<void> updateExpense(Expense expense) async {
+    final hid = _appUser?.householdId;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    await _repo.updateExpense(
+      householdId: hid,
+      monthId: mid,
+      expense: expense,
+    );
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    final hid = _appUser?.householdId;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    await _repo.deleteExpense(
+      householdId: hid,
+      monthId: mid,
+      expenseId: expenseId,
     );
   }
 }

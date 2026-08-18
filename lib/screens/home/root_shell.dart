@@ -8,7 +8,6 @@ import '../activity/activity_screen.dart';
 import '../auth/auth_screen.dart';
 import '../auth/onboarding_screen.dart';
 import 'home_screen.dart';
-import 'plan_screen.dart';
 
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
@@ -45,7 +44,6 @@ class _RootShellState extends State<RootShell> {
     final pages = const [
       HomeScreen(),
       ActivityScreen(),
-      PlanScreen(),
     ];
 
     return SyncBackground(
@@ -68,11 +66,6 @@ class _RootShellState extends State<RootShell> {
               icon: const Icon(Icons.receipt_long_outlined),
               selectedIcon: const Icon(Icons.receipt_long),
               label: l10n.activity,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.view_list_outlined),
-              selectedIcon: const Icon(Icons.view_list),
-              label: l10n.plan,
             ),
           ],
         ),

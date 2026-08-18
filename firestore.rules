@@ -30,6 +30,13 @@ service cloud.firestore {
       allow update: if isMember(householdId);
       allow delete: if false;
 
+      match /categories/{docId} {
+        allow read, write: if isMember(householdId);
+      }
+      match /subcategories/{docId} {
+        allow read, write: if isMember(householdId);
+      }
+
       match /months/{monthId} {
         allow read, write: if isMember(householdId);
 
@@ -39,6 +46,13 @@ service cloud.firestore {
         match /incomeEntries/{docId} {
           allow read, write: if isMember(householdId);
         }
+        match /plans/{docId} {
+          allow read, write: if isMember(householdId);
+        }
+        match /expenses/{docId} {
+          allow read, write: if isMember(householdId);
+        }
+        // Legacy per-month catalog (kept for one-shot migration).
         match /categories/{docId} {
           allow read, write: if isMember(householdId);
         }

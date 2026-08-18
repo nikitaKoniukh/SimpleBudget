@@ -93,21 +93,15 @@ class SettingsScreen extends StatelessWidget {
           ),
           ListTile(
             title: Text(l10n.manageCategories),
-            subtitle: Text(
-              state.hasMonthSelected
-                  ? '${state.categories.length}'
-                  : l10n.noMonthSelected,
-            ),
+            subtitle: Text('${state.categories.length}'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: !state.hasMonthSelected
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CategoriesScreen(),
-                      ),
-                    );
-                  },
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CategoriesScreen(),
+                ),
+              );
+            },
           ),
           ListTile(
             title: Text(l10n.addMonth),

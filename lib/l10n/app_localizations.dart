@@ -134,6 +134,17 @@ class AppLocalizations {
       isRu ? 'Месяц для копирования' : 'Month to copy';
   String get noMonthSelected =>
       isRu ? 'Сначала выберите или создайте месяц' : 'Select or create a month first';
+  String get subcategory => isRu ? 'Подкатегория' : 'Subcategory';
+  String get addSubcategory =>
+      isRu ? 'Добавить подкатегорию' : 'Add subcategory';
+  String get subcategoryName =>
+      isRu ? 'Название подкатегории' : 'Subcategory name';
+  String get editPlan => isRu ? 'Изменить план' : 'Edit plan';
+  String get date => isRu ? 'Дата' : 'Date';
+  String get noSubcategories =>
+      isRu
+          ? 'Подкатегорий пока нет. Добавьте, например, топливо или страховку.'
+          : 'No subcategories yet. Add one, for example fuel or insurance.';
   String get addCategory =>
       isRu ? 'Добавить категорию' : 'Add category';
   String get chooseFromList =>

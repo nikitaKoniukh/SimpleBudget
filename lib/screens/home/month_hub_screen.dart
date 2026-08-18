@@ -5,8 +5,8 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../widgets/summary_card.dart';
+import '../category/budget_sheets.dart';
 import '../category/categories_screen.dart';
-import '../category/category_detail_screen.dart';
 import 'month_actions.dart';
 
 class MonthHubScreen extends StatelessWidget {
@@ -112,7 +112,7 @@ class MonthHubScreen extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const CategoriesScreen()),
                 );
               }
-            : () => showLineItemEditor(context),
+            : () => showExpenseEditor(context),
         icon: Icon(state.categories.isEmpty ? Icons.category : Icons.add),
         label: Text(
           state.categories.isEmpty ? l10n.addCategory : l10n.addExpense,
@@ -228,14 +228,7 @@ class MonthHubScreen extends StatelessWidget {
                     formatIls(actual),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CategoryDetailScreen(categoryId: cat.id),
-                      ),
-                    );
-                  },
+                  onTap: () {},
                 ),
               );
             }),

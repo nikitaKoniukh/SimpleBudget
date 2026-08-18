@@ -229,82 +229,164 @@ class BudgetCategory {
   }
 }
 
-class LineItem {
-  const LineItem({
+class Subcategory {
+  const Subcategory({
     required this.id,
     required this.categoryId,
-    required this.descriptionEn,
-    required this.descriptionRu,
-    required this.planned,
-    required this.actual,
-    this.installmentCurrent,
+    required this.nameEn,
+    required this.nameRu,
     this.installmentTotal,
     this.sortOrder = 0,
+    this.archived = false,
   });
 
   final String id;
   final String categoryId;
-  final String descriptionEn;
-  final String descriptionRu;
-  final double planned;
-  final double actual;
-  final int? installmentCurrent;
+  final String nameEn;
+  final String nameRu;
   final int? installmentTotal;
   final int sortOrder;
+  final bool archived;
 
-  double get difference => planned - actual;
+  String localizedName(String localeCode) =>
+      localeCode == 'ru' ? nameRu : nameEn;
 
-  String localizedDescription(String localeCode) =>
-      localeCode == 'ru' ? descriptionRu : descriptionEn;
-
-  String? get installmentHint {
-    if (installmentCurrent == null || installmentTotal == null) return null;
-    return '$installmentCurrent/$installmentTotal';
-  }
-
-  LineItem copyWith({
-    double? planned,
-    double? actual,
-    String? descriptionEn,
-    String? descriptionRu,
-    int? installmentCurrent,
+  Subcategory copyWith({
+    String? categoryId,
+    String? nameEn,
+    String? nameRu,
     int? installmentTotal,
+    bool clearInstallmentTotal = false,
+    int? sortOrder,
+    bool? archived,
   }) {
-    return LineItem(
+    return Subcategory(
       id: id,
-      categoryId: categoryId,
-      descriptionEn: descriptionEn ?? this.descriptionEn,
-      descriptionRu: descriptionRu ?? this.descriptionRu,
-      planned: planned ?? this.planned,
-      actual: actual ?? this.actual,
-      installmentCurrent: installmentCurrent ?? this.installmentCurrent,
-      installmentTotal: installmentTotal ?? this.installmentTotal,
-      sortOrder: sortOrder,
+      categoryId: categoryId ?? this.categoryId,
+      nameEn: nameEn ?? this.nameEn,
+      nameRu: nameRu ?? this.nameRu,
+      installmentTotal: clearInstallmentTotal
+          ? null
+          : (installmentTotal ?? this.installmentTotal),
+      sortOrder: sortOrder ?? this.sortOrder,
+      archived: archived ?? this.archived,
     );
   }
 
   Map<String, dynamic> toMap() => {
         'categoryId': categoryId,
-        'descriptionEn': descriptionEn,
-        'descriptionRu': descriptionRu,
-        'planned': planned,
-        'actual': actual,
-        'installmentCurrent': installmentCurrent,
+        'nameEn': nameEn,
+        'nameRu': nameRu,
         'installmentTotal': installmentTotal,
         'sortOrder': sortOrder,
+        'archived': archived,
       };
 
-  factory LineItem.fromMap(String id, Map<String, dynamic> map) {
-    return LineItem(
+  factory Subcategory.fromMap(String id, Map<String, dynamic> map) {
+    return Subcategory(
       id: id,
       categoryId: map['categoryId'] as String? ?? '',
-      descriptionEn: map['descriptionEn'] as String? ?? '',
-      descriptionRu: map['descriptionRu'] as String? ?? '',
-      planned: (map['planned'] as num?)?.toDouble() ?? 0,
-      actual: (map['actual'] as num?)?.toDouble() ?? 0,
-      installmentCurrent: (map['installmentCurrent'] as num?)?.toInt(),
+      nameEn: map['nameEn'] as String? ?? '',
+      nameRu: map['nameRu'] as String? ?? '',
       installmentTotal: (map['installmentTotal'] as num?)?.toInt(),
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
+      archived: map['archived'] as bool? ?? false,
+    );
+  }
+}
+
+class MonthPlan {
+  const MonthPlan({
+    required this.subcategoryId,
+    required this.planned,
+    this.installmentCurrent,
+  });
+
+  final String subcategoryId;
+  final double planned;
+  final int? installmentCurrent;
+
+  MonthPlan copyWith({
+    double? planned,
+    int? installmentCurrent,
+    bool clearInstallmentCurrent = false,
+  }) {
+    return MonthPlan(
+      subcategoryId: subcategoryId,
+      planned: planned ?? this.planned,
+      installmentCurrent: clearInstallmentCurrent
+          ? null
+          : (installmentCurrent ?? this.installmentCurrent),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'planned': planned,
+        'installmentCurrent': installmentCurrent,
+      };
+
+  factory MonthPlan.fromMap(String subcategoryId, Map<String, dynamic> map) {
+    return MonthPlan(
+      subcategoryId: subcategoryId,
+      planned: (map['planned'] as num?)?.toDouble() ?? 0,
+      installmentCurrent: (map['installmentCurrent'] as num?)?.toInt(),
+    );
+  }
+}
+
+class Expense {
+  const Expense({
+    required this.id,
+    required this.subcategoryId,
+    required this.amount,
+    required this.date,
+    this.note,
+    this.createdAt,
+  });
+
+  final String id;
+  final String subcategoryId;
+  final double amount;
+  final DateTime date;
+  final String? note;
+  final DateTime? createdAt;
+
+  Expense copyWith({
+    String? subcategoryId,
+    double? amount,
+    DateTime? date,
+    String? note,
+  }) {
+    return Expense(
+      id: id,
+      subcategoryId: subcategoryId ?? this.subcategoryId,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      createdAt: createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'subcategoryId': subcategoryId,
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'note': note,
+        'createdAt': createdAt?.toIso8601String(),
+      };
+
+  factory Expense.fromMap(String id, Map<String, dynamic> map) {
+    return Expense(
+      id: id,
+      subcategoryId: map['subcategoryId'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      date: map['date'] != null
+          ? DateTime.tryParse(map['date'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      note: map['note'] as String?,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String)
+          : null,
     );
   }
 }
