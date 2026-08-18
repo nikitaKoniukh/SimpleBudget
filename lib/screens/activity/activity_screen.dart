@@ -47,6 +47,7 @@ class ActivityScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         appBar: AppBar(title: Text(l10n.activity)),
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'activity-log-fab',
           onPressed: () => showQuickLogSheet(context),
           icon: const Icon(Icons.add),
           label: Text(l10n.log),

@@ -130,6 +130,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'home-log-fab',
           onPressed: () => showQuickLogSheet(context),
           icon: const Icon(Icons.add),
           label: Text(l10n.log),
