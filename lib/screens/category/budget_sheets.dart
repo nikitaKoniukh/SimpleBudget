@@ -388,12 +388,18 @@ Future<String?> showAddSubcategorySheet(
 Future<String?> _addCategoryAndSubcategory(BuildContext context) async {
   final categoryId = await showAddCategoryFlow(context);
   if (categoryId == null || !context.mounted) return null;
+  final state = context.read<AppState>();
+  final cat = state.categoryById(categoryId);
+  if (cat != null && cat.isSavings) {
+    return state.ensureImplicitSubcategory(categoryId);
+  }
   return showAddSubcategorySheet(context, categoryId: categoryId);
 }
 
 Future<String?> _pickCategoryAndAddSubcategory(BuildContext context) async {
   final state = context.read<AppState>();
-  final categories = state.categories;
+  final categories =
+      state.categories.where((c) => !c.isSavings).toList();
   if (categories.isEmpty) {
     return _addCategoryAndSubcategory(context);
   }

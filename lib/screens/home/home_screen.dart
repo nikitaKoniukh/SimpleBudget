@@ -9,6 +9,7 @@ import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../category/budget_sheets.dart';
 import '../category/categories_screen.dart';
+import '../investments/investments_sheets.dart';
 import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
@@ -237,6 +238,7 @@ class _CategoryTreeCard extends StatelessWidget {
         ? (actual > 0 ? 1.0 : 0.0)
         : (actual / planned).clamp(0.0, 1.0);
     final subs = state.subcategoriesFor(cat.id);
+    final deposits = cat.isSavings ? state.expensesForCategory(cat.id) : const <Expense>[];
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -297,7 +299,54 @@ class _CategoryTreeCard extends StatelessWidget {
               ],
             ),
             children: [
-              if (subs.isEmpty)
+              if (cat.isSavings && subs.length <= 1) ...[
+                ...deposits.map((expense) {
+                  final note = expense.note?.trim();
+                  return ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.only(left: 8, right: 4),
+                    title: Text(
+                      note == null || note.isEmpty
+                          ? DateFormat.MMMd().format(expense.date)
+                          : note,
+                    ),
+                    subtitle: note == null || note.isEmpty
+                        ? null
+                        : Text(DateFormat.MMMd().format(expense.date)),
+                    trailing: Text(
+                      formatIls(expense.amount),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    onTap: () => showExpenseEditor(
+                      context,
+                      expense: expense,
+                      subcategoryId: expense.subcategoryId,
+                    ),
+                  );
+                }),
+                if (deposits.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                    child: Text(
+                      l10n.noDepositsThisMonth,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: SyncColors.textMuted),
+                    ),
+                  ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => showDepositEditor(
+                      context,
+                      category: cat,
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l10n.logDeposit),
+                  ),
+                ),
+              ] else if (subs.isEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                   child: Text(
@@ -310,17 +359,18 @@ class _CategoryTreeCard extends StatelessWidget {
                 )
               else
                 ...subs.map((sub) => _SubcategoryTile(subcategory: sub)),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => showAddSubcategorySheet(
-                    context,
-                    categoryId: cat.id,
+              if (!cat.isSavings)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => showAddSubcategorySheet(
+                      context,
+                      categoryId: cat.id,
+                    ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l10n.addSubcategory),
                   ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.addSubcategory),
                 ),
-              ),
             ],
           ),
         ),

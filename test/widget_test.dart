@@ -99,6 +99,41 @@ void main() {
     expect(csv.contains('TOTALS'), isTrue);
   });
 
+  test('BudgetCategory serializes optional target and ignores savedTotal in toMap',
+      () {
+    const cat = BudgetCategory(
+      id: 'c1',
+      nameEn: 'Emergency fund',
+      nameRu: 'Резервный фонд',
+      colorValue: 0xFFFFCC80,
+      type: 'savings',
+      sortOrder: 0,
+      targetAmount: 30000,
+      savedTotal: 1200,
+    );
+    expect(cat.isSavings, isTrue);
+    final map = cat.toMap();
+    expect(map['targetAmount'], 30000);
+    expect(map.containsKey('savedTotal'), isFalse);
+
+    final parsed = BudgetCategory.fromMap('c1', {
+      ...map,
+      'savedTotal': 1200,
+    });
+    expect(parsed.targetAmount, 30000);
+    expect(parsed.savedTotal, 1200);
+
+    final noTarget = BudgetCategory.fromMap('c2', {
+      'nameEn': 'Savings',
+      'nameRu': 'Накопления',
+      'colorValue': 0,
+      'type': 'savings',
+      'sortOrder': 1,
+    });
+    expect(noTarget.targetAmount, isNull);
+    expect(noTarget.savedTotal, 0);
+  });
+
   test('invite share message shape via localizations is not empty', () {
     final totals = MonthTotals(income: 100, planned: 80, actual: 50);
     expect(totals.remaining, 30);

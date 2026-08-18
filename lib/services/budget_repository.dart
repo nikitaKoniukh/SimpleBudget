@@ -68,7 +68,7 @@ class BudgetRepository {
     );
     await ref.set({
       ...household.toMap(),
-      'catalogVersion': 2,
+      'catalogVersion': 3,
     });
     await _db.collection('users').doc(creatorUid).update({
       'householdId': household.id,
@@ -281,6 +281,7 @@ class BudgetRepository {
     required int colorValue,
     required String type,
     required int sortOrder,
+    double? targetAmount,
   }) async {
     final doc = await _categories(householdId).add({
       'nameEn': nameEn,
@@ -288,8 +289,30 @@ class BudgetRepository {
       'colorValue': colorValue,
       'type': type,
       'sortOrder': sortOrder,
+      'targetAmount': targetAmount,
+      'savedTotal': 0,
     });
+    if (type == 'savings') {
+      await addSubcategory(
+        householdId: householdId,
+        categoryId: doc.id,
+        nameEn: nameEn,
+        nameRu: nameRu,
+        sortOrder: 0,
+      );
+    }
     return doc.id;
+  }
+
+  Future<void> incrementSavedTotal({
+    required String householdId,
+    required String categoryId,
+    required double delta,
+  }) async {
+    if (delta == 0) return;
+    await _categories(householdId).doc(categoryId).update({
+      'savedTotal': FieldValue.increment(delta),
+    });
   }
 
   Future<void> updateCategory({
@@ -332,21 +355,54 @@ class BudgetRepository {
     for (final cat in toAdd) {
       if (existingNames.contains(cat.nameEn.toLowerCase())) continue;
       final sortOrder = sortBase + added;
+      final catId = _uuid.v4();
       ops.add(
-        (batch) => batch.set(_categories(householdId).doc(_uuid.v4()), {
+        (batch) => batch.set(_categories(householdId).doc(catId), {
           'nameEn': cat.nameEn,
           'nameRu': cat.nameRu,
           'colorValue': cat.colorValue,
           'type': cat.type,
           'sortOrder': sortOrder,
+          'savedTotal': 0,
         }),
       );
+      if (cat.type == 'savings') {
+        ops.add(
+          (batch) => batch.set(_subcategories(householdId).doc(_uuid.v4()), {
+            'categoryId': catId,
+            'nameEn': cat.nameEn,
+            'nameRu': cat.nameRu,
+            'sortOrder': 0,
+            'archived': false,
+          }),
+        );
+      }
       added++;
     }
     if (ops.isNotEmpty) {
       await _commitInChunks(ops);
     }
     return added;
+  }
+
+  Future<String> ensureImplicitSubcategory({
+    required String householdId,
+    required String categoryId,
+    required String nameEn,
+    required String nameRu,
+  }) async {
+    final existing = await _subcategories(householdId)
+        .where('categoryId', isEqualTo: categoryId)
+        .limit(1)
+        .get();
+    if (existing.docs.isNotEmpty) return existing.docs.first.id;
+    return addSubcategory(
+      householdId: householdId,
+      categoryId: categoryId,
+      nameEn: nameEn,
+      nameRu: nameRu,
+      sortOrder: 0,
+    );
   }
 
   Future<String> addSubcategory({
@@ -499,13 +555,23 @@ class BudgetRepository {
     return doc.id;
   }
 
-  /// Promotes per-month categories/lineItems into the household catalog.
+  /// Promotes per-month categories/lineItems into the household catalog,
+  /// then backfills savings pot totals.
   Future<void> migrateLegacyCatalogIfNeeded(String householdId) async {
     final householdRef = _householdRef(householdId);
     final householdSnap = await householdRef.get();
     final version =
         (householdSnap.data()?['catalogVersion'] as num?)?.toInt() ?? 0;
-    if (version >= 2) return;
+    if (version >= 3) return;
+
+    if (version < 2) {
+      await _migrateCatalogV2(householdId);
+    }
+    await _migrateSavingsPotsV3(householdId);
+  }
+
+  Future<void> _migrateCatalogV2(String householdId) async {
+    final householdRef = _householdRef(householdId);
 
     final existingCats = await _categories(householdId).limit(1).get();
     if (existingCats.docs.isNotEmpty) {
@@ -636,5 +702,75 @@ class BudgetRepository {
 
     await _commitInChunks(ops);
     await householdRef.set({'catalogVersion': 2}, SetOptions(merge: true));
+  }
+
+  /// Creates implicit subcategories for savings pots and backfills savedTotal.
+  Future<void> _migrateSavingsPotsV3(String householdId) async {
+    final householdRef = _householdRef(householdId);
+    final cats = await _categories(householdId).get();
+    final subs = await _subcategories(householdId).get();
+    final monthsSnap = await _months(householdId).get();
+
+    final subsByCat = <String, List<QueryDocumentSnapshot<Map<String, dynamic>>>>{};
+    for (final sub in subs.docs) {
+      final catId = sub.data()['categoryId'] as String? ?? '';
+      subsByCat.putIfAbsent(catId, () => []).add(sub);
+    }
+
+    final savingsDocs =
+        cats.docs.where((d) => d.data()['type'] == 'savings').toList();
+    final subIdToCatId = <String, String>{};
+    final ops = <void Function(WriteBatch)>[];
+
+    for (final catDoc in savingsDocs) {
+      final existingSubs = subsByCat[catDoc.id] ?? const [];
+      if (existingSubs.isEmpty) {
+        final subId = _uuid.v4();
+        final nameEn = catDoc.data()['nameEn'] as String? ?? '';
+        final nameRu = catDoc.data()['nameRu'] as String? ?? nameEn;
+        ops.add(
+          (batch) => batch.set(_subcategories(householdId).doc(subId), {
+            'categoryId': catDoc.id,
+            'nameEn': nameEn,
+            'nameRu': nameRu,
+            'sortOrder': 0,
+            'archived': false,
+          }),
+        );
+        subIdToCatId[subId] = catDoc.id;
+      } else {
+        for (final sub in existingSubs) {
+          subIdToCatId[sub.id] = catDoc.id;
+        }
+      }
+    }
+
+    final totals = <String, double>{};
+    for (final monthDoc in monthsSnap.docs) {
+      final expenses = await monthDoc.reference.collection('expenses').get();
+      for (final exp in expenses.docs) {
+        final subId = exp.data()['subcategoryId'] as String? ?? '';
+        final catId = subIdToCatId[subId];
+        if (catId == null) continue;
+        final amount = (exp.data()['amount'] as num?)?.toDouble() ?? 0;
+        totals[catId] = (totals[catId] ?? 0) + amount;
+      }
+    }
+
+    for (final catDoc in savingsDocs) {
+      final total = totals[catDoc.id] ?? 0;
+      ops.add(
+        (batch) => batch.set(
+          catDoc.reference,
+          {'savedTotal': total},
+          SetOptions(merge: true),
+        ),
+      );
+    }
+
+    if (ops.isNotEmpty) {
+      await _commitInChunks(ops);
+    }
+    await householdRef.set({'catalogVersion': 3}, SetOptions(merge: true));
   }
 }

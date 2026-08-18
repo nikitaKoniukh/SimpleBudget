@@ -10,7 +10,7 @@ import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 import 'budget_sheets.dart';
 
-const _palette = <int>[
+const categoryColorPalette = <int>[
   0xFF81C784,
   0xFF4DB6AC,
   0xFFFFF176,
@@ -119,7 +119,12 @@ class CategoriesScreen extends StatelessWidget {
                       child: ExpansionTile(
                         title: Text(cat.localizedName(state.localeCode)),
                         subtitle: Text(
-                          '${_typeLabel(l10n, cat.type)} · ${subs.length}',
+                          cat.isSavings
+                              ? (cat.targetAmount != null &&
+                                      cat.targetAmount! > 0
+                                  ? '${_typeLabel(l10n, cat.type)} · ${l10n.targetAmount}'
+                                  : _typeLabel(l10n, cat.type))
+                              : '${_typeLabel(l10n, cat.type)} · ${subs.length}',
                         ),
                         children: [
                           Row(
@@ -160,11 +165,11 @@ class CategoriesScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (subs.isEmpty)
+                          if (!cat.isSavings && subs.isEmpty)
                             ListTile(
                               title: Text(l10n.noSubcategories),
                             )
-                          else
+                          else if (!cat.isSavings)
                             ...subs.map(
                               (sub) => ListTile(
                                 title: Text(
@@ -182,14 +187,15 @@ class CategoriesScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ListTile(
-                            leading: const Icon(Icons.add),
-                            title: Text(l10n.addSubcategory),
-                            onTap: () => showAddSubcategorySheet(
-                              context,
-                              categoryId: cat.id,
+                          if (!cat.isSavings)
+                            ListTile(
+                              leading: const Icon(Icons.add),
+                              title: Text(l10n.addSubcategory),
+                              onTap: () => showAddSubcategorySheet(
+                                context,
+                                categoryId: cat.id,
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -322,8 +328,13 @@ Future<String?> _editCategory(
   final nameCtrl = TextEditingController(
     text: existing?.localizedName(state.localeCode) ?? '',
   );
+  final targetCtrl = TextEditingController(
+    text: existing?.targetAmount != null && existing!.targetAmount! > 0
+        ? existing.targetAmount!.toStringAsFixed(2)
+        : '',
+  );
   var type = existing?.type ?? 'expense';
-  var colorValue = existing?.colorValue ?? _palette.first;
+  var colorValue = existing?.colorValue ?? categoryColorPalette.first;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -368,11 +379,18 @@ Future<String?> _editCategory(
                   selected: {type},
                   onSelectionChanged: (s) => setLocal(() => type = s.first),
                 ),
+                if (type == 'savings')
+                  TextField(
+                    controller: targetCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(labelText: l10n.targetOptional),
+                  ),
                 Text(l10n.categoryColor),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: _palette.map((c) {
+                  children: categoryColorPalette.map((c) {
                     final selected = c == colorValue;
                     return GestureDetector(
                       onTap: () => setLocal(() => colorValue = c),
@@ -405,6 +423,10 @@ Future<String?> _editCategory(
   if (ok != true || !context.mounted) return null;
   final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return null;
+  final parsedTarget = double.tryParse(targetCtrl.text.replaceAll(',', ''));
+  final target = type == 'savings' && parsedTarget != null && parsedTarget > 0
+      ? parsedTarget
+      : null;
 
   try {
     if (existing == null) {
@@ -412,16 +434,17 @@ Future<String?> _editCategory(
         name: name,
         colorValue: colorValue,
         type: type,
+        targetAmount: target,
       );
     } else {
       await state.updateCategory(
-        BudgetCategory(
-          id: existing.id,
+        existing.copyWith(
           nameEn: name,
           nameRu: name,
           colorValue: colorValue,
           type: type,
-          sortOrder: existing.sortOrder,
+          targetAmount: target,
+          clearTargetAmount: target == null,
         ),
       );
       return existing.id;

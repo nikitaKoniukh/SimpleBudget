@@ -69,6 +69,9 @@ class AppState extends ChangeNotifier {
   List<MonthPlan> get plans => _plans;
   List<Expense> get expenses => _expenses;
 
+  List<BudgetCategory> get savingsCategories =>
+      _categories.where((c) => c.isSavings).toList();
+
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
     final liveSubIds = subcategories.map((s) => s.id).toSet();
@@ -111,6 +114,54 @@ class AppState extends ChangeNotifier {
 
   double categoryActual(String categoryId) =>
       subcategoriesFor(categoryId).fold(0, (s, sub) => s + spentFor(sub.id));
+
+  List<Expense> expensesForCategory(String categoryId) {
+    final subIds = subcategoriesFor(categoryId).map((s) => s.id).toSet();
+    final list =
+        _expenses.where((e) => subIds.contains(e.subcategoryId)).toList();
+    list.sort((a, b) => b.date.compareTo(a.date));
+    return list;
+  }
+
+  String? _savingsCategoryIdForSub(String subcategoryId) {
+    final sub = subcategoryById(subcategoryId);
+    if (sub == null) return null;
+    final cat = categoryById(sub.categoryId);
+    if (cat == null || !cat.isSavings) return null;
+    return cat.id;
+  }
+
+  Future<void> _adjustSavedTotal({
+    required String subcategoryId,
+    required double delta,
+  }) async {
+    if (delta == 0) return;
+    final catId = _savingsCategoryIdForSub(subcategoryId);
+    if (catId == null) return;
+    final hid = _appUser?.householdId;
+    if (hid == null) return;
+    await _repo.incrementSavedTotal(
+      householdId: hid,
+      categoryId: catId,
+      delta: delta,
+    );
+  }
+
+  /// Returns an existing subcategory for [categoryId], creating one if needed.
+  Future<String> ensureImplicitSubcategory(String categoryId) async {
+    final existing = subcategoriesFor(categoryId);
+    if (existing.isNotEmpty) return existing.first.id;
+    final cat = categoryById(categoryId);
+    if (cat == null) throw StateError('Category not found');
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    return _repo.ensureImplicitSubcategory(
+      householdId: hid,
+      categoryId: categoryId,
+      nameEn: cat.nameEn,
+      nameRu: cat.nameRu,
+    );
+  }
 
   String? installmentHint(Subcategory sub) {
     final current = planFor(sub.id)?.installmentCurrent;
@@ -407,6 +458,7 @@ class AppState extends ChangeNotifier {
     required String type,
     String? nameEn,
     String? nameRu,
+    double? targetAmount,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
@@ -420,6 +472,7 @@ class AppState extends ChangeNotifier {
       colorValue: colorValue,
       type: type,
       sortOrder: _categories.length,
+      targetAmount: targetAmount,
     );
     if (!_categories.any((c) => c.id == id)) {
       _categories = [
@@ -431,6 +484,7 @@ class AppState extends ChangeNotifier {
           colorValue: colorValue,
           type: type,
           sortOrder: _categories.length,
+          targetAmount: targetAmount,
         ),
       ];
       notifyListeners();
@@ -463,6 +517,9 @@ class AppState extends ChangeNotifier {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
     await _repo.updateCategory(householdId: hid, category: category);
+    if (category.isSavings) {
+      await ensureImplicitSubcategory(category.id);
+    }
   }
 
   Future<void> deleteCategory(String categoryId) async {
@@ -559,27 +616,85 @@ class AppState extends ChangeNotifier {
       date: date,
       note: note,
     );
+    await _adjustSavedTotal(subcategoryId: subcategoryId, delta: amount);
+  }
+
+  Future<void> addDeposit({
+    required String categoryId,
+    required double amount,
+    required DateTime date,
+    String? note,
+  }) async {
+    final subId = await ensureImplicitSubcategory(categoryId);
+    await addExpense(
+      subcategoryId: subId,
+      amount: amount,
+      date: date,
+      note: note,
+    );
   }
 
   Future<void> updateExpense(Expense expense) async {
     final hid = _appUser?.householdId;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
+    Expense? old;
+    for (final e in _expenses) {
+      if (e.id == expense.id) {
+        old = e;
+        break;
+      }
+    }
     await _repo.updateExpense(
       householdId: hid,
       monthId: mid,
       expense: expense,
     );
+    if (old != null) {
+      if (old.subcategoryId == expense.subcategoryId) {
+        await _adjustSavedTotal(
+          subcategoryId: expense.subcategoryId,
+          delta: expense.amount - old.amount,
+        );
+      } else {
+        await _adjustSavedTotal(
+          subcategoryId: old.subcategoryId,
+          delta: -old.amount,
+        );
+        await _adjustSavedTotal(
+          subcategoryId: expense.subcategoryId,
+          delta: expense.amount,
+        );
+      }
+    } else {
+      await _adjustSavedTotal(
+        subcategoryId: expense.subcategoryId,
+        delta: expense.amount,
+      );
+    }
   }
 
   Future<void> deleteExpense(String expenseId) async {
     final hid = _appUser?.householdId;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
+    Expense? old;
+    for (final e in _expenses) {
+      if (e.id == expenseId) {
+        old = e;
+        break;
+      }
+    }
     await _repo.deleteExpense(
       householdId: hid,
       monthId: mid,
       expenseId: expenseId,
     );
+    if (old != null) {
+      await _adjustSavedTotal(
+        subcategoryId: old.subcategoryId,
+        delta: -old.amount,
+      );
+    }
   }
 }

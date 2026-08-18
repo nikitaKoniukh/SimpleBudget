@@ -7,6 +7,7 @@ import '../../theme/sync_theme.dart';
 import '../activity/activity_screen.dart';
 import '../auth/auth_screen.dart';
 import '../auth/onboarding_screen.dart';
+import '../investments/investments_screen.dart';
 import 'home_screen.dart';
 
 class RootShell extends StatefulWidget {
@@ -44,6 +45,7 @@ class _RootShellState extends State<RootShell> {
     final pages = const [
       HomeScreen(),
       ActivityScreen(),
+      InvestmentsScreen(),
     ];
 
     return SyncBackground(
@@ -66,6 +68,11 @@ class _RootShellState extends State<RootShell> {
               icon: const Icon(Icons.receipt_long_outlined),
               selectedIcon: const Icon(Icons.receipt_long),
               label: l10n.activity,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.savings_outlined),
+              selectedIcon: const Icon(Icons.savings),
+              label: l10n.savingsHighlight,
             ),
           ],
         ),

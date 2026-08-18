@@ -197,6 +197,8 @@ class BudgetCategory {
     required this.colorValue,
     required this.type,
     required this.sortOrder,
+    this.targetAmount,
+    this.savedTotal = 0,
   });
 
   final String id;
@@ -205,16 +207,48 @@ class BudgetCategory {
   final int colorValue;
   final String type; // expense | savings | debt
   final int sortOrder;
+  /// Optional lifetime goal for savings pots. Null means no target.
+  final double? targetAmount;
+  /// Cumulative deposits. Written via increment, not [toMap].
+  final double savedTotal;
+
+  bool get isSavings => type == 'savings';
 
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;
 
+  BudgetCategory copyWith({
+    String? nameEn,
+    String? nameRu,
+    int? colorValue,
+    String? type,
+    int? sortOrder,
+    double? targetAmount,
+    bool clearTargetAmount = false,
+    double? savedTotal,
+  }) {
+    return BudgetCategory(
+      id: id,
+      nameEn: nameEn ?? this.nameEn,
+      nameRu: nameRu ?? this.nameRu,
+      colorValue: colorValue ?? this.colorValue,
+      type: type ?? this.type,
+      sortOrder: sortOrder ?? this.sortOrder,
+      targetAmount: clearTargetAmount
+          ? null
+          : (targetAmount ?? this.targetAmount),
+      savedTotal: savedTotal ?? this.savedTotal,
+    );
+  }
+
+  /// Does not include [savedTotal] so merge-updates cannot clobber increments.
   Map<String, dynamic> toMap() => {
         'nameEn': nameEn,
         'nameRu': nameRu,
         'colorValue': colorValue,
         'type': type,
         'sortOrder': sortOrder,
+        'targetAmount': targetAmount,
       };
 
   factory BudgetCategory.fromMap(String id, Map<String, dynamic> map) {
@@ -225,6 +259,8 @@ class BudgetCategory {
       colorValue: (map['colorValue'] as num?)?.toInt() ?? 0xFFBDBDBD,
       type: map['type'] as String? ?? 'expense',
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
+      targetAmount: (map['targetAmount'] as num?)?.toDouble(),
+      savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
     );
   }
 }

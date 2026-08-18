@@ -185,6 +185,24 @@ class AppLocalizations {
 
   String get savingsHighlight =>
       isRu ? 'Отложено' : 'Set aside';
+  String get addPot => isRu ? 'Добавить цель' : 'Add pot';
+  String get logDeposit => isRu ? 'Отложить' : 'Log deposit';
+  String get deposit => isRu ? 'Отложение' : 'Deposit';
+  String get targetAmount => isRu ? 'Цель' : 'Target';
+  String get targetOptional =>
+      isRu ? 'Цель (необязательно)' : 'Target (optional)';
+  String get setTarget => isRu ? 'Задать цель' : 'Set target';
+  String get clearTarget => isRu ? 'Убрать цель' : 'Clear target';
+  String get savedLabel => isRu ? 'Накоплено' : 'Saved';
+  String get emptyPots =>
+      isRu
+          ? 'Пока нет целей. Добавьте накопления, резерв или инвестиции.'
+          : 'No pots yet. Add savings, an emergency fund, or investments.';
+  String get thisMonthDeposits =>
+      isRu ? 'В этом месяце' : 'This month';
+  String get noDepositsThisMonth =>
+      isRu ? 'В этом месяце ещё ничего не отложено' : 'No deposits this month';
+  String get editPot => isRu ? 'Изменить цель' : 'Edit pot';
   String get underspent => isRu ? 'Остаток по позициям' : 'Underspent items';
   String get noData => isRu ? 'Пока нет данных' : 'No data yet';
   String get loading => isRu ? 'Загрузка…' : 'Loading…';
