@@ -45,6 +45,7 @@ class AppLocalizations {
       isRu ? 'Категории или копия' : 'Categories or copy';
   String get continueLabel => isRu ? 'Далее' : 'Continue';
   String get done => isRu ? 'Готово' : 'Done';
+  String get edit => isRu ? 'Редактировать' : 'Edit';
   String get plannedLabel => isRu ? 'План' : 'Planned';
   String get spentLabel => isRu ? 'Потрачено' : 'Spent';
 
@@ -163,6 +164,8 @@ class AppLocalizations {
   String get subcategoryName =>
       isRu ? 'Название подкатегории' : 'Subcategory name';
   String get editPlan => isRu ? 'Изменить план' : 'Edit plan';
+  String get editSubcategory =>
+      isRu ? 'Изменить подкатегорию' : 'Edit subcategory';
   String get date => isRu ? 'Дата' : 'Date';
   String get noSubcategories => isRu
       ? 'Подкатегорий пока нет. Добавьте, например, топливо или страховку.'

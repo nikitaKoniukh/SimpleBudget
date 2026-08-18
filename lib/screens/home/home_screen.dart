@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -14,8 +13,15 @@ import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  bool _editing = false;
 
   @override
   Widget build(BuildContext context) {
@@ -114,6 +120,10 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: () => setState(() => _editing = !_editing),
+              child: Text(_editing ? l10n.done : l10n.edit),
+            ),
             IconButton(
               tooltip: l10n.selectMonth,
               onPressed: () => showSelectMonthSheet(context),
@@ -130,12 +140,14 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'home-log-fab',
-          onPressed: () => showQuickLogSheet(context),
-          icon: const Icon(Icons.add),
-          label: Text(l10n.log),
-        ),
+        floatingActionButton: _editing
+            ? null
+            : FloatingActionButton.extended(
+                heroTag: 'home-log-fab',
+                onPressed: () => showQuickLogSheet(context),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.log),
+              ),
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
@@ -198,23 +210,36 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const CategoriesScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: () => _editing
+                            ? showAddCategoryFlow(context)
+                            : Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const CategoriesScreen(),
+                                ),
+                              ),
                         child: Text(l10n.addCategory),
                       ),
                     ],
                   ),
                 ),
               )
-            else
+            else ...[
               ...state.categories.map(
-                (cat) => _CategoryTreeCard(category: cat),
+                (cat) => _CategoryTreeCard(
+                  category: cat,
+                  editing: _editing,
+                ),
               ),
+              if (_editing)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => showAddCategoryFlow(context),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l10n.addCategory),
+                  ),
+                ),
+            ],
           ],
         ),
       ),
@@ -223,9 +248,13 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _CategoryTreeCard extends StatelessWidget {
-  const _CategoryTreeCard({required this.category});
+  const _CategoryTreeCard({
+    required this.category,
+    required this.editing,
+  });
 
   final BudgetCategory category;
+  final bool editing;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +299,13 @@ class _CategoryTreeCard extends StatelessWidget {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
+                    if (editing)
+                      IconButton(
+                        tooltip: l10n.edit,
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        onPressed: () => showCategoryEditor(context, cat),
+                      ),
                     Text(
                       formatIls(actual),
                       style: const TextStyle(fontWeight: FontWeight.w700),
@@ -310,22 +346,28 @@ class _CategoryTreeCard extends StatelessWidget {
                   ),
                 )
               else
-                ...subs.map((sub) => _SubcategoryTile(subcategory: sub)),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => cat.isSavings
-                      ? showAddPotFlow(context)
-                      : showAddSubcategorySheet(
-                          context,
-                          categoryId: cat.id,
-                        ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(
-                    cat.isSavings ? l10n.addPot : l10n.addSubcategory,
+                ...subs.map(
+                  (sub) => _SubcategoryTile(
+                    subcategory: sub,
+                    editing: editing,
                   ),
                 ),
-              ),
+              if (editing)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => cat.isSavings
+                        ? showAddPotFlow(context)
+                        : showAddSubcategorySheet(
+                            context,
+                            categoryId: cat.id,
+                          ),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(
+                      cat.isSavings ? l10n.addPot : l10n.addSubcategory,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -335,127 +377,74 @@ class _CategoryTreeCard extends StatelessWidget {
 }
 
 class _SubcategoryTile extends StatelessWidget {
-  const _SubcategoryTile({required this.subcategory});
+  const _SubcategoryTile({
+    required this.subcategory,
+    required this.editing,
+  });
 
   final Subcategory subcategory;
+  final bool editing;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
     final sub = subcategory;
     final planned = state.plannedFor(sub.id);
     final spent = state.spentFor(sub.id);
     final hint = state.installmentHint(sub);
-    final expenses = state.expensesFor(sub.id);
     final isSavings = state.categoryById(sub.categoryId)?.isSavings ?? false;
+    final amountStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: spent > planned && planned > 0
+              ? SyncColors.accent
+              : SyncColors.text,
+        );
+    final amountLabel = Text(
+      '${formatIls(spent)} / ${formatIls(planned)}',
+      style: amountStyle,
+    );
 
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.fromLTRB(8, 0, 0, 0),
-        childrenPadding: const EdgeInsets.only(left: 12, right: 4, bottom: 8),
-        title: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    sub.localizedName(state.localeCode),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  if (hint != null)
-                    Text(
-                      hint,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: SyncColors.textMuted),
-                    ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: () => showPlanEditor(context, subcategory: sub),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                child: Text(
-                  '${formatIls(spent)} / ${formatIls(planned)}',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: spent > planned && planned > 0
-                            ? SyncColors.accent
-                            : SyncColors.text,
-                      ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          tooltip: l10n.editPlan,
-          icon: const Icon(Icons.edit_outlined, size: 18),
-          onPressed: () => showPlanEditor(context, subcategory: sub),
-        ),
-        children: [
-          if (expenses.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 4),
-              child: Text(
-                l10n.noData,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: SyncColors.textMuted),
-              ),
-            )
-          else
-            ...expenses.map((expense) {
-              final note = expense.note?.trim();
-              return ListTile(
-                dense: true,
-                contentPadding: const EdgeInsets.only(left: 8, right: 4),
-                title: Text(
-                  note == null || note.isEmpty
-                      ? DateFormat.MMMd().format(expense.date)
-                      : note,
-                ),
-                subtitle: note == null || note.isEmpty
-                    ? null
-                    : Text(DateFormat.MMMd().format(expense.date)),
-                trailing: Text(
-                  formatIls(expense.amount),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                onTap: () => isSavings
-                    ? showDepositEditor(
-                        context,
-                        subcategory: sub,
-                        expense: expense,
-                      )
-                    : showExpenseEditor(
-                        context,
-                        expense: expense,
-                        subcategoryId: sub.id,
-                      ),
-              );
-            }),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => isSavings
-                  ? showDepositEditor(context, subcategory: sub)
-                  : showExpenseEditor(
-                      context,
-                      subcategoryId: sub.id,
-                    ),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(isSavings ? l10n.logDeposit : l10n.addExpense),
-            ),
-          ),
-        ],
+    return ListTile(
+      contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
+      title: Text(
+        sub.localizedName(state.localeCode),
+        style: const TextStyle(fontWeight: FontWeight.w600),
       ),
+      subtitle: hint == null
+          ? null
+          : Text(
+              hint,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(color: SyncColors.textMuted),
+            ),
+      trailing: editing
+          ? TextButton(
+              onPressed: () => showPlanEditor(context, subcategory: sub),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: amountLabel,
+            )
+          : amountLabel,
+      onTap: () {
+        if (editing) {
+          showAddSubcategorySheet(
+            context,
+            categoryId: sub.categoryId,
+            existing: sub,
+          );
+          return;
+        }
+        if (isSavings) {
+          showDepositEditor(context, subcategory: sub);
+          return;
+        }
+        showExpenseEditor(context, subcategoryId: sub.id);
+      },
     );
   }
 }

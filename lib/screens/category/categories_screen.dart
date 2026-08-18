@@ -127,7 +127,7 @@ class CategoriesScreen extends StatelessWidget {
                             children: [
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined),
-                                onPressed: () => _editCategory(context, cat),
+                                onPressed: () => showCategoryEditor(context, cat),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
@@ -231,7 +231,7 @@ Future<String?> showAddCategoryFlow(BuildContext context) async {
     }
 
     if (choice.wantsCustom) {
-      return _editCategory(context);
+      return showCategoryEditor(context);
     }
   } catch (e) {
     if (!context.mounted) return null;
@@ -320,7 +320,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
   );
 }
 
-Future<String?> _editCategory(
+Future<String?> showCategoryEditor(
   BuildContext context, [
   BudgetCategory? existing,
 ]) async {

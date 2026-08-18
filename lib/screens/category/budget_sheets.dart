@@ -311,12 +311,25 @@ Future<void> showPlanEditor(
 Future<String?> showAddSubcategorySheet(
   BuildContext context, {
   required String categoryId,
+  Subcategory? existing,
 }) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
-  final nameCtrl = TextEditingController();
-  final plannedCtrl = TextEditingController();
-  final installmentCtrl = TextEditingController();
+  final plan = existing != null ? state.planFor(existing.id) : null;
+  final nameCtrl = TextEditingController(
+    text: existing?.localizedName(state.localeCode) ?? '',
+  );
+  final plannedCtrl = TextEditingController(
+    text: plan != null && plan.planned > 0
+        ? plan.planned.toStringAsFixed(2)
+        : '',
+  );
+  final installmentCtrl = TextEditingController(
+    text: plan?.installmentCurrent != null &&
+            existing?.installmentTotal != null
+        ? '${plan!.installmentCurrent}/${existing!.installmentTotal}'
+        : '',
+  );
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -330,14 +343,14 @@ Future<String?> showAddSubcategorySheet(
           spacing: 12,
           children: [
             Text(
-              l10n.addSubcategory,
+              existing == null ? l10n.addSubcategory : l10n.editSubcategory,
               style: Theme.of(ctx).textTheme.titleLarge,
             ),
             TextField(
               controller: nameCtrl,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(labelText: l10n.subcategoryName),
-              autofocus: true,
+              autofocus: existing == null,
             ),
             TextField(
               controller: plannedCtrl,
@@ -375,6 +388,23 @@ Future<String?> showAddSubcategorySheet(
     final parts = inst.split('/');
     instCur = int.tryParse(parts[0].trim());
     instTot = int.tryParse(parts[1].trim());
+  }
+  if (existing != null) {
+    await state.updateSubcategory(
+      existing.copyWith(
+        nameEn: name,
+        nameRu: name,
+        installmentTotal: instTot,
+        clearInstallmentTotal: instTot == null,
+      ),
+    );
+    await state.upsertPlan(
+      subcategoryId: existing.id,
+      planned: planned,
+      installmentCurrent: instCur,
+      clearInstallmentCurrent: inst.isEmpty,
+    );
+    return existing.id;
   }
   return state.addSubcategory(
     categoryId: categoryId,
