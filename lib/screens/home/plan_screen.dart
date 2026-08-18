@@ -75,20 +75,8 @@ class PlanScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () async {
-                          final n = await state.addDefaultCategories();
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                n > 0
-                                    ? l10n.defaultsAdded
-                                    : l10n.defaultsAlreadyPresent,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(l10n.addDefaultCategories),
+                        onPressed: () => showAddCategoryFlow(context),
+                        child: Text(l10n.addCategory),
                       ),
                     ],
                   ),

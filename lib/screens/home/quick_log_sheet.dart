@@ -48,12 +48,6 @@ Future<void> showQuickLogSheet(BuildContext context) async {
                 subtitle: Text(l10n.addExpense),
                 onTap: () {
                   Navigator.pop(ctx);
-                  if (state.categories.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.emptyCategories)),
-                    );
-                    return;
-                  }
                   showLineItemEditor(context);
                 },
               ),

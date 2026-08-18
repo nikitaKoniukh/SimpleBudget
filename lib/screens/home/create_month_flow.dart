@@ -40,12 +40,13 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     final now = DateTime.now();
     _year = now.year;
     _month = now.month;
-    _selected.addAll(DefaultCategories.all.map((c) => c.nameEn));
+    // Categories stay unselected — user opts in via chips or copy.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final state = context.read<AppState>();
       setState(() {
-        _useCopy = state.months.isNotEmpty;
+        // Prefer empty month; copy only if user turns it on.
+        _useCopy = false;
         _copyFrom = state.months.isNotEmpty ? state.months.first.id : null;
       });
     });

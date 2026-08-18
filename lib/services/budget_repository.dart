@@ -235,7 +235,7 @@ class BudgetRepository {
     return toMonthId;
   }
 
-  Future<void> addCategory({
+  Future<String> addCategory({
     required String householdId,
     required String monthId,
     required String nameEn,
@@ -244,13 +244,14 @@ class BudgetRepository {
     required String type,
     required int sortOrder,
   }) async {
-    await _monthRef(householdId, monthId).collection('categories').add({
+    final doc = await _monthRef(householdId, monthId).collection('categories').add({
       'nameEn': nameEn,
       'nameRu': nameRu,
       'colorValue': colorValue,
       'type': type,
       'sortOrder': sortOrder,
     });
+    return doc.id;
   }
 
   Future<void> updateCategory({

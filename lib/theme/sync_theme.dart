@@ -27,25 +27,31 @@ ThemeData buildSyncTheme() {
     outline: SyncColors.textMuted.withValues(alpha: 0.35),
   );
 
-  final display = GoogleFonts.frauncesTextTheme();
-  final body = GoogleFonts.plusJakartaSansTextTheme();
+  // Literata: soft bookish display for month titles (less “landing-page serif”
+  // than Fraunces). Figtree: friendly geometric UI that stays clear on ₪ amounts.
+  final display = GoogleFonts.literataTextTheme();
+  final body = GoogleFonts.figtreeTextTheme();
 
   final textTheme = body.copyWith(
     displayLarge: display.displayLarge?.copyWith(
       color: SyncColors.text,
       fontWeight: FontWeight.w600,
+      letterSpacing: -0.5,
     ),
     displayMedium: display.displayMedium?.copyWith(
       color: SyncColors.text,
       fontWeight: FontWeight.w600,
+      letterSpacing: -0.4,
     ),
     displaySmall: display.displaySmall?.copyWith(
       color: SyncColors.text,
       fontWeight: FontWeight.w600,
+      letterSpacing: -0.3,
     ),
     headlineLarge: display.headlineLarge?.copyWith(
       color: SyncColors.text,
       fontWeight: FontWeight.w600,
+      letterSpacing: -0.3,
     ),
     headlineMedium: display.headlineMedium?.copyWith(
       color: SyncColors.text,
@@ -64,8 +70,14 @@ ThemeData buildSyncTheme() {
       color: SyncColors.text,
       fontWeight: FontWeight.w600,
     ),
-    bodyLarge: body.bodyLarge?.copyWith(color: SyncColors.text),
-    bodyMedium: body.bodyMedium?.copyWith(color: SyncColors.text),
+    bodyLarge: body.bodyLarge?.copyWith(
+      color: SyncColors.text,
+      height: 1.4,
+    ),
+    bodyMedium: body.bodyMedium?.copyWith(
+      color: SyncColors.text,
+      height: 1.4,
+    ),
     bodySmall: body.bodySmall?.copyWith(color: SyncColors.textMuted),
     labelLarge: body.labelLarge?.copyWith(
       color: SyncColors.text,

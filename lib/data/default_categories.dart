@@ -1,7 +1,8 @@
-/// Default expense/savings categories with EN + RU names.
-/// Applied when creating an empty month, or via "Add defaults" in the UI.
+/// Suggested expense/savings/debt categories with EN + RU names.
+/// Used when creating a month, "Add defaults", and the add-category picker.
 class DefaultCategories {
   static const List<DefaultCategory> all = [
+    // —— Everyday living ——
     DefaultCategory(
       nameEn: 'Housing',
       nameRu: 'Жильё',
@@ -9,10 +10,22 @@ class DefaultCategories {
       colorValue: 0xFF81C784,
     ),
     DefaultCategory(
-      nameEn: 'Food',
-      nameRu: 'Еда',
+      nameEn: 'Utilities',
+      nameRu: 'Коммунальные',
+      type: 'expense',
+      colorValue: 0xFF4DB6AC,
+    ),
+    DefaultCategory(
+      nameEn: 'Groceries',
+      nameRu: 'Продукты',
       type: 'expense',
       colorValue: 0xFFFFF176,
+    ),
+    DefaultCategory(
+      nameEn: 'Dining out',
+      nameRu: 'Кафе и рестораны',
+      type: 'expense',
+      colorValue: 0xFFFFAB91,
     ),
     DefaultCategory(
       nameEn: 'Transport',
@@ -21,16 +34,23 @@ class DefaultCategories {
       colorValue: 0xFF80CBC4,
     ),
     DefaultCategory(
+      nameEn: 'Car',
+      nameRu: 'Автомобиль',
+      type: 'expense',
+      colorValue: 0xFF90A4AE,
+    ),
+    // —— Life & family ——
+    DefaultCategory(
       nameEn: 'Health',
       nameRu: 'Здоровье',
       type: 'expense',
       colorValue: 0xFFD7CCC8,
     ),
     DefaultCategory(
-      nameEn: 'Personal',
-      nameRu: 'Личное',
+      nameEn: 'Insurance',
+      nameRu: 'Страховка',
       type: 'expense',
-      colorValue: 0xFFCE93D8,
+      colorValue: 0xFFB0BEC5,
     ),
     DefaultCategory(
       nameEn: 'Family & kids',
@@ -39,17 +59,73 @@ class DefaultCategories {
       colorValue: 0xFF9CCC65,
     ),
     DefaultCategory(
+      nameEn: 'Education',
+      nameRu: 'Образование',
+      type: 'expense',
+      colorValue: 0xFF64B5F6,
+    ),
+    DefaultCategory(
+      nameEn: 'Pets',
+      nameRu: 'Питомцы',
+      type: 'expense',
+      colorValue: 0xFFA1887F,
+    ),
+    // —— Lifestyle ——
+    DefaultCategory(
+      nameEn: 'Personal',
+      nameRu: 'Личное',
+      type: 'expense',
+      colorValue: 0xFFCE93D8,
+    ),
+    DefaultCategory(
+      nameEn: 'Shopping',
+      nameRu: 'Покупки',
+      type: 'expense',
+      colorValue: 0xFFF48FB1,
+    ),
+    DefaultCategory(
+      nameEn: 'Entertainment',
+      nameRu: 'Развлечения',
+      type: 'expense',
+      colorValue: 0xFFBA68C8,
+    ),
+    DefaultCategory(
+      nameEn: 'Subscriptions',
+      nameRu: 'Подписки',
+      type: 'expense',
+      colorValue: 0xFF7986CB,
+    ),
+    DefaultCategory(
       nameEn: 'Communications',
       nameRu: 'Связь',
       type: 'expense',
       colorValue: 0xFF90CAF9,
     ),
     DefaultCategory(
-      nameEn: 'Debt & payments',
-      nameRu: 'Долги и платежи',
-      type: 'debt',
-      colorValue: 0xFFE57373,
+      nameEn: 'Travel',
+      nameRu: 'Путешествия',
+      type: 'expense',
+      colorValue: 0xFF4FC3F7,
     ),
+    DefaultCategory(
+      nameEn: 'Gifts & donations',
+      nameRu: 'Подарки и благотворительность',
+      type: 'expense',
+      colorValue: 0xFFFF8A65,
+    ),
+    DefaultCategory(
+      nameEn: 'Home maintenance',
+      nameRu: 'Ремонт и дом',
+      type: 'expense',
+      colorValue: 0xFFAED581,
+    ),
+    DefaultCategory(
+      nameEn: 'Other',
+      nameRu: 'Другое',
+      type: 'expense',
+      colorValue: 0xFFFFF59D,
+    ),
+    // —— Money goals ——
     DefaultCategory(
       nameEn: 'Savings',
       nameRu: 'Накопления',
@@ -57,10 +133,29 @@ class DefaultCategories {
       colorValue: 0xFFFFB74D,
     ),
     DefaultCategory(
-      nameEn: 'Other',
-      nameRu: 'Другое',
-      type: 'expense',
-      colorValue: 0xFFFFF59D,
+      nameEn: 'Emergency fund',
+      nameRu: 'Резервный фонд',
+      type: 'savings',
+      colorValue: 0xFFFFCC80,
+    ),
+    DefaultCategory(
+      nameEn: 'Investments',
+      nameRu: 'Инвестиции',
+      type: 'savings',
+      colorValue: 0xFFFFD54F,
+    ),
+    // —— Debt ——
+    DefaultCategory(
+      nameEn: 'Debt & payments',
+      nameRu: 'Долги и платежи',
+      type: 'debt',
+      colorValue: 0xFFE57373,
+    ),
+    DefaultCategory(
+      nameEn: 'Credit cards',
+      nameRu: 'Кредитные карты',
+      type: 'debt',
+      colorValue: 0xFFEF9A9A,
     ),
   ];
 }
@@ -77,4 +172,7 @@ class DefaultCategory {
   final String nameRu;
   final String type;
   final int colorValue;
+
+  String localizedName(String localeCode) =>
+      localeCode == 'ru' ? nameRu : nameEn;
 }

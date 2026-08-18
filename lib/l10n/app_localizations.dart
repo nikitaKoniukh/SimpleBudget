@@ -106,8 +106,8 @@ class AppLocalizations {
   String get typeDebt => isRu ? 'Долг / карта' : 'Debt / card';
   String get emptyCategories =>
       isRu
-          ? 'Категорий пока нет. Добавьте свои или набор по умолчанию.'
-          : 'No categories yet. Add your own or the default set.';
+          ? 'Категорий пока нет. Добавьте при записи траты или из списка.'
+          : 'No categories yet. Add one when you log a spend, or from the list.';
   String get emptyIncome =>
       isRu ? 'Добавьте источник дохода и суммы.' : 'Add an income source and amounts.';
   String get emptyMonths =>
@@ -136,6 +136,16 @@ class AppLocalizations {
       isRu ? 'Сначала выберите или создайте месяц' : 'Select or create a month first';
   String get addCategory =>
       isRu ? 'Добавить категорию' : 'Add category';
+  String get chooseFromList =>
+      isRu ? 'Выбрать из списка' : 'Choose from list';
+  String get customCategory =>
+      isRu ? 'Своя категория' : 'Custom category';
+  String get categoryAlreadyAdded =>
+      isRu ? 'Эта категория уже есть' : 'Category already added';
+  String get noSuggestionsLeft =>
+      isRu
+          ? 'Все предложенные категории уже добавлены'
+          : 'All suggested categories are already added';
   String get categoryName =>
       isRu ? 'Название категории' : 'Category name';
   String get categoryType => isRu ? 'Тип' : 'Type';

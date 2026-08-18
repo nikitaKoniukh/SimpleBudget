@@ -278,22 +278,60 @@ class AppState extends ChangeNotifier {
     return next;
   }
 
-  Future<void> addCategory({
+  Future<String> addCategory({
     required String name,
     required int colorValue,
     required String type,
+    String? nameEn,
+    String? nameRu,
   }) async {
     final hid = _appUser?.householdId;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.addCategory(
+    final trimmed = name.trim();
+    final en = (nameEn ?? trimmed).trim();
+    final ru = (nameRu ?? trimmed).trim();
+    final id = await _repo.addCategory(
       householdId: hid,
       monthId: mid,
-      nameEn: name.trim(),
-      nameRu: name.trim(),
+      nameEn: en,
+      nameRu: ru,
       colorValue: colorValue,
       type: type,
       sortOrder: _categories.length,
+    );
+    // Optimistic local insert so expense logging can use the id immediately.
+    if (!_categories.any((c) => c.id == id)) {
+      _categories = [
+        ..._categories,
+        BudgetCategory(
+          id: id,
+          nameEn: en,
+          nameRu: ru,
+          colorValue: colorValue,
+          type: type,
+          sortOrder: _categories.length,
+        ),
+      ];
+      notifyListeners();
+    }
+    return id;
+  }
+
+  /// Adds one suggested category if not already present (match by EN name).
+  /// Returns the category id (existing or newly created).
+  Future<String?> addSuggestedCategory(DefaultCategory suggested) async {
+    for (final c in _categories) {
+      if (c.nameEn.toLowerCase() == suggested.nameEn.toLowerCase()) {
+        return c.id;
+      }
+    }
+    return addCategory(
+      name: suggested.nameEn,
+      nameEn: suggested.nameEn,
+      nameRu: suggested.nameRu,
+      colorValue: suggested.colorValue,
+      type: suggested.type,
     );
   }
 
