@@ -71,6 +71,9 @@ class AppLocalizations {
   String get description => isRu ? 'Описание' : 'Description';
   String get category => isRu ? 'Категория' : 'Category';
   String get installment => isRu ? 'Рассрочка' : 'Installment';
+  String get installmentHint => isRu ? 'Например, 1/12' : 'For example, 1/12';
+  String get installmentHelper =>
+      isRu ? 'Введите текущий и общий номер платежа через /' : 'Enter current and total payment number separated by /';
   String get note => isRu ? 'Заметка' : 'Note';
   String get amount => isRu ? 'Сумма' : 'Amount';
 

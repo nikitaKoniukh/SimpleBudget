@@ -152,6 +152,7 @@ ThemeData buildSyncTheme() {
       filled: true,
       fillColor: Colors.white,
       isDense: false,
+      hintStyle: textTheme.bodyMedium?.copyWith(color: SyncColors.textMuted),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),

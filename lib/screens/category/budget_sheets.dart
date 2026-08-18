@@ -265,6 +265,8 @@ Future<void> showPlanEditor(
               controller: installmentCtrl,
               decoration: InputDecoration(
                 labelText: '${l10n.installment} (1/12)',
+                hintText: l10n.installmentHint,
+                helperText: l10n.installmentHelper,
               ),
             ),
             FilledButton(
@@ -344,6 +346,8 @@ Future<String?> showAddSubcategorySheet(
               controller: installmentCtrl,
               decoration: InputDecoration(
                 labelText: '${l10n.installment} (1/12)',
+                hintText: l10n.installmentHint,
+                helperText: l10n.installmentHelper,
               ),
             ),
             FilledButton(
