@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// SyncMonth visual tokens — calm sage, warm coral, soft mint wash.
@@ -96,6 +97,12 @@ ThemeData buildSyncTheme() {
       scrolledUnderElevation: 0,
       foregroundColor: SyncColors.text,
       titleTextStyle: textTheme.titleLarge,
+      // Transparent AppBar luminance is 0, so Flutter would pick light content.
+      systemOverlayStyle: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
+      ),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
