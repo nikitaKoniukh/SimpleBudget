@@ -307,9 +307,21 @@ class _CategoryTreeCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        cat.localizedName(state.localeCode),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            cat.localizedName(state.localeCode),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            _categoryTypeLabel(l10n, cat.type),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: SyncColors.textMuted),
+                          ),
+                        ],
                       ),
                     ),
                     if (editing)
@@ -386,6 +398,17 @@ class _CategoryTreeCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _categoryTypeLabel(AppLocalizations l10n, String type) {
+  switch (type) {
+    case 'savings':
+      return l10n.typeSavings;
+    case 'debt':
+      return l10n.typeDebt;
+    default:
+      return l10n.typeExpense;
   }
 }
 
