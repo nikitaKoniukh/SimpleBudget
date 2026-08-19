@@ -6,9 +6,11 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../category/budget_sheets.dart';
+import '../../widgets/budget/alerts_section.dart';
+import '../../widgets/budget/budget_overview_bar.dart';
+import '../../widgets/budget/category_budget_section.dart';
+import '../../widgets/budget/spending_donut_chart.dart';
 import '../category/categories_screen.dart';
-import '../investments/investments_sheets.dart';
 import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
@@ -21,7 +23,63 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _editing = false;
+  final _scrollController = ScrollController();
+  final _categoryKeys = <String, GlobalKey>{};
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  GlobalKey _keyForCategory(String categoryId) {
+    return _categoryKeys.putIfAbsent(categoryId, GlobalKey.new);
+  }
+
+  void _scrollToCategory(String categoryId) {
+    final key = _categoryKeys[categoryId];
+    if (key?.currentContext == null) return;
+    Scrollable.ensureVisible(
+      key!.currentContext!,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+      alignment: 0.08,
+    );
+  }
+
+  List<BudgetCategory> _categoriesByType(List<BudgetCategory> all, String type) {
+    return all.where((c) => c.type == type).toList();
+  }
+
+  Widget _buildTypeSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    String title,
+    List<BudgetCategory> categories,
+  ) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 4, bottom: 8),
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: SyncColors.textMuted,
+                ),
+          ),
+        ),
+        ...categories.map(
+          (cat) => CategoryBudgetSection(
+            category: cat,
+            scrollKey: _keyForCategory(cat.id),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,15 +200,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        floatingActionButton: _editing
-            ? null
-            : FloatingActionButton.extended(
+        floatingActionButton: FloatingActionButton.extended(
                 heroTag: 'home-log-fab',
                 onPressed: () => showQuickLogSheet(context),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.log),
               ),
         body: ListView(
+          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
             if (totals.planExceedsIncome)
@@ -166,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: SyncColors.warning.withValues(alpha: 0.15),
                 ),
               ),
-            const SizedBox(height: 8),
+            if (totals.planExceedsIncome) const SizedBox(height: 8),
             _HeroRemaining(
               label: cashLeft < 0 ? l10n.overspent : l10n.remaining,
               amount: cashLeft.abs(),
@@ -174,32 +231,9 @@ class _HomeScreenState extends State<HomeScreen> {
               progress: progress,
               overPlan: totals.actual > totals.planned && totals.planned > 0,
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _MiniStat(
-                    label: l10n.income,
-                    amount: totals.income,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MiniStat(
-                    label: l10n.plannedLabel,
-                    amount: totals.planned,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _MiniStat(
-                    label: l10n.spentLabel,
-                    amount: totals.actual,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            SpendingDonutChart(onCategoryTap: _scrollToCategory),
+            BudgetOverviewBar(totals: totals),
             if (totals.savedThisMonth > 0) ...[
               Text(
                 '${l10n.savingsHighlight}: ${formatIls(totals.savedThisMonth)}',
@@ -209,54 +243,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
             ],
-            if (watch.isNotEmpty) ...[
-              Text(
-                l10n.watchlist,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final cat in watch)
-                    Chip(
-                      avatar: Icon(
-                        Icons.warning_amber_rounded,
-                        size: 18,
-                        color: SyncColors.warning,
-                      ),
-                      label: Text(
-                        '${cat.localizedName(state.localeCode)} · ${l10n.overspendAlert}',
-                      ),
-                      backgroundColor:
-                          SyncColors.warning.withValues(alpha: 0.15),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-            if (upcoming.isNotEmpty) ...[
-              Text(
-                l10n.upcomingBills,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              for (final bill in upcoming.take(5))
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  title: Text(bill.name),
-                  subtitle: Text('${l10n.billDay} ${bill.dayOfMonth}'),
-                  trailing: Text(formatIls(bill.amount)),
-                ),
-              const SizedBox(height: 8),
-            ],
-            const SizedBox(height: 8),
+            AlertsSection(
+              watchlist: watch,
+              upcomingBills: upcoming.take(5).toList(),
+            ),
             Row(
               children: [
                 Expanded(
@@ -268,10 +258,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: !state.canEditPlan
-                      ? null
-                      : () => setState(() => _editing = !_editing),
-                  child: Text(_editing ? l10n.done : l10n.edit),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CategoriesScreen(),
+                      ),
+                    );
+                  },
+                  child: Text(l10n.manageCategoriesLink),
                 ),
               ],
             ),
@@ -288,13 +282,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () => _editing
-                            ? showAddCategoryFlow(context)
-                            : Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const CategoriesScreen(),
-                                ),
-                              ),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const CategoriesScreen(),
+                            ),
+                          );
+                        },
                         child: Text(l10n.addCategory),
                       ),
                     ],
@@ -302,258 +296,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else ...[
-              ...state.categories.map(
-                (cat) => _CategoryTreeCard(
-                  category: cat,
-                  editing: _editing,
-                ),
+              _buildTypeSection(
+                context,
+                l10n,
+                l10n.sectionExpenses,
+                _categoriesByType(state.categories, 'expense'),
               ),
-              if (_editing)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => showAddCategoryFlow(context),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(l10n.addCategory),
-                  ),
-                ),
+              _buildTypeSection(
+                context,
+                l10n,
+                l10n.sectionSavings,
+                _categoriesByType(state.categories, 'savings'),
+              ),
+              _buildTypeSection(
+                context,
+                l10n,
+                l10n.sectionDebt,
+                _categoriesByType(state.categories, 'debt'),
+              ),
             ],
           ],
         ),
       ),
-    );
-  }
-}
-
-class _CategoryTreeCard extends StatelessWidget {
-  const _CategoryTreeCard({
-    required this.category,
-    required this.editing,
-  });
-
-  final BudgetCategory category;
-  final bool editing;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final state = context.watch<AppState>();
-    final cat = category;
-    final planned = state.categoryPlanned(cat.id);
-    final actual = state.categoryActual(cat.id);
-    final overPlan = actual > planned && planned > 0;
-    final overColor = SyncColors.overspend;
-    final ratio = planned <= 0
-        ? (actual > 0 ? 1.0 : 0.0)
-        : (actual / planned).clamp(0.0, 1.0);
-    final subs = state.subcategoriesFor(cat.id);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(18),
-        clipBehavior: Clip.antiAlias,
-        child: Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            tilePadding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
-            childrenPadding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: Color(cat.colorValue),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            cat.localizedName(state.localeCode),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            _categoryTypeLabel(l10n, cat.type),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: SyncColors.textMuted),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (editing)
-                      IconButton(
-                        tooltip: l10n.edit,
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        onPressed: () => showCategoryEditor(context, cat),
-                      ),
-                    Text(
-                      formatIls(actual),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: overPlan ? overColor : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: ratio,
-                    minHeight: 8,
-                    backgroundColor: overPlan
-                        ? overColor.withValues(alpha: 0.18)
-                        : Color(cat.colorValue).withValues(alpha: 0.18),
-                    color: overPlan ? overColor : Color(cat.colorValue),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${formatIls(actual)} / ${formatIls(planned)}',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: overPlan ? overColor : SyncColors.textMuted,
-                      ),
-                ),
-              ],
-            ),
-            children: [
-              if (subs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                  child: Text(
-                    l10n.noSubcategories,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: SyncColors.textMuted),
-                  ),
-                )
-              else
-                ...subs.map(
-                  (sub) => _SubcategoryTile(
-                    subcategory: sub,
-                    editing: editing,
-                  ),
-                ),
-              if (editing)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    onPressed: () => cat.isSavings
-                        ? showAddPotFlow(context)
-                        : showAddSubcategorySheet(
-                            context,
-                            categoryId: cat.id,
-                          ),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(
-                      cat.isSavings ? l10n.addPot : l10n.addSubcategory,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _categoryTypeLabel(AppLocalizations l10n, String type) {
-  switch (type) {
-    case 'savings':
-      return l10n.typeSavings;
-    case 'debt':
-      return l10n.typeDebt;
-    default:
-      return l10n.typeExpense;
-  }
-}
-
-class _SubcategoryTile extends StatelessWidget {
-  const _SubcategoryTile({
-    required this.subcategory,
-    required this.editing,
-  });
-
-  final Subcategory subcategory;
-  final bool editing;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
-    final sub = subcategory;
-    final planned = state.plannedFor(sub.id);
-    final spent = state.spentFor(sub.id);
-    final hint = state.installmentHint(sub);
-    final isSavings = state.categoryById(sub.categoryId)?.isSavings ?? false;
-    final overPlan = spent > planned && planned > 0;
-    final overColor = SyncColors.overspend;
-    final amountStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: overPlan ? overColor : SyncColors.text,
-        );
-    final amountLabel = Text(
-      '${formatIls(spent)} / ${formatIls(planned)}',
-      style: amountStyle,
-    );
-
-    return ListTile(
-      contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-      title: Text(
-        sub.localizedName(state.localeCode),
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: overPlan ? overColor : null,
-        ),
-      ),
-      subtitle: hint == null
-          ? null
-          : Text(
-              hint,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(color: SyncColors.textMuted),
-            ),
-      trailing: editing
-          ? TextButton(
-              onPressed: () => showPlanEditor(context, subcategory: sub),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: amountLabel,
-            )
-          : amountLabel,
-      onTap: () {
-        if (editing) {
-          showAddSubcategorySheet(
-            context,
-            categoryId: sub.categoryId,
-            existing: sub,
-          );
-          return;
-        }
-        if (isSavings) {
-          showDepositEditor(context, subcategory: sub);
-          return;
-        }
-        showExpenseEditor(context, subcategoryId: sub.id);
-      },
     );
   }
 }
@@ -621,42 +385,6 @@ class _HeroRemaining extends StatelessWidget {
                 ),
               );
             },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({required this.label, required this.amount});
-
-  final String label;
-  final double amount;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SyncColors.textMuted,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            formatIls(amount),
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
           ),
         ],
       ),

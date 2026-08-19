@@ -286,6 +286,24 @@ class AppLocalizations {
         'Близко к лимиту или сверх плана',
         'קרוב לתקציב או מעליו',
       );
+  String get alerts => _t('Alerts', 'Уведомления', 'התראות');
+  String get seeAll => _t('See all', 'Показать все', 'הצג הכל');
+  String get noExpensesYet =>
+      _t('No expenses yet', 'Трат пока нет', 'אין הוצאות עדיין');
+  String moreExpenses(int count) => _t(
+        '+ $count more',
+        '+ ещё $count',
+        '+ עוד $count',
+      );
+  String get spendingByCategory =>
+      _t('Spending by category', 'Расход по категориям', 'הוצאות לפי קטגוריה');
+  String get manageCategoriesLink =>
+      _t('Manage categories', 'Управление категориями', 'ניהול קטגוריות');
+  String get sectionExpenses => _t('Expenses', 'Расходы', 'הוצאות');
+  String get sectionSavings => _t('Savings', 'Накопления', 'חיסכון');
+  String get sectionDebt => _t('Debt', 'Долги', 'חובות');
+  String get cashLeft => _t('Cash left', 'Остаток наличных', 'מזומן שנותר');
+  String get unallocated => _t('Unallocated', 'Не распределено', 'לא מוקצה');
   String get viewerReadOnlyPlan => _t(
         'You can log income and spends. Plan changes are for editors.',
         'Можно записывать доходы и траты. План меняют редакторы.',

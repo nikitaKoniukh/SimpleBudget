@@ -6,6 +6,8 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../utils/share_helpers.dart';
+import '../../widgets/budget/budget_overview_bar.dart';
+import '../../widgets/budget/spending_donut_chart.dart';
 import '../../widgets/summary_card.dart';
 
 class OverviewScreen extends StatelessWidget {
@@ -51,9 +53,6 @@ class OverviewScreen extends StatelessWidget {
       (s, c) => s + state.categoryPlanned(c.id),
     );
     final totals = state.totals;
-    final progress = totals.planned <= 0
-        ? 0.0
-        : (totals.actual / totals.planned).clamp(0.0, 1.5);
 
     return SyncBackground(
       child: Scaffold(
@@ -62,24 +61,9 @@ class OverviewScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            '${l10n.actual} / ${l10n.budget}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          SpendingDonutChart(),
+          BudgetOverviewBar(totals: totals),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: progress > 1 ? 1 : progress,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(8),
-            color: progress > 1
-                ? Theme.of(context).colorScheme.error
-                : Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
-          ),
-          const SizedBox(height: 20),
           Card(
             color: const Color(0xFFFFB74D).withValues(alpha: 0.35),
             child: ListTile(

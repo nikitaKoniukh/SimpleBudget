@@ -6,7 +6,10 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
+import '../../utils/money.dart';
+import '../../theme/sync_theme.dart';
 import '../../widgets/form_sheet.dart';
+import '../investments/investments_sheets.dart';
 import 'categories_screen.dart';
 
 Future<void> showExpenseEditor(
@@ -550,4 +553,119 @@ Future<String?> _pickCategoryAndAddSubcategory(BuildContext context) async {
 
   if (ok != true || !context.mounted) return null;
   return showAddSubcategorySheet(context, categoryId: categoryId);
+}
+
+Future<void> showSubcategoryExpensesSheet(
+  BuildContext context, {
+  required Subcategory subcategory,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final dateFmt = DateFormat.yMMMd(
+    Localizations.localeOf(context).languageCode,
+  );
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.35,
+        maxChildSize: 0.92,
+        builder: (ctx, scrollController) {
+          return FormSheet(
+            child: Consumer<AppState>(
+              builder: (ctx, state, _) {
+                final isSavings =
+                    state.categoryById(subcategory.categoryId)?.isSavings ??
+                        false;
+                final expenses = state.expensesFor(subcategory.id);
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      subcategory.localizedName(state.localeCode),
+                      style: Theme.of(ctx).textTheme.titleLarge,
+                    ),
+                    Text(
+                      '${formatIls(state.spentFor(subcategory.id))} / ${formatIls(state.plannedFor(subcategory.id))}',
+                      style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                            color: SyncColors.textMuted,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: expenses.isEmpty
+                          ? Center(child: Text(l10n.noExpensesYet))
+                          : ListView.builder(
+                              controller: scrollController,
+                              itemCount: expenses.length,
+                              itemBuilder: (ctx, index) {
+                                final expense = expenses[index];
+                                final note = expense.note?.trim();
+                                return ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    note == null || note.isEmpty
+                                        ? '—'
+                                        : note,
+                                  ),
+                                  subtitle: Text(dateFmt.format(expense.date)),
+                                  trailing: Text(
+                                    formatIls(expense.amount),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    if (isSavings || expense.isDeposit) {
+                                      showDepositEditor(
+                                        context,
+                                        expense: expense,
+                                      );
+                                      return;
+                                    }
+                                    showExpenseEditor(
+                                      context,
+                                      expense: expense,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        if (isSavings) {
+                          showDepositEditor(
+                            context,
+                            subcategory: subcategory,
+                          );
+                          return;
+                        }
+                        showExpenseEditor(
+                          context,
+                          subcategoryId: subcategory.id,
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: Text(
+                        isSavings ? l10n.logDeposit : l10n.addExpense,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          );
+        },
+      );
+    },
+  );
 }
