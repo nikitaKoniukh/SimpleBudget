@@ -309,6 +309,26 @@ class AuthService {
     });
   }
 
+  Future<Map<String, String>> getMemberLabels(List<String> uids) async {
+    final labels = <String, String>{};
+    for (final uid in uids) {
+      final snap = await _db.collection('users').doc(uid).get();
+      final data = snap.data();
+      if (data == null) continue;
+      final user = AppUser.fromMap(uid, data);
+      final name = user.displayName?.trim();
+      if (name != null && name.isNotEmpty) {
+        labels[uid] = name;
+        continue;
+      }
+      final email = user.email.trim();
+      if (email.isNotEmpty) {
+        labels[uid] = email;
+      }
+    }
+    return labels;
+  }
+
   Future<void> updateLocale(String uid, String localeCode) async {
     await _db.collection('users').doc(uid).update({'localeCode': localeCode});
   }

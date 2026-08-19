@@ -35,8 +35,19 @@ service cloud.firestore {
       );
     }
 
+    function sameHouseholdUser(userId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId
+            == get(/databases/$(database)/documents/users/$(userId)).data.householdId;
+    }
+
     match /users/{userId} {
-      allow read: if signedIn() && request.auth.uid == userId;
+      allow read: if signedIn() && (
+        request.auth.uid == userId
+        || sameHouseholdUser(userId)
+      );
       allow create: if signedIn() && request.auth.uid == userId;
       allow update: if signedIn() && request.auth.uid == userId;
       allow delete: if signedIn() && request.auth.uid == userId;

@@ -96,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
                 household == null
                     ? '—'
                     : household.memberIds
-                        .map(household.memberName)
+                        .map(state.memberLabel)
                         .join(', '),
               ),
               trailing: const Icon(Icons.chevron_right),
@@ -273,7 +273,7 @@ Future<void> _showMembers(BuildContext context) async {
                 ListTile(title: Text(l10n.members)),
                 for (final uid in household.memberIds)
                   ListTile(
-                    title: Text(household.memberName(uid)),
+                    title: Text(state.memberLabel(uid)),
                     subtitle: Text(
                       household.isOwnedBy(uid)
                           ? l10n.roleOwner

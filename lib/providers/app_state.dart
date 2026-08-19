@@ -71,6 +71,7 @@ class AppState extends ChangeNotifier {
   }
 
   String? get currentUid => _firebaseUser?.uid;
+  Map<String, String> _memberLabels = {};
 
   String get currentDisplayName {
     final name = _appUser?.displayName?.trim();
@@ -82,6 +83,8 @@ class AppState extends ChangeNotifier {
 
   String memberLabel(String? uid) {
     if (uid == null || uid.isEmpty) return '';
+    final fallback = _memberLabels[uid]?.trim();
+    if (fallback != null && fallback.isNotEmpty) return fallback;
     return _household?.memberName(uid) ?? uid;
   }
 
@@ -324,6 +327,7 @@ class AppState extends ChangeNotifier {
     _categories = [];
     _subcategories = [];
     _recurringBills = [];
+    _memberLabels = {};
     _monthId = null;
   }
 
@@ -348,6 +352,9 @@ class AppState extends ChangeNotifier {
         .listen(
           (h) {
             _household = h;
+            if (h != null) {
+              unawaited(_refreshMemberLabels(h.memberIds));
+            }
             if (!ready.isCompleted) ready.complete(h);
             if (h == null) {
               unawaited(_clearStaleHousehold());
@@ -427,6 +434,7 @@ class AppState extends ChangeNotifier {
     await _householdSub?.cancel();
     _householdSub = null;
     _household = null;
+    _memberLabels = {};
     if (_appUser != null) {
       _appUser = AppUser(
         id: _appUser!.id,
@@ -440,6 +448,12 @@ class AppState extends ChangeNotifier {
         await _auth.clearHouseholdId(uid);
       } catch (_) {}
     }
+    notifyListeners();
+  }
+
+  Future<void> _refreshMemberLabels(List<String> memberIds) async {
+    final labels = await _auth.getMemberLabels(memberIds);
+    _memberLabels = labels;
     notifyListeners();
   }
 
