@@ -276,6 +276,8 @@ class _CategoryTreeCard extends StatelessWidget {
     final cat = category;
     final planned = state.categoryPlanned(cat.id);
     final actual = state.categoryActual(cat.id);
+    final overPlan = actual > planned && planned > 0;
+    final overColor = SyncColors.overspend;
     final ratio = planned <= 0
         ? (actual > 0 ? 1.0 : 0.0)
         : (actual / planned).clamp(0.0, 1.0);
@@ -333,7 +335,10 @@ class _CategoryTreeCard extends StatelessWidget {
                       ),
                     Text(
                       formatIls(actual),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: overPlan ? overColor : null,
+                      ),
                     ),
                   ],
                 ),
@@ -343,18 +348,18 @@ class _CategoryTreeCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: ratio,
                     minHeight: 8,
-                    backgroundColor:
-                        Color(cat.colorValue).withValues(alpha: 0.18),
-                    color: Color(cat.colorValue),
+                    backgroundColor: overPlan
+                        ? overColor.withValues(alpha: 0.18)
+                        : Color(cat.colorValue).withValues(alpha: 0.18),
+                    color: overPlan ? overColor : Color(cat.colorValue),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${formatIls(actual)} / ${formatIls(planned)}',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelSmall
-                      ?.copyWith(color: SyncColors.textMuted),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: overPlan ? overColor : SyncColors.textMuted,
+                      ),
                 ),
               ],
             ),
@@ -429,11 +434,11 @@ class _SubcategoryTile extends StatelessWidget {
     final spent = state.spentFor(sub.id);
     final hint = state.installmentHint(sub);
     final isSavings = state.categoryById(sub.categoryId)?.isSavings ?? false;
+    final overPlan = spent > planned && planned > 0;
+    final overColor = SyncColors.overspend;
     final amountStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
           fontWeight: FontWeight.w600,
-          color: spent > planned && planned > 0
-              ? SyncColors.accent
-              : SyncColors.text,
+          color: overPlan ? overColor : SyncColors.text,
         );
     final amountLabel = Text(
       '${formatIls(spent)} / ${formatIls(planned)}',
@@ -444,7 +449,10 @@ class _SubcategoryTile extends StatelessWidget {
       contentPadding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       title: Text(
         sub.localizedName(state.localeCode),
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: overPlan ? overColor : null,
+        ),
       ),
       subtitle: hint == null
           ? null
