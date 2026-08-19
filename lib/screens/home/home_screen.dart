@@ -120,10 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           actions: [
-            TextButton(
-              onPressed: () => setState(() => _editing = !_editing),
-              child: Text(_editing ? l10n.done : l10n.edit),
-            ),
             IconButton(
               tooltip: l10n.selectMonth,
               onPressed: () => showSelectMonthSheet(context),
@@ -198,6 +194,23 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.categories,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _editing = !_editing),
+                  child: Text(_editing ? l10n.done : l10n.edit),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             if (state.categories.isEmpty)
               Card(
                 child: Padding(

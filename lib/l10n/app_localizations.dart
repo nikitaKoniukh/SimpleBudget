@@ -69,6 +69,7 @@ class AppLocalizations {
   String get cancel => isRu ? 'Отмена' : 'Cancel';
   String get description => isRu ? 'Описание' : 'Description';
   String get category => isRu ? 'Категория' : 'Category';
+  String get categories => isRu ? 'Категории' : 'Categories';
   String get installment => isRu ? 'Рассрочка' : 'Installment';
   String get installmentHint => isRu ? 'Например, 1/12' : 'For example, 1/12';
   String get installmentHelper => isRu
