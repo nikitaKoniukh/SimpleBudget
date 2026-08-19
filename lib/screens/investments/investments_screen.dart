@@ -110,6 +110,7 @@ class _SetAsideHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -143,7 +144,7 @@ class _SetAsideHero extends StatelessWidget {
           if (target != null) ...[
             const SizedBox(height: 4),
             Text(
-              '${formatIls(saved)} / ${formatIls(target!)}',
+              '${l10n.targetAmount}: ${formatIls(target!)}',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: SyncColors.textMuted,
                   ),
@@ -232,7 +233,7 @@ class _PotCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}',
+                    '${l10n.targetAmount}: ${formatIls(pot.targetAmount!)}',
                     style: Theme.of(context)
                         .textTheme
                         .labelSmall

@@ -221,11 +221,11 @@ class AppLocalizations {
   String get addPot => isRu ? 'Добавить цель' : 'Add pot';
   String get logDeposit => isRu ? 'Отложить' : 'Log deposit';
   String get deposit => isRu ? 'Отложение' : 'Deposit';
-  String get targetAmount => isRu ? 'Цель' : 'Target';
+  String get targetAmount => isRu ? 'Общая цель' : 'Savings goal';
   String get targetOptional =>
-      isRu ? 'Цель (необязательно)' : 'Target (optional)';
-  String get setTarget => isRu ? 'Задать цель' : 'Set target';
-  String get clearTarget => isRu ? 'Убрать цель' : 'Clear target';
+      isRu ? 'Общая цель (необязательно)' : 'Savings goal (optional)';
+  String get setTarget => isRu ? 'Задать общую цель' : 'Set savings goal';
+  String get clearTarget => isRu ? 'Убрать общую цель' : 'Clear savings goal';
   String get savedLabel => isRu ? 'Накоплено' : 'Saved';
   String get emptyPots => isRu
       ? 'Пока нет целей. Добавьте накопления, резерв или инвестиции.'
