@@ -12,9 +12,14 @@ class FormSheet extends StatelessWidget {
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(context).bottom,
       ),
-      child: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-        child: SingleChildScrollView(child: child),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+        ),
+        child: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+          child: SingleChildScrollView(child: child),
+        ),
       ),
     );
   }
