@@ -15,10 +15,24 @@ service cloud.firestore {
     function isJoiningHousehold() {
       return signedIn()
         && resource.data.inviteCode is string
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['memberIds', 'memberProfiles'])
         && request.auth.uid in request.resource.data.memberIds
         && !(request.auth.uid in resource.data.memberIds)
         && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1;
+    }
+
+    function householdData(householdId) {
+      return get(/databases/$(database)/documents/households/$(householdId)).data;
+    }
+
+    function isPlanEditor(householdId) {
+      return isMember(householdId) && (
+        householdData(householdId).createdBy == request.auth.uid
+        || !('memberProfiles' in householdData(householdId))
+        || !(request.auth.uid in householdData(householdId).memberProfiles)
+        || householdData(householdId).memberProfiles[request.auth.uid].role != 'viewer'
+      );
     }
 
     match /users/{userId} {
@@ -54,23 +68,32 @@ service cloud.firestore {
       allow delete: if isHouseholdOwner();
 
       match /categories/{docId} {
-        allow read, write: if isMember(householdId);
+        allow read: if isMember(householdId);
+        allow write: if isPlanEditor(householdId);
       }
       match /subcategories/{docId} {
-        allow read, write: if isMember(householdId);
+        allow read: if isMember(householdId);
+        allow write: if isPlanEditor(householdId);
+      }
+      match /recurringBills/{docId} {
+        allow read: if isMember(householdId);
+        allow write: if isPlanEditor(householdId);
       }
 
       match /months/{monthId} {
-        allow read, write: if isMember(householdId);
+        allow read: if isMember(householdId);
+        allow write: if isPlanEditor(householdId);
 
         match /incomeSources/{docId} {
-          allow read, write: if isMember(householdId);
+          allow read: if isMember(householdId);
+          allow write: if isPlanEditor(householdId);
         }
         match /incomeEntries/{docId} {
           allow read, write: if isMember(householdId);
         }
         match /plans/{docId} {
-          allow read, write: if isMember(householdId);
+          allow read: if isMember(householdId);
+          allow write: if isPlanEditor(householdId);
         }
         match /expenses/{docId} {
           allow read, write: if isMember(householdId);

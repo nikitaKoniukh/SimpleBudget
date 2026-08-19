@@ -38,6 +38,7 @@ class SyncMonthApp extends StatelessWidget {
             supportedLocales: const [
               Locale('en'),
               Locale('ru'),
+              Locale('he'),
             ],
             localizationsDelegates: const [
               AppLocalizationsDelegate(),

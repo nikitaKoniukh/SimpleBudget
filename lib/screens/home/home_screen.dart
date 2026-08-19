@@ -87,10 +87,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final monthId = state.monthId!;
     final monthDate = dateFromMonthId(monthId);
     final totals = state.totals;
-    final cashLeft = totals.income - totals.actual;
+    final cashLeft = totals.cashLeft;
     final progress = totals.planned <= 0
         ? 0.0
         : (totals.actual / totals.planned).clamp(0.0, 1.0);
+    final watch = state.overspendWatchlist();
+    final today = DateTime.now();
+    final upcoming = state.recurringBills
+        .where((b) => b.dayOfMonth >= today.day)
+        .toList()
+      ..sort((a, b) => a.dayOfMonth.compareTo(b.dayOfMonth));
 
     return SyncBackground(
       child: Scaffold(
@@ -193,7 +199,64 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            if (totals.savedThisMonth > 0) ...[
+              Text(
+                '${l10n.savingsHighlight}: ${formatIls(totals.savedThisMonth)}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: SyncColors.textMuted,
+                    ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (watch.isNotEmpty) ...[
+              Text(
+                l10n.watchlist,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final cat in watch)
+                    Chip(
+                      avatar: Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: SyncColors.warning,
+                      ),
+                      label: Text(
+                        '${cat.localizedName(state.localeCode)} · ${l10n.overspendAlert}',
+                      ),
+                      backgroundColor:
+                          SyncColors.warning.withValues(alpha: 0.15),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (upcoming.isNotEmpty) ...[
+              Text(
+                l10n.upcomingBills,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              for (final bill in upcoming.take(5))
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: Text(bill.name),
+                  subtitle: Text('${l10n.billDay} ${bill.dayOfMonth}'),
+                  trailing: Text(formatIls(bill.amount)),
+                ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -205,7 +268,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => setState(() => _editing = !_editing),
+                  onPressed: !state.canEditPlan
+                      ? null
+                      : () => setState(() => _editing = !_editing),
                   child: Text(_editing ? l10n.done : l10n.edit),
                 ),
               ],

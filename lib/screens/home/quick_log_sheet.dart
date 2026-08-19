@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../category/budget_sheets.dart';
 import '../income/income_dialogs.dart';
+import '../investments/investments_sheets.dart';
 
 Future<void> showQuickLogSheet(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
@@ -49,6 +50,17 @@ Future<void> showQuickLogSheet(BuildContext context) async {
                 onTap: () {
                   Navigator.pop(ctx);
                   showExpenseEditor(context);
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.savings_outlined),
+                ),
+                title: Text(l10n.savingsHighlight),
+                subtitle: Text(l10n.logDeposit),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showDepositEditor(context);
                 },
               ),
             ],

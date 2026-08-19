@@ -10,8 +10,22 @@ import '../category/budget_sheets.dart';
 import '../home/quick_log_sheet.dart';
 import '../income/income_dialogs.dart';
 
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
+
+  @override
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
+
+class _ActivityScreenState extends State<ActivityScreen> {
+  String _query = '';
+  String? _categoryId;
+
+  bool _matchesQuery(String haystack) {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return true;
+    return haystack.toLowerCase().contains(q);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +53,26 @@ class ActivityScreen extends StatelessWidget {
       });
     final expenses = List.of(state.expenses)
       ..sort((a, b) => b.date.compareTo(a.date));
+
+    final filteredEntries = entries.where((e) {
+      final source = sourcesById[e.sourceId];
+      final title = source?.localizedName(state.localeCode) ?? l10n.income;
+      final who = e.createdByName ?? state.memberLabel(e.createdBy);
+      return _matchesQuery('$title ${e.note ?? ''} $who');
+    }).toList();
+
+    final filteredExpenses = expenses.where((expense) {
+      if (_categoryId != null) {
+        final sub = state.subcategoryById(expense.subcategoryId);
+        if (sub == null || sub.categoryId != _categoryId) return false;
+      }
+      final sub = state.subcategoryById(expense.subcategoryId);
+      final cat = sub == null ? null : state.categoryById(sub.categoryId);
+      final who = expense.createdByName ?? state.memberLabel(expense.createdBy);
+      final hay =
+          '${expense.note ?? ''} ${sub?.localizedName(state.localeCode) ?? ''} ${cat?.localizedName(state.localeCode) ?? ''} $who';
+      return _matchesQuery(hay);
+    }).toList();
 
     final empty = entries.isEmpty && expenses.isEmpty;
 
@@ -83,6 +117,11 @@ class ActivityScreen extends StatelessWidget {
                         onPressed: () => showAddIncomeEntryFlow(context),
                         child: Text(l10n.addFirstIncome),
                       ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () => showExpenseEditor(context),
+                        child: Text(l10n.addFirstExpense),
+                      ),
                     ],
                   ),
                 ),
@@ -90,12 +129,47 @@ class ActivityScreen extends StatelessWidget {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 children: [
+                  TextField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: l10n.searchActivity,
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        FilterChip(
+                          label: Text(l10n.filterAll),
+                          selected: _categoryId == null,
+                          onSelected: (_) => setState(() => _categoryId = null),
+                        ),
+                        const SizedBox(width: 8),
+                        ...state.categories.map(
+                          (c) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(c.localizedName(state.localeCode)),
+                              selected: _categoryId == c.id,
+                              onSelected: (_) => setState(
+                                () => _categoryId =
+                                    _categoryId == c.id ? null : c.id,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     l10n.incomeEntries,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  if (entries.isEmpty)
+                  if (filteredEntries.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
@@ -104,10 +178,12 @@ class ActivityScreen extends StatelessWidget {
                       ),
                     )
                   else
-                    ...entries.map((e) {
+                    ...filteredEntries.map((e) {
                       final source = sourcesById[e.sourceId];
                       final title = source?.localizedName(state.localeCode) ??
                           l10n.income;
+                      final who =
+                          e.createdByName ?? state.memberLabel(e.createdBy);
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
@@ -119,7 +195,12 @@ class ActivityScreen extends StatelessWidget {
                             ),
                           ),
                           title: Text(title),
-                          subtitle: e.note != null ? Text(e.note!) : null,
+                          subtitle: Text(
+                            [
+                              if (e.note != null) e.note!,
+                              if (who.isNotEmpty) '${l10n.loggedBy} $who',
+                            ].join(' · '),
+                          ),
                           trailing: Text(
                             formatIls(e.amount),
                             style: const TextStyle(fontWeight: FontWeight.w700),
@@ -138,26 +219,33 @@ class ActivityScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  if (expenses.isEmpty)
+                  if (filteredExpenses.isEmpty)
                     Text(
                       l10n.noData,
                       style: TextStyle(color: SyncColors.textMuted),
                     )
                   else
-                    ...expenses.map((expense) {
+                    ...filteredExpenses.map((expense) {
                       final sub = state.subcategoryById(expense.subcategoryId);
                       final cat = sub == null
                           ? null
                           : state.categoryById(sub.categoryId);
+                      final isDeposit = state.isDepositExpense(expense);
                       final title = expense.note?.trim().isNotEmpty == true
                           ? expense.note!
                           : (sub?.localizedName(state.localeCode) ??
                               l10n.expense);
+                      final who = expense.createdByName ??
+                          state.memberLabel(expense.createdBy);
                       final subtitleParts = <String>[
+                        if (isDeposit) l10n.deposit,
+                        if (expense.splitGroupId != null) l10n.splitSpend,
                         if (cat != null) cat.localizedName(state.localeCode),
-                        if (sub != null && expense.note?.trim().isNotEmpty == true)
+                        if (sub != null &&
+                            expense.note?.trim().isNotEmpty == true)
                           sub.localizedName(state.localeCode),
                         DateFormat.MMMd().format(expense.date),
+                        if (who.isNotEmpty) '${l10n.loggedBy} $who',
                       ];
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -166,8 +254,10 @@ class ActivityScreen extends StatelessWidget {
                             backgroundColor: Color(
                               cat?.colorValue ?? 0xFF90A4AE,
                             ).withValues(alpha: 0.35),
-                            child: const Icon(
-                              Icons.arrow_upward_rounded,
+                            child: Icon(
+                              isDeposit
+                                  ? Icons.savings_outlined
+                                  : Icons.arrow_upward_rounded,
                               color: SyncColors.accent,
                             ),
                           ),

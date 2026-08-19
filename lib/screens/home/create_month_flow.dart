@@ -29,6 +29,9 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
   late int _year;
   late int _month;
   var _saving = false;
+  String? _copyFromId;
+  var _empty = false;
+  var _rollover = false;
 
   @override
   void initState() {
@@ -36,6 +39,13 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     final now = DateTime.now();
     _year = now.year;
     _month = now.month;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final months = context.read<AppState>().months;
+      if (months.isNotEmpty) {
+        setState(() => _copyFromId = months.first.id);
+      }
+    });
   }
 
   String get _selectedMonthId => monthIdFromDate(DateTime(_year, _month));
@@ -63,7 +73,13 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     if (state.months.any((m) => m.id == monthId)) return;
     setState(() => _saving = true);
     try {
-      await state.createMonth(monthId: monthId);
+      final copyFrom = _empty ? null : _copyFromId;
+      await state.createMonth(
+        monthId: monthId,
+        copyFromMonthId: copyFrom,
+        empty: copyFrom == null,
+        rolloverLeftover: copyFrom != null && _rollover,
+      );
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +102,9 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     final existingIds = {for (final m in state.months) m.id};
     final monthId = _selectedMonthId;
     final alreadyExists = existingIds.contains(monthId);
-    final willCopy = state.months.any((m) => m.id != monthId);
+    final copyCandidates =
+        state.months.where((m) => m.id != monthId).toList();
+    final willCopy = !_empty && copyCandidates.isNotEmpty;
 
     return SyncBackground(
       child: Scaffold(
@@ -98,11 +116,9 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: Padding(
+        body: ListView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          children: [
               Text(
                 l10n.createThisMonth,
                 style: Theme.of(context).textTheme.headlineSmall,
@@ -114,6 +130,40 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
                       color: SyncColors.textMuted,
                     ),
               ),
+              if (copyCandidates.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.createEmptyMonth),
+                  value: _empty,
+                  onChanged: (v) => setState(() => _empty = v),
+                ),
+                if (!_empty)
+                  DropdownButtonFormField<String>(
+                    initialValue: copyCandidates.any((m) => m.id == _copyFromId)
+                        ? _copyFromId
+                        : copyCandidates.first.id,
+                    decoration:
+                        InputDecoration(labelText: l10n.selectMonthToCopy),
+                    items: [
+                      for (final m in copyCandidates)
+                        DropdownMenuItem(
+                          value: m.id,
+                          child: Text(l10n.monthTitle(dateFromMonthId(m.id))),
+                        ),
+                    ],
+                    onChanged: (v) => setState(() => _copyFromId = v),
+                  ),
+                if (!_empty)
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.rolloverLeftover),
+                    subtitle: Text(l10n.copyPlanOnly),
+                    value: _rollover,
+                    onChanged: (v) =>
+                        setState(() => _rollover = v ?? false),
+                  ),
+              ],
               const SizedBox(height: 28),
               Text(l10n.yearLabel),
               const SizedBox(height: 8),
@@ -143,7 +193,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
                   setState(() => _month = v);
                 },
               ),
-              const Spacer(),
+              const SizedBox(height: 24),
               FilledButton(
                 onPressed: _saving || alreadyExists ? null : _finish,
                 child: Text(l10n.done),
@@ -151,8 +201,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

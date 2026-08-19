@@ -27,6 +27,13 @@ Future<void> showExpenseEditor(
   final noteCtrl = TextEditingController(text: expense?.note ?? '');
   var date = expense?.date ?? DateTime.now();
 
+  var split = false;
+  var splitSubId = state.subcategories
+      .where((s) => s.id != selectedSubId)
+      .firstOrNull
+      ?.id;
+  final splitAmountCtrl = TextEditingController();
+
   final result = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
@@ -152,6 +159,39 @@ Future<void> showExpenseEditor(
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.note),
                 ),
+                if (expense == null && (subs.length >= 2))
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.splitSpend),
+                    value: split,
+                    onChanged: (v) => setModal(() => split = v),
+                  ),
+                if (expense == null && split) ...[
+                  DropdownButtonFormField<String>(
+                    initialValue: splitSubId,
+                    decoration: InputDecoration(labelText: '${l10n.splitPart} 2'),
+                    items: subs
+                        .where((s) => s.id != selectedSubId)
+                        .map((sub) {
+                      final cat = live.categoryById(sub.categoryId);
+                      return DropdownMenuItem(
+                        value: sub.id,
+                        child: Text(
+                          '${cat?.localizedName(live.localeCode) ?? ''} · ${sub.localizedName(live.localeCode)}',
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (v) => setModal(() => splitSubId = v),
+                  ),
+                  TextField(
+                    controller: splitAmountCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: '${l10n.splitPart} 2 ${l10n.amount}',
+                    ),
+                  ),
+                ],
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.date),
@@ -204,12 +244,27 @@ Future<void> showExpenseEditor(
   final note = sentenceCase(noteCtrl.text);
 
   if (expense == null) {
-    await state.addExpense(
-      subcategoryId: subId,
-      amount: amount,
-      date: date,
-      note: note.isEmpty ? null : note,
-    );
+    if (split) {
+      final part2 = double.tryParse(splitAmountCtrl.text.replaceAll(',', '')) ?? 0;
+      final rest = amount - part2;
+      final secondId = splitSubId;
+      if (secondId == null || part2 <= 0 || rest <= 0) return;
+      await state.addSplitExpenses(
+        date: date,
+        note: note.isEmpty ? null : note,
+        parts: [
+          (subcategoryId: subId, amount: rest),
+          (subcategoryId: secondId, amount: part2),
+        ],
+      );
+    } else {
+      await state.addExpense(
+        subcategoryId: subId,
+        amount: amount,
+        date: date,
+        note: note.isEmpty ? null : note,
+      );
+    }
   } else {
     await state.updateExpense(
       Expense(
@@ -219,6 +274,10 @@ Future<void> showExpenseEditor(
         date: date,
         note: note.isEmpty ? null : note,
         createdAt: expense.createdAt,
+        createdBy: expense.createdBy,
+        createdByName: expense.createdByName,
+        isDeposit: expense.isDeposit,
+        splitGroupId: expense.splitGroupId,
       ),
     );
   }
@@ -230,6 +289,12 @@ Future<void> showPlanEditor(
 }) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
+  if (!state.canEditPlan) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.viewerReadOnlyPlan)),
+    );
+    return;
+  }
   final plan = state.planFor(subcategory.id);
   final plannedCtrl = TextEditingController(
     text: plan != null && plan.planned > 0

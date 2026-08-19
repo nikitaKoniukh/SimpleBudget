@@ -63,6 +63,32 @@ class AppState extends ChangeNotifier {
     return household.isOwnedBy(uid);
   }
 
+  bool get canEditPlan {
+    final uid = _firebaseUser?.uid;
+    final household = _household;
+    if (uid == null || household == null) return false;
+    return household.canEditPlan(uid);
+  }
+
+  String? get currentUid => _firebaseUser?.uid;
+
+  String get currentDisplayName {
+    final name = _appUser?.displayName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    final email = _appUser?.email.trim();
+    if (email != null && email.isNotEmpty) return email.split('@').first;
+    return 'Member';
+  }
+
+  String memberLabel(String? uid) {
+    if (uid == null || uid.isEmpty) return '';
+    return _household?.memberName(uid) ?? uid;
+  }
+
+  List<RecurringBill> _recurringBills = [];
+  StreamSubscription<List<RecurringBill>>? _billsSub;
+  List<RecurringBill> get recurringBills => _recurringBills;
+
   bool get hasMonthSelected => _monthId != null && _monthId!.isNotEmpty;
   List<BudgetMonth> get months => _months;
 
@@ -100,13 +126,41 @@ class AppState extends ChangeNotifier {
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
     final liveSubIds = subcategories.map((s) => s.id).toSet();
+    final spendSubIds = liveSubIds.where((id) => !_isSavingsPot(id)).toSet();
     final planned = _plans
-        .where((p) => liveSubIds.contains(p.subcategoryId))
+        .where((p) => spendSubIds.contains(p.subcategoryId))
         .fold<double>(0, (s, p) => s + p.planned);
     final actual = _expenses
-        .where((e) => liveSubIds.contains(e.subcategoryId))
+        .where(
+          (e) =>
+              spendSubIds.contains(e.subcategoryId) && !e.isDeposit,
+        )
         .fold<double>(0, (s, e) => s + e.amount);
-    return MonthTotals(income: income, planned: planned, actual: actual);
+    final savedThisMonth = _expenses
+        .where(
+          (e) =>
+              liveSubIds.contains(e.subcategoryId) &&
+              (e.isDeposit || _isSavingsPot(e.subcategoryId)),
+        )
+        .fold<double>(0, (s, e) => s + e.amount);
+    return MonthTotals(
+      income: income,
+      planned: planned,
+      actual: actual,
+      savedThisMonth: savedThisMonth,
+    );
+  }
+
+  bool isDepositExpense(Expense e) =>
+      e.isDeposit || _isSavingsPot(e.subcategoryId);
+
+  List<BudgetCategory> overspendWatchlist({double threshold = 0.8}) {
+    return _categories.where((c) {
+      if (c.isSavings) return false;
+      final planned = categoryPlanned(c.id);
+      if (planned <= 0) return false;
+      return categoryActual(c.id) / planned >= threshold;
+    }).toList();
   }
 
   List<Subcategory> subcategoriesFor(String categoryId) =>
@@ -258,15 +312,18 @@ class AppState extends ChangeNotifier {
     await _monthsSub?.cancel();
     await _categoriesSub?.cancel();
     await _subcategoriesSub?.cancel();
+    await _billsSub?.cancel();
     await _detachMonthDataListeners();
     _householdSub = null;
     _monthsSub = null;
     _categoriesSub = null;
     _subcategoriesSub = null;
+    _billsSub = null;
     _household = null;
     _months = [];
     _categories = [];
     _subcategories = [];
+    _recurringBills = [];
     _monthId = null;
   }
 
@@ -337,6 +394,16 @@ class AppState extends ChangeNotifier {
             notifyListeners();
           },
         );
+    _billsSub = _repo.watchRecurringBills(householdId).listen(
+      (v) {
+        _recurringBills = v;
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        notifyListeners();
+      },
+    );
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
       _months = list;
       if (_monthId != null && !list.any((m) => m.id == _monthId)) {
@@ -411,20 +478,27 @@ class AppState extends ChangeNotifier {
   Future<void> createMonth({
     required String monthId,
     String? copyFromMonthId,
+    bool empty = false,
+    bool rolloverLeftover = false,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
-    final copyFrom =
-        copyFromMonthId ??
-        _months.where((m) => m.id != monthId).firstOrNull?.id;
-    if (copyFrom != null && copyFrom.isNotEmpty) {
-      await _repo.createMonthFromCopy(
-        householdId: hid,
-        fromMonthId: copyFrom,
-        toMonthId: monthId,
-      );
-    } else {
+    if (empty) {
       await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
+    } else {
+      final copyFrom =
+          copyFromMonthId ??
+          _months.where((m) => m.id != monthId).firstOrNull?.id;
+      if (copyFrom != null && copyFrom.isNotEmpty) {
+        await _repo.createMonthFromCopy(
+          householdId: hid,
+          fromMonthId: copyFrom,
+          toMonthId: monthId,
+          rolloverLeftover: rolloverLeftover,
+        );
+      } else {
+        await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
+      }
     }
     await setMonth(monthId);
   }
@@ -441,7 +515,11 @@ class AppState extends ChangeNotifier {
   Future<void> createHousehold(String name) async {
     final uid = _firebaseUser?.uid;
     if (uid == null) return;
-    final h = await _repo.createHousehold(name: name, creatorUid: uid);
+    final h = await _repo.createHousehold(
+      name: name,
+      creatorUid: uid,
+      creatorName: currentDisplayName,
+    );
     _appUser = _appUser?.copyWith(householdId: h.id);
     await _attachHousehold(h.id);
   }
@@ -455,7 +533,11 @@ class AppState extends ChangeNotifier {
   Future<void> joinHousehold(String inviteCode) async {
     final uid = _firebaseUser?.uid;
     if (uid == null) return;
-    final h = await _repo.joinHousehold(inviteCode: inviteCode, uid: uid);
+    final h = await _repo.joinHousehold(
+      inviteCode: inviteCode,
+      uid: uid,
+      displayName: currentDisplayName,
+    );
     _appUser = _appUser?.copyWith(householdId: h.id);
     await _attachHousehold(h.id);
   }
@@ -477,6 +559,62 @@ class AppState extends ChangeNotifier {
       rethrow;
     }
     await _clearStaleHousehold();
+  }
+
+  Future<void> leaveHousehold() async {
+    final uid = _firebaseUser?.uid;
+    final household = _household;
+    if (uid == null || household == null) throw StateError('No household');
+    if (household.isOwnedBy(uid)) {
+      throw StateError('owner-must-delete');
+    }
+    await _repo.leaveHousehold(householdId: household.id, uid: uid);
+    await _detachBudgetListeners();
+    await _clearStaleHousehold();
+  }
+
+  Future<void> removeMember(String memberUid) async {
+    final hid = _household?.id;
+    if (hid == null) throw StateError('No household');
+    if (!isHouseholdOwner) throw StateError('Only the owner can remove members');
+    if (memberUid == _firebaseUser?.uid) {
+      throw StateError('Use leave household');
+    }
+    await _repo.removeMember(householdId: hid, memberUid: memberUid);
+  }
+
+  Future<void> setMemberRole(String memberUid, String role) async {
+    final hid = _household?.id;
+    if (hid == null) throw StateError('No household');
+    if (!isHouseholdOwner) throw StateError('Only the owner can change roles');
+    await _repo.setMemberRole(
+      householdId: hid,
+      memberUid: memberUid,
+      role: role,
+    );
+  }
+
+  Future<void> addRecurringBill({
+    required String name,
+    required double amount,
+    required int dayOfMonth,
+    String? subcategoryId,
+  }) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.addRecurringBill(
+      householdId: hid,
+      name: name,
+      amount: amount,
+      dayOfMonth: dayOfMonth,
+      subcategoryId: subcategoryId,
+    );
+  }
+
+  Future<void> deleteRecurringBill(String billId) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) throw StateError('No household');
+    await _repo.deleteRecurringBill(householdId: hid, billId: billId);
   }
 
   Future<void> deleteAccount({String? password}) async {
@@ -613,6 +751,7 @@ class AppState extends ChangeNotifier {
     String? nameEn,
     String? nameRu,
     double? targetAmount,
+    DateTime? targetDate,
   }) async {
     final catId = await ensureSavingsCategory();
     final trimmed = name.trim();
@@ -627,6 +766,7 @@ class AppState extends ChangeNotifier {
       nameEn: en,
       nameRu: ru,
       targetAmount: targetAmount,
+      targetDate: targetDate,
     );
   }
 
@@ -661,6 +801,7 @@ class AppState extends ChangeNotifier {
     int? installmentCurrent,
     int? installmentTotal,
     double? targetAmount,
+    DateTime? targetDate,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
@@ -675,6 +816,7 @@ class AppState extends ChangeNotifier {
       sortOrder: _subcategories.length,
       installmentTotal: installmentTotal,
       targetAmount: targetAmount,
+      targetDate: targetDate,
     );
     if (_monthId != null && (planned > 0 || installmentCurrent != null)) {
       await _repo.upsertPlan(
@@ -730,6 +872,8 @@ class AppState extends ChangeNotifier {
     required double amount,
     required DateTime date,
     String? note,
+    bool isDeposit = false,
+    String? splitGroupId,
   }) async {
     final hid = _appUser?.householdId;
     final mid = _monthId;
@@ -741,8 +885,49 @@ class AppState extends ChangeNotifier {
       amount: amount,
       date: date,
       note: note,
+      createdBy: currentUid,
+      createdByName: currentDisplayName,
+      isDeposit: isDeposit,
+      splitGroupId: splitGroupId,
     );
     await _adjustSavedTotal(subcategoryId: subcategoryId, delta: amount);
+  }
+
+  Future<void> addSplitExpenses({
+    required DateTime date,
+    String? note,
+    required List<({String subcategoryId, double amount})> parts,
+  }) async {
+    final groupId = DateTime.now().millisecondsSinceEpoch.toString();
+    for (final part in parts) {
+      if (part.amount <= 0) continue;
+      await addExpense(
+        subcategoryId: part.subcategoryId,
+        amount: part.amount,
+        date: date,
+        note: note,
+        splitGroupId: groupId,
+      );
+    }
+  }
+
+  Future<void> addIncomeEntry({
+    required String sourceId,
+    required double amount,
+    String? note,
+  }) async {
+    final hid = _appUser?.householdId;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    await _repo.addIncomeEntry(
+      householdId: hid,
+      monthId: mid,
+      sourceId: sourceId,
+      amount: amount,
+      note: note,
+      createdBy: currentUid,
+      createdByName: currentDisplayName,
+    );
   }
 
   Future<void> addDeposit({
@@ -756,6 +941,7 @@ class AppState extends ChangeNotifier {
       amount: amount,
       date: date,
       note: note,
+      isDeposit: true,
     );
   }
 

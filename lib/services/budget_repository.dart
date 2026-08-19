@@ -55,14 +55,25 @@ class BudgetRepository {
   Future<Household> createHousehold({
     required String name,
     required String creatorUid,
+    String? creatorName,
   }) async {
     final ref = _db.collection('households').doc();
+    final profileName = (creatorName ?? '').trim().isEmpty
+        ? 'Member'
+        : creatorName!.trim();
     final household = Household(
       id: ref.id,
       name: name.trim(),
       memberIds: [creatorUid],
       inviteCode: _generateInviteCode(),
       createdBy: creatorUid,
+      memberProfiles: {
+        creatorUid: MemberProfile(
+          uid: creatorUid,
+          name: profileName,
+          role: 'owner',
+        ),
+      },
     );
     await ref.set({...household.toMap(), 'catalogVersion': 4});
     await _db.collection('users').doc(creatorUid).update({
@@ -74,6 +85,7 @@ class BudgetRepository {
   Future<Household> joinHousehold({
     required String inviteCode,
     required String uid,
+    String? displayName,
   }) async {
     final code = inviteCode.trim().toUpperCase();
     final query = await _db
@@ -89,8 +101,14 @@ class BudgetRepository {
     final members = List<String>.from(data['memberIds'] as List? ?? []);
     if (!members.contains(uid)) {
       members.add(uid);
-      await doc.reference.update({'memberIds': members});
     }
+    final profileName = (displayName ?? '').trim().isEmpty
+        ? 'Member'
+        : displayName!.trim();
+    await doc.reference.update({
+      'memberIds': members,
+      'memberProfiles.$uid': {'name': profileName, 'role': 'editor'},
+    });
     await _db.collection('users').doc(uid).update({'householdId': doc.id});
     return Household.fromMap(doc.id, {...data, 'memberIds': members});
   }
@@ -135,6 +153,7 @@ class BudgetRepository {
     await _deleteQueryDocs(_months(householdId));
     await _deleteQueryDocs(_categories(householdId));
     await _deleteQueryDocs(_subcategories(householdId));
+    await _deleteQueryDocs(_householdRef(householdId).collection('recurringBills'));
     await _householdRef(householdId).delete();
     await _db.collection('users').doc(ownerUid).update({
       'householdId': FieldValue.delete(),
@@ -152,11 +171,97 @@ class BudgetRepository {
         snap.data()?['memberIds'] as List? ?? const [],
       );
       members.remove(uid);
-      await ref.update({'memberIds': members});
+      await ref.update({
+        'memberIds': members,
+        'memberProfiles.$uid': FieldValue.delete(),
+      });
     }
     await _db.collection('users').doc(uid).update({
       'householdId': FieldValue.delete(),
     });
+  }
+
+  Future<void> removeMember({
+    required String householdId,
+    required String memberUid,
+  }) async {
+    await leaveHousehold(householdId: householdId, uid: memberUid);
+  }
+
+  Future<void> setMemberRole({
+    required String householdId,
+    required String memberUid,
+    required String role,
+  }) async {
+    await _householdRef(householdId).update({
+      'memberProfiles.$memberUid.role': role,
+    });
+  }
+
+  Stream<List<RecurringBill>> watchRecurringBills(String householdId) {
+    return _householdRef(householdId)
+        .collection('recurringBills')
+        .snapshots()
+        .map(
+          (s) => s.docs
+              .map((d) => RecurringBill.fromMap(d.id, d.data()))
+              .toList(),
+        );
+  }
+
+  Future<void> addRecurringBill({
+    required String householdId,
+    required String name,
+    required double amount,
+    required int dayOfMonth,
+    String? subcategoryId,
+  }) async {
+    await _householdRef(householdId).collection('recurringBills').add({
+      'name': name,
+      'amount': amount,
+      'dayOfMonth': dayOfMonth.clamp(1, 28),
+      'subcategoryId': subcategoryId,
+    });
+  }
+
+  Future<void> deleteRecurringBill({
+    required String householdId,
+    required String billId,
+  }) async {
+    await _householdRef(
+      householdId,
+    ).collection('recurringBills').doc(billId).delete();
+  }
+
+  Future<void> applyRecurringBillsToMonth({
+    required String householdId,
+    required String monthId,
+  }) async {
+    final bills = await _householdRef(
+      householdId,
+    ).collection('recurringBills').get();
+    if (bills.docs.isEmpty) return;
+    final plans = await _monthRef(householdId, monthId).collection('plans').get();
+    final planned = {
+      for (final d in plans.docs)
+        d.id: (d.data()['planned'] as num?)?.toDouble() ?? 0,
+    };
+    final ops = <void Function(WriteBatch)>[];
+    for (final doc in bills.docs) {
+      final bill = RecurringBill.fromMap(doc.id, doc.data());
+      final subId = bill.subcategoryId;
+      if (subId == null || subId.isEmpty || bill.amount <= 0) continue;
+      final existing = planned[subId] ?? 0;
+      if (existing > 0) continue;
+      ops.add(
+        (batch) => batch.set(
+          _monthRef(householdId, monthId).collection('plans').doc(subId),
+          {'planned': bill.amount},
+          SetOptions(merge: true),
+        ),
+      );
+    }
+    if (ops.isNotEmpty) await _commitInChunks(ops);
   }
 
   Stream<Household?> watchHousehold(String householdId) {
@@ -191,6 +296,10 @@ class BudgetRepository {
       throw StateError('Month already exists');
     }
     await ref.set(BudgetMonth(id: monthId).toMap());
+    await applyRecurringBillsToMonth(
+      householdId: householdId,
+      monthId: monthId,
+    );
   }
 
   /// Copies income sources and plans. Expenses are not copied.
@@ -199,6 +308,7 @@ class BudgetRepository {
     required String householdId,
     required String fromMonthId,
     required String toMonthId,
+    bool rolloverLeftover = false,
   }) async {
     if (fromMonthId == toMonthId) {
       throw StateError('Cannot copy a month onto itself');
@@ -217,6 +327,30 @@ class BudgetRepository {
 
     final sources = await fromRef.collection('incomeSources').get();
     final plans = await fromRef.collection('plans').get();
+    final spentBySub = <String, double>{};
+    if (rolloverLeftover) {
+      final expenses = await fromRef.collection('expenses').get();
+      final savingsIds = <String>{};
+      final cats = await _categories(householdId).get();
+      final savingsCatIds = {
+        for (final c in cats.docs)
+          if (c.data()['type'] == 'savings') c.id,
+      };
+      final subsSnap = await _subcategories(householdId).get();
+      for (final s in subsSnap.docs) {
+        if (savingsCatIds.contains(s.data()['categoryId'])) {
+          savingsIds.add(s.id);
+        }
+      }
+      for (final doc in expenses.docs) {
+        final data = doc.data();
+        final subId = data['subcategoryId'] as String? ?? '';
+        if (subId.isEmpty) continue;
+        if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
+        spentBySub[subId] =
+            (spentBySub[subId] ?? 0) + ((data['amount'] as num?)?.toDouble() ?? 0);
+      }
+    }
     final subs = await _subcategories(householdId).get();
     final subTotals = <String, int?>{
       for (final doc in subs.docs)
@@ -243,12 +377,24 @@ class BudgetRepository {
       if (total != null && current != null && current < total) {
         data['installmentCurrent'] = current + 1;
       }
+      if (rolloverLeftover) {
+        final planned = (data['planned'] as num?)?.toDouble() ?? 0;
+        final spent = spentBySub[doc.id] ?? 0;
+        final leftover = planned - spent;
+        if (leftover > 0) {
+          data['planned'] = planned + leftover;
+        }
+      }
       ops.add(
         (batch) => batch.set(toRef.collection('plans').doc(doc.id), data),
       );
     }
 
     await _commitInChunks(ops);
+    await applyRecurringBillsToMonth(
+      householdId: householdId,
+      monthId: toMonthId,
+    );
   }
 
   Future<String> duplicateMonth({
@@ -512,6 +658,7 @@ class BudgetRepository {
     required int sortOrder,
     int? installmentTotal,
     double? targetAmount,
+    DateTime? targetDate,
   }) async {
     final doc = await _subcategories(householdId).add({
       'categoryId': categoryId,
@@ -521,6 +668,7 @@ class BudgetRepository {
       'installmentTotal': installmentTotal,
       'archived': false,
       'targetAmount': targetAmount,
+      'targetDate': targetDate?.toIso8601String(),
       'savedTotal': 0,
     });
     return doc.id;
@@ -571,6 +719,10 @@ class BudgetRepository {
     required double amount,
     required DateTime date,
     String? note,
+    String? createdBy,
+    String? createdByName,
+    bool isDeposit = false,
+    String? splitGroupId,
   }) async {
     final doc = await _monthRef(householdId, monthId)
         .collection('expenses')
@@ -580,6 +732,10 @@ class BudgetRepository {
           'date': date.toIso8601String(),
           'note': note,
           'createdAt': DateTime.now().toIso8601String(),
+          'createdBy': createdBy,
+          'createdByName': createdByName,
+          'isDeposit': isDeposit,
+          'splitGroupId': splitGroupId,
         });
     return doc.id;
   }
@@ -612,12 +768,16 @@ class BudgetRepository {
     required String sourceId,
     required double amount,
     String? note,
+    String? createdBy,
+    String? createdByName,
   }) async {
     await _monthRef(householdId, monthId).collection('incomeEntries').add({
       'sourceId': sourceId,
       'amount': amount,
       'note': note,
       'createdAt': DateTime.now().toIso8601String(),
+      'createdBy': createdBy,
+      'createdByName': createdByName,
     });
   }
 
@@ -654,6 +814,28 @@ class BudgetRepository {
         .collection('incomeSources')
         .add({'nameEn': nameEn, 'nameRu': nameRu, 'sortOrder': sortOrder});
     return doc.id;
+  }
+
+  Future<void> updateIncomeSource({
+    required String householdId,
+    required String monthId,
+    required IncomeSource source,
+  }) async {
+    await _monthRef(householdId, monthId)
+        .collection('incomeSources')
+        .doc(source.id)
+        .set(source.toMap(), SetOptions(merge: true));
+  }
+
+  Future<void> deleteIncomeSource({
+    required String householdId,
+    required String monthId,
+    required String sourceId,
+  }) async {
+    await _monthRef(
+      householdId,
+      monthId,
+    ).collection('incomeSources').doc(sourceId).delete();
   }
 
   /// Promotes per-month categories/lineItems into the household catalog,

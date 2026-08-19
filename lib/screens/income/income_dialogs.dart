@@ -58,6 +58,70 @@ Future<IncomeSource?> _createIncomeSource(BuildContext context) async {
   );
 }
 
+Future<void> _editIncomeSource(
+  BuildContext context,
+  IncomeSource source,
+) async {
+  final l10n = AppLocalizations.of(context);
+  final state = context.read<AppState>();
+  final hid = state.appUser?.householdId;
+  final monthId = state.monthId;
+  if (hid == null || monthId == null) return;
+  final nameCtrl = TextEditingController(
+    text: source.localizedName(state.localeCode),
+  );
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(l10n.editIncomeSource),
+      content: TextField(
+        controller: nameCtrl,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: InputDecoration(labelText: l10n.description),
+        autofocus: true,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text(l10n.cancel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, 'delete'),
+          child: Text(
+            l10n.deleteIncomeSource,
+            style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+          ),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, 'save'),
+          child: Text(l10n.save),
+        ),
+      ],
+    ),
+  );
+  if (result == null || !context.mounted) return;
+  if (result == 'delete') {
+    await state.repo.deleteIncomeSource(
+      householdId: hid,
+      monthId: monthId,
+      sourceId: source.id,
+    );
+    return;
+  }
+  final name = sentenceCase(nameCtrl.text);
+  if (name.isEmpty) return;
+  await state.repo.updateIncomeSource(
+    householdId: hid,
+    monthId: monthId,
+    source: IncomeSource(
+      id: source.id,
+      nameEn: name,
+      nameRu: name,
+      sortOrder: source.sortOrder,
+    ),
+  );
+}
+
 Future<void> showAddIncomeEntryFlow(BuildContext context) async {
   IncomeSource? created;
   if (context.read<AppState>().incomeSources.isEmpty) {
@@ -134,17 +198,36 @@ Future<void> showIncomeEntryEditor(
                   ),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final created = await _createIncomeSource(ctx);
-                      if (created == null || !ctx.mounted) return;
-                      setModal(() {
-                        sourceId = created.id;
-                        pendingSource = created;
-                      });
-                    },
-                    icon: const Icon(Icons.add),
-                    label: Text(l10n.addIncomeSource),
+                  child: Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final created = await _createIncomeSource(ctx);
+                          if (created == null || !ctx.mounted) return;
+                          setModal(() {
+                            sourceId = created.id;
+                            pendingSource = created;
+                          });
+                        },
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.addIncomeSource),
+                      ),
+                      if (sourceId != null && live.canEditPlan)
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final source = liveSources
+                                .where((s) => s.id == sourceId)
+                                .firstOrNull;
+                            if (source == null) return;
+                            await _editIncomeSource(ctx, source);
+                            if (!ctx.mounted) return;
+                            setModal(() {});
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: Text(l10n.editIncomeSource),
+                        ),
+                    ],
                   ),
                 ),
                 TextField(
@@ -204,9 +287,7 @@ Future<void> showIncomeEntryEditor(
   final note = noteText.isEmpty ? null : noteText;
 
   if (entry == null) {
-    await state.repo.addIncomeEntry(
-      householdId: hid,
-      monthId: monthId,
+    await state.addIncomeEntry(
       sourceId: selectedSourceId,
       amount: amount,
       note: note,

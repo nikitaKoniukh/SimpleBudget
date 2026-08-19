@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../utils/share_helpers.dart';
 import '../../widgets/summary_card.dart';
@@ -23,10 +24,17 @@ class OverviewScreen extends StatelessWidget {
     }
 
     final overspent = state.subcategories
-        .where((s) => state.spentFor(s.id) > state.plannedFor(s.id) && state.plannedFor(s.id) > 0)
+        .where((s) {
+          final cat = state.categoryById(s.categoryId);
+          if (cat == null || cat.isSavings) return false;
+          return state.spentFor(s.id) > state.plannedFor(s.id) &&
+              state.plannedFor(s.id) > 0;
+        })
         .toList();
     final underspent = state.subcategories
         .where((s) {
+          final cat = state.categoryById(s.categoryId);
+          if (cat == null || cat.isSavings) return false;
           final planned = state.plannedFor(s.id);
           final spent = state.spentFor(s.id);
           return planned > spent && planned > 0;
@@ -47,8 +55,10 @@ class OverviewScreen extends StatelessWidget {
         ? 0.0
         : (totals.actual / totals.planned).clamp(0.0, 1.5);
 
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.overview)),
+    return SyncBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(title: Text(l10n.overview)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -80,6 +90,19 @@ class OverviewScreen extends StatelessWidget {
               leading: const Icon(Icons.savings_outlined),
             ),
           ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.categories,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          ...state.categories.where((c) => !c.isSavings).map(
+                (c) => ListTile(
+                  title: Text(c.localizedName(state.localeCode)),
+                  subtitle: Text(
+                    '${formatIls(state.categoryActual(c.id))} / ${formatIls(state.categoryPlanned(c.id))}',
+                  ),
+                ),
+              ),
           const SizedBox(height: 16),
           Text(
             l10n.overspent,
@@ -138,6 +161,7 @@ class OverviewScreen extends StatelessWidget {
             label: Text(l10n.exportCsv),
           ),
         ],
+      ),
       ),
     );
   }

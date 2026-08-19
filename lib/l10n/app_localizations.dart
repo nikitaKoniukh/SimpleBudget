@@ -7,24 +7,47 @@ class AppLocalizations {
   final String localeCode;
 
   bool get isRu => localeCode == 'ru';
+  bool get isHe => localeCode == 'he';
+
+  String _t(String en, String ru, [String? he]) {
+    if (isRu) return ru;
+    if (isHe) return he ?? en;
+    return en;
+  }
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
-  String get appTitle => isRu ? 'SyncMonth' : 'SyncMonth';
+  String get appTitle => 'SyncMonth';
   String get tagline =>
-      isRu ? 'Семейный месячный бюджет' : 'Family monthly budget';
+      _t('Family monthly budget', 'Семейный месячный бюджет', 'תקציב משפחתי חודשי');
 
-  String get month => isRu ? 'Месяц' : 'Month';
-  String get home => isRu ? 'Домой' : 'Home';
-  String get activity => isRu ? 'Активность' : 'Activity';
-  String get plan => isRu ? 'План' : 'Plan';
-  String get income => isRu ? 'Доход' : 'Income';
-  String get expense => isRu ? 'Расход' : 'Expense';
-  String get overview => isRu ? 'Обзор' : 'Overview';
-  String get settings => isRu ? 'Настройки' : 'Settings';
-  String get log => isRu ? 'Записать' : 'Log';
+  String get month => _t('Month', 'Месяц', 'חודש');
+  String get home => _t('Home', 'Домой', 'בית');
+  String get activity => _t('Activity', 'Активность', 'פעילות');
+  String get plan => _t('Plan', 'План', 'תוכנית');
+  String get income => _t('Income', 'Доход', 'הכנסה');
+  String get expense => _t('Expense', 'Расход', 'הוצאה');
+  String get overview => _t('Reports', 'Обзор', 'דוחות');
+  String get settings => _t('Settings', 'Настройки', 'הגדרות');
+  String get log => _t('Log', 'Записать', 'רישום');
+  String get remaining => _t('Remaining', 'Остаток', 'יתרה');
+  String get overspent => _t('Overspent', 'Перерасход', 'חריגה');
+  String get forgotPassword =>
+      _t('Forgot password?', 'Забыли пароль?', 'שכחתם סיסמה?');
+  String get resetEmailSent => _t(
+        'Check your email for a reset link.',
+        'Проверьте почту — отправили ссылку.',
+        'בדקו את האימייל לקישור לאיפוס.',
+      );
+  String get fieldRequired => _t('Required', 'Обязательно', 'שדה חובה');
+  String get invalidEmail => _t('Invalid email', 'Некорректный email', 'אימייל לא תקין');
+  String get minPassword => _t('Min 6 chars', 'Минимум 6 символов', 'לפחות 6 תווים');
+  String get editIncomeSource =>
+      _t('Edit income source', 'Изменить источник', 'עריכת מקור הכנסה');
+  String get deleteIncomeSource =>
+      _t('Delete income source', 'Удалить источник', 'מחיקת מקור הכנסה');
   String get quickLog => isRu ? 'Быстрая запись' : 'Quick log';
   String get recentExpenses => isRu ? 'Недавние траты' : 'Recent expenses';
   String get incomeEntries => isRu ? 'Доходы' : 'Income entries';
@@ -52,8 +75,6 @@ class AppLocalizations {
   String get budget => isRu ? 'Бюджет' : 'Budget';
   String get actual => isRu ? 'Фактически' : 'Actual';
   String get difference => isRu ? 'Разница' : 'Difference';
-  String get remaining => isRu ? 'Остаток' : 'Remaining';
-  String get overspent => isRu ? 'Перерасход' : 'Overspent';
   String get totalIncome => isRu ? 'Итого дохода' : 'Total income';
   String get groupTotal => isRu ? 'Сумма по группе' : 'Group total';
 
@@ -220,9 +241,63 @@ class AppLocalizations {
       isRu ? 'Что-то пошло не так' : 'Something went wrong';
   String get tryAgain => isRu ? 'Повторить' : 'Try again';
 
+  String get addFirstExpense => _t(
+        'Add first expense',
+        'Добавьте первую трату',
+        'הוסיפו הוצאה ראשונה',
+      );
+  String get searchActivity => _t('Search', 'Поиск', 'חיפוש');
+  String get filterAll => _t('All', 'Все', 'הכל');
+  String get loggedBy => _t('Logged by', 'Кто записал', 'נרשם על ידי');
+  String get leaveHousehold => _t('Leave household', 'Выйти из семьи', 'עזיבת המשפחה');
+  String get leaveHouseholdConfirmTitle =>
+      _t('Leave this household?', 'Выйти из семьи?', 'לעזוב את המשפחה?');
+  String get leaveHouseholdConfirmBody => _t(
+        'You will lose access to this shared budget. Your account stays.',
+        'Вы потеряете доступ к общему бюджету. Аккаунт останется.',
+        'תאבדו גישה לתקציב המשותף. החשבון יישאר.',
+      );
+  String get leaveHouseholdOwnerBlocked => _t(
+        'Owners must delete the household instead of leaving.',
+        'Владелец должен удалить семью, а не выйти.',
+        'בעלים צריכים למחוק את המשפחה במקום לעזוב.',
+      );
+  String get removeMember => _t('Remove', 'Удалить', 'הסרה');
+  String get roleEditor => _t('Editor', 'Редактор', 'עורך');
+  String get roleViewer => _t('Can log only', 'Только записи', 'רישום בלבד');
+  String get roleOwner => _t('Owner', 'Владелец', 'בעלים');
+  String get recurringBills => _t('Recurring bills', 'Регулярные счета', 'חשבונות קבועים');
+  String get addBill => _t('Add bill', 'Добавить счёт', 'הוספת חשבון');
+  String get billDay => _t('Day of month', 'День месяца', 'יום בחודש');
+  String get upcomingBills => _t('Upcoming bills', 'Ближайшие счета', 'חשבונות קרובים');
+  String get splitSpend => _t('Split spend', 'Разделить трату', 'פיצול הוצאה');
+  String get splitPart => _t('Part', 'Часть', 'חלק');
+  String get rolloverLeftover => _t(
+        'Carry leftover to next month',
+        'Перенести остаток на следующий месяц',
+        'העברת יתרה לחודש הבא',
+      );
+  String get copyPlanOnly => _t('Copy plan amounts', 'Копировать план', 'העתקת הסכומים');
+  String get reports => _t('Reports', 'Отчёты', 'דוחות');
+  String get targetDate => _t('Target date', 'Срок', 'תאריך יעד');
+  String get watchlist => _t('Watchlist', 'Контроль категорий', 'מעקב קטגוריות');
+  String get overspendAlert => _t(
+        'Near or over plan',
+        'Близко к лимиту или сверх плана',
+        'קרוב לתקציב או מעליו',
+      );
+  String get viewerReadOnlyPlan => _t(
+        'You can log income and spends. Plan changes are for editors.',
+        'Можно записывать доходы и траты. План меняют редакторы.',
+        'אפשר לרשום הכנסות והוצאות. שינויי תוכנית לעורכים.',
+      );
+  String get hebrew => 'עברית';
+
   String inviteShareMessage(String code, String householdName) => isRu
       ? 'Присоединяйся к бюджету «$householdName» в SyncMonth. Код: $code'
-      : 'Join "$householdName" on SyncMonth. Invite code: $code';
+      : isHe
+          ? 'הצטרפו לתקציב "$householdName" ב-SyncMonth. קוד: $code'
+          : 'Join "$householdName" on SyncMonth. Invite code: $code';
 
   String monthTitle(DateTime date) {
     final monthsEn = [
@@ -239,6 +314,20 @@ class AppLocalizations {
       'November',
       'December',
     ];
+    final monthsHe = [
+      'ינואר',
+      'פברואר',
+      'מרץ',
+      'אפריל',
+      'מאי',
+      'יוני',
+      'יולי',
+      'אוגוסט',
+      'ספטמבר',
+      'אוקטובר',
+      'נובמבר',
+      'דצמבר',
+    ];
     final monthsRu = [
       'Январь',
       'Февраль',
@@ -253,7 +342,11 @@ class AppLocalizations {
       'Ноябрь',
       'Декабрь',
     ];
-    final name = isRu ? monthsRu[date.month - 1] : monthsEn[date.month - 1];
+    final name = isRu
+        ? monthsRu[date.month - 1]
+        : isHe
+            ? monthsHe[date.month - 1]
+            : monthsEn[date.month - 1];
     return '$name ${date.year}';
   }
 }
@@ -263,7 +356,9 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) =>
-      locale.languageCode == 'en' || locale.languageCode == 'ru';
+      locale.languageCode == 'en' ||
+      locale.languageCode == 'ru' ||
+      locale.languageCode == 'he';
 
   @override
   Future<AppLocalizations> load(Locale locale) async {

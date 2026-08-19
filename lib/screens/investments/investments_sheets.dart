@@ -159,38 +159,64 @@ Future<String?> showEditPotSheet(
         : '',
   );
 
+  var targetDate = existing?.targetDate;
+
   final ok = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (ctx) {
       return FormSheet(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          spacing: 12,
-          children: [
-            Text(
-              existing == null ? l10n.addPot : l10n.editPot,
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            TextField(
-              controller: nameCtrl,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(labelText: l10n.subcategoryName),
-              autofocus: existing == null,
-            ),
-            TextField(
-              controller: targetCtrl,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: l10n.targetOptional),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.save),
-            ),
-          ],
+        child: StatefulBuilder(
+          builder: (ctx, setModal) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              spacing: 12,
+              children: [
+                Text(
+                  existing == null ? l10n.addPot : l10n.editPot,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                TextField(
+                  controller: nameCtrl,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(labelText: l10n.subcategoryName),
+                  autofocus: existing == null,
+                ),
+                TextField(
+                  controller: targetCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.targetOptional),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.targetDate),
+                  subtitle: Text(
+                    targetDate == null
+                        ? l10n.noData
+                        : DateFormat.yMMMd().format(targetDate!),
+                  ),
+                  trailing: const Icon(Icons.calendar_today_outlined),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: targetDate ?? DateTime.now(),
+                      firstDate: DateTime(DateTime.now().year - 1),
+                      lastDate: DateTime(DateTime.now().year + 15),
+                    );
+                    if (picked == null) return;
+                    setModal(() => targetDate = picked);
+                  },
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.save),
+                ),
+              ],
+            );
+          },
         ),
       );
     },
@@ -204,7 +230,11 @@ Future<String?> showEditPotSheet(
 
   try {
     if (existing == null) {
-      return await state.addPot(name: name, targetAmount: target);
+      return await state.addPot(
+        name: name,
+        targetAmount: target,
+        targetDate: targetDate,
+      );
     }
     await state.updateSubcategory(
       existing.copyWith(
@@ -212,6 +242,8 @@ Future<String?> showEditPotSheet(
         nameRu: name,
         targetAmount: target,
         clearTargetAmount: target == null,
+        targetDate: targetDate,
+        clearTargetDate: targetDate == null,
       ),
     );
     return existing.id;
@@ -441,6 +473,10 @@ Future<void> showDepositEditor(
       date: date,
       note: note.isEmpty ? null : note,
       createdAt: expense.createdAt,
+      createdBy: expense.createdBy,
+      createdByName: expense.createdByName,
+      isDeposit: true,
+      splitGroupId: expense.splitGroupId,
     ),
   );
 }

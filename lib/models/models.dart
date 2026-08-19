@@ -45,6 +45,32 @@ class AppUser {
   }
 }
 
+class MemberProfile {
+  const MemberProfile({
+    required this.uid,
+    required this.name,
+    this.role = 'editor',
+  });
+
+  final String uid;
+  final String name;
+
+  /// owner | editor | viewer
+  final String role;
+
+  bool get canEditPlan => role != 'viewer';
+
+  Map<String, dynamic> toMap() => {'name': name, 'role': role};
+
+  factory MemberProfile.fromMap(String uid, Map<String, dynamic> map) {
+    return MemberProfile(
+      uid: uid,
+      name: map['name'] as String? ?? '',
+      role: map['role'] as String? ?? 'editor',
+    );
+  }
+}
+
 class Household {
   const Household({
     required this.id,
@@ -53,6 +79,7 @@ class Household {
     required this.inviteCode,
     this.currency = 'ILS',
     this.createdBy,
+    this.memberProfiles = const {},
   });
 
   final String id;
@@ -61,11 +88,25 @@ class Household {
   final String inviteCode;
   final String currency;
   final String? createdBy;
+  final Map<String, MemberProfile> memberProfiles;
 
   bool isOwnedBy(String uid) {
     if (createdBy == uid) return true;
     final missingOwner = createdBy == null || createdBy!.isEmpty;
     return missingOwner && memberIds.length == 1 && memberIds.contains(uid);
+  }
+
+  String roleFor(String uid) {
+    if (isOwnedBy(uid)) return 'owner';
+    return memberProfiles[uid]?.role ?? 'editor';
+  }
+
+  bool canEditPlan(String uid) => roleFor(uid) != 'viewer';
+
+  String memberName(String uid) {
+    final named = memberProfiles[uid]?.name.trim();
+    if (named != null && named.isNotEmpty) return named;
+    return uid;
   }
 
   Map<String, dynamic> toMap() => {
@@ -74,9 +115,25 @@ class Household {
     'inviteCode': inviteCode,
     'currency': currency,
     'createdBy': createdBy,
+    'memberProfiles': {
+      for (final e in memberProfiles.entries) e.key: e.value.toMap(),
+    },
   };
 
   factory Household.fromMap(String id, Map<String, dynamic> map) {
+    final rawProfiles = map['memberProfiles'];
+    final profiles = <String, MemberProfile>{};
+    if (rawProfiles is Map) {
+      for (final e in rawProfiles.entries) {
+        final value = e.value;
+        if (value is Map) {
+          profiles[e.key.toString()] = MemberProfile.fromMap(
+            e.key.toString(),
+            Map<String, dynamic>.from(value),
+          );
+        }
+      }
+    }
     return Household(
       id: id,
       name: map['name'] as String? ?? 'Household',
@@ -84,6 +141,7 @@ class Household {
       inviteCode: map['inviteCode'] as String? ?? '',
       currency: map['currency'] as String? ?? 'ILS',
       createdBy: map['createdBy'] as String?,
+      memberProfiles: profiles,
     );
   }
 }
@@ -146,6 +204,8 @@ class IncomeEntry {
     required this.amount,
     this.note,
     this.createdAt,
+    this.createdBy,
+    this.createdByName,
   });
 
   final String id;
@@ -153,12 +213,16 @@ class IncomeEntry {
   final double amount;
   final String? note;
   final DateTime? createdAt;
+  final String? createdBy;
+  final String? createdByName;
 
   Map<String, dynamic> toMap() => {
     'sourceId': sourceId,
     'amount': amount,
     'note': note,
     'createdAt': createdAt?.toIso8601String(),
+    'createdBy': createdBy,
+    'createdByName': createdByName,
   };
 
   IncomeEntry copyWith({String? sourceId, double? amount, String? note}) {
@@ -168,6 +232,8 @@ class IncomeEntry {
       amount: amount ?? this.amount,
       note: note ?? this.note,
       createdAt: createdAt,
+      createdBy: createdBy,
+      createdByName: createdByName,
     );
   }
 
@@ -180,6 +246,8 @@ class IncomeEntry {
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
           : null,
+      createdBy: map['createdBy'] as String?,
+      createdByName: map['createdByName'] as String?,
     );
   }
 }
@@ -273,6 +341,7 @@ class Subcategory {
     this.archived = false,
     this.targetAmount,
     this.savedTotal = 0,
+    this.targetDate,
   });
 
   final String id;
@@ -289,6 +358,9 @@ class Subcategory {
   /// Cumulative deposits. Written via increment, not [toMap].
   final double savedTotal;
 
+  /// Optional deadline for a savings pot.
+  final DateTime? targetDate;
+
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;
 
@@ -303,6 +375,8 @@ class Subcategory {
     double? targetAmount,
     bool clearTargetAmount = false,
     double? savedTotal,
+    DateTime? targetDate,
+    bool clearTargetDate = false,
   }) {
     return Subcategory(
       id: id,
@@ -318,6 +392,7 @@ class Subcategory {
           ? null
           : (targetAmount ?? this.targetAmount),
       savedTotal: savedTotal ?? this.savedTotal,
+      targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
     );
   }
 
@@ -330,6 +405,7 @@ class Subcategory {
     'sortOrder': sortOrder,
     'archived': archived,
     'targetAmount': targetAmount,
+    'targetDate': targetDate?.toIso8601String(),
   };
 
   factory Subcategory.fromMap(String id, Map<String, dynamic> map) {
@@ -343,6 +419,42 @@ class Subcategory {
       archived: map['archived'] as bool? ?? false,
       targetAmount: (map['targetAmount'] as num?)?.toDouble(),
       savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
+      targetDate: map['targetDate'] != null
+          ? DateTime.tryParse(map['targetDate'] as String)
+          : null,
+    );
+  }
+}
+
+class RecurringBill {
+  const RecurringBill({
+    required this.id,
+    required this.name,
+    required this.amount,
+    required this.dayOfMonth,
+    this.subcategoryId,
+  });
+
+  final String id;
+  final String name;
+  final double amount;
+  final int dayOfMonth;
+  final String? subcategoryId;
+
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'amount': amount,
+    'dayOfMonth': dayOfMonth,
+    'subcategoryId': subcategoryId,
+  };
+
+  factory RecurringBill.fromMap(String id, Map<String, dynamic> map) {
+    return RecurringBill(
+      id: id,
+      name: map['name'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      dayOfMonth: (map['dayOfMonth'] as num?)?.toInt() ?? 1,
+      subcategoryId: map['subcategoryId'] as String?,
     );
   }
 }
@@ -394,6 +506,10 @@ class Expense {
     required this.date,
     this.note,
     this.createdAt,
+    this.createdBy,
+    this.createdByName,
+    this.isDeposit = false,
+    this.splitGroupId,
   });
 
   final String id;
@@ -402,6 +518,10 @@ class Expense {
   final DateTime date;
   final String? note;
   final DateTime? createdAt;
+  final String? createdBy;
+  final String? createdByName;
+  final bool isDeposit;
+  final String? splitGroupId;
 
   Expense copyWith({
     String? subcategoryId,
@@ -416,6 +536,10 @@ class Expense {
       date: date ?? this.date,
       note: note ?? this.note,
       createdAt: createdAt,
+      createdBy: createdBy,
+      createdByName: createdByName,
+      isDeposit: isDeposit,
+      splitGroupId: splitGroupId,
     );
   }
 
@@ -425,6 +549,10 @@ class Expense {
     'date': date.toIso8601String(),
     'note': note,
     'createdAt': createdAt?.toIso8601String(),
+    'createdBy': createdBy,
+    'createdByName': createdByName,
+    'isDeposit': isDeposit,
+    'splitGroupId': splitGroupId,
   };
 
   factory Expense.fromMap(String id, Map<String, dynamic> map) {
@@ -439,6 +567,10 @@ class Expense {
       createdAt: map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'] as String)
           : null,
+      createdBy: map['createdBy'] as String?,
+      createdByName: map['createdByName'] as String?,
+      isDeposit: map['isDeposit'] as bool? ?? false,
+      splitGroupId: map['splitGroupId'] as String?,
     );
   }
 }
@@ -448,13 +580,16 @@ class MonthTotals {
     required this.income,
     required this.planned,
     required this.actual,
+    this.savedThisMonth = 0,
   });
 
   final double income;
   final double planned;
   final double actual;
+  final double savedThisMonth;
 
   double get remaining => planned - actual;
+  double get cashLeft => income - actual;
   double get unallocated => income - planned;
   bool get planExceedsIncome => planned > income;
 }

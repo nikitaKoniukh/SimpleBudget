@@ -10,7 +10,9 @@ import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../category/categories_screen.dart';
 import '../home/month_actions.dart';
+import '../overview/overview_screen.dart';
 import 'account_actions.dart';
+import 'recurring_bills_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -90,7 +92,17 @@ class SettingsScreen extends StatelessWidget {
             ),
             ListTile(
               title: Text(l10n.members),
-              subtitle: Text('${household?.memberIds.length ?? 0}'),
+              subtitle: Text(
+                household == null
+                    ? '—'
+                    : household.memberIds
+                        .map(household.memberName)
+                        .join(', '),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: household == null
+                  ? null
+                  : () => _showMembers(context),
             ),
             ListTile(
               title: Text(l10n.invitePartner),
@@ -126,20 +138,48 @@ class SettingsScreen extends StatelessWidget {
             ListTile(
               title: Text(l10n.language),
               subtitle: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'en', label: Text('English')),
-                  ButtonSegment(value: 'ru', label: Text('Русский')),
+                segments: [
+                  const ButtonSegment(value: 'en', label: Text('English')),
+                  const ButtonSegment(value: 'ru', label: Text('Русский')),
+                  ButtonSegment(value: 'he', label: Text(l10n.hebrew)),
                 ],
                 selected: {state.localeCode},
                 onSelectionChanged: (s) => state.setLocale(s.first),
               ),
             ),
-            ListTile(title: Text(l10n.currency), subtitle: const Text('₪ ILS')),
+            ListTile(
+              title: Text(l10n.reports),
+              leading: const Icon(Icons.insights_outlined),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: !state.hasMonthSelected
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const OverviewScreen(),
+                        ),
+                      );
+                    },
+            ),
+            ListTile(
+              title: Text(l10n.recurringBills),
+              leading: const Icon(Icons.event_repeat_outlined),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const RecurringBillsScreen(),
+                  ),
+                );
+              },
+            ),
             ListTile(
               title: Text(l10n.manageCategories),
               subtitle: Text('${state.categories.length}'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () {
+              onTap: !state.canEditPlan
+                  ? null
+                  : () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const CategoriesScreen()),
                 );
@@ -148,12 +188,14 @@ class SettingsScreen extends StatelessWidget {
             ListTile(
               title: Text(l10n.addMonth),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => showCreateMonthDialog(context),
+              onTap: !state.canEditPlan
+                  ? null
+                  : () => showCreateMonthDialog(context),
             ),
             ListTile(
               title: Text(l10n.startNextMonth),
               trailing: const Icon(Icons.chevron_right),
-              onTap: !state.hasMonthSelected
+              onTap: !state.hasMonthSelected || !state.canEditPlan
                   ? null
                   : () async {
                       try {
@@ -173,6 +215,12 @@ class SettingsScreen extends StatelessWidget {
                     },
             ),
             const Divider(),
+            if (!state.isHouseholdOwner)
+              ListTile(
+                title: Text(l10n.leaveHousehold),
+                leading: const Icon(Icons.logout),
+                onTap: () => confirmAndLeaveHousehold(context),
+              ),
             ListTile(
               title: Text(l10n.signOut),
               leading: const Icon(Icons.logout),
@@ -206,4 +254,65 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _showMembers(BuildContext context) async {
+  final l10n = AppLocalizations.of(context);
+  await showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (ctx) {
+      return SafeArea(
+        child: Consumer<AppState>(
+          builder: (ctx, state, _) {
+            final household = state.household;
+            if (household == null) return const SizedBox.shrink();
+            return ListView(
+              shrinkWrap: true,
+              children: [
+                ListTile(title: Text(l10n.members)),
+                for (final uid in household.memberIds)
+                  ListTile(
+                    title: Text(household.memberName(uid)),
+                    subtitle: Text(
+                      household.isOwnedBy(uid)
+                          ? l10n.roleOwner
+                          : household.roleFor(uid) == 'viewer'
+                              ? l10n.roleViewer
+                              : l10n.roleEditor,
+                    ),
+                    trailing: state.isHouseholdOwner &&
+                            uid != state.currentUid
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: l10n.roleViewer,
+                                icon: Icon(
+                                  household.roleFor(uid) == 'viewer'
+                                      ? Icons.visibility
+                                      : Icons.edit_outlined,
+                                ),
+                                onPressed: () {
+                                  final next = household.roleFor(uid) == 'viewer'
+                                      ? 'editor'
+                                      : 'viewer';
+                                  state.setMemberRole(uid, next);
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.person_remove_outlined),
+                                onPressed: () => state.removeMember(uid),
+                              ),
+                            ],
+                          )
+                        : null,
+                  ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
 }

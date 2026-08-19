@@ -180,8 +180,34 @@ class CategoriesScreen extends StatelessWidget {
                                         : null),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.delete_outline),
-                                  onPressed: () =>
-                                      state.deleteSubcategory(sub.id),
+                                  onPressed: () async {
+                                    final ok = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: Text(l10n.delete),
+                                        content: Text(
+                                          sub.localizedName(state.localeCode),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: Text(l10n.cancel),
+                                          ),
+                                          FilledButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: Text(l10n.confirmDelete),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (ok == true && context.mounted) {
+                                      await context
+                                          .read<AppState>()
+                                          .deleteSubcategory(sub.id);
+                                    }
+                                  },
                                 ),
                               ),
                             ),

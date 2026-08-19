@@ -82,6 +82,22 @@ class _AuthScreenState extends State<AuthScreen> {
     await _run(() => auth.signInWithApple());
   }
 
+  Future<void> _forgotPassword() async {
+    final l10n = AppLocalizations.of(context);
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
+      setState(() => _error = l10n.invalidEmail);
+      return;
+    }
+    await _run(() async {
+      await context.read<AppState>().auth.sendPasswordReset(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.resetEmailSent)),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -134,7 +150,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           border: const OutlineInputBorder(),
                         ),
                         validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            (v == null || v.trim().isEmpty) ? l10n.fieldRequired : null,
                       ),
                     if (_isSignUp) const SizedBox(height: 12),
                     TextFormField(
@@ -145,7 +161,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       validator: (v) => (v == null || !v.contains('@'))
-                          ? 'Invalid email'
+                          ? l10n.invalidEmail
                           : null,
                     ),
                     const SizedBox(height: 12),
@@ -157,7 +173,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         border: const OutlineInputBorder(),
                       ),
                       validator: (v) =>
-                          (v == null || v.length < 6) ? 'Min 6 chars' : null,
+                          (v == null || v.length < 6) ? l10n.minPassword : null,
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
@@ -185,6 +201,11 @@ class _AuthScreenState extends State<AuthScreen> {
                           : () => setState(() => _isSignUp = !_isSignUp),
                       child: Text(_isSignUp ? l10n.signIn : l10n.signUp),
                     ),
+                    if (!_isSignUp)
+                      TextButton(
+                        onPressed: _busy ? null : _forgotPassword,
+                        child: Text(l10n.forgotPassword),
+                      ),
                     const SizedBox(height: 8),
                     Row(
                       children: [

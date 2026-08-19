@@ -175,9 +175,52 @@ void main() {
   );
 
   test('invite share message shape via localizations is not empty', () {
-    final totals = MonthTotals(income: 100, planned: 80, actual: 50);
+    final totals = MonthTotals(
+      income: 100,
+      planned: 80,
+      actual: 50,
+      savedThisMonth: 20,
+    );
     expect(totals.remaining, 30);
+    expect(totals.cashLeft, 50);
     expect(totals.planExceedsIncome, isFalse);
+  });
+
+  test('Expense serializes createdBy, deposit, and split', () {
+    final e = Expense(
+      id: 'x1',
+      subcategoryId: 'sub1',
+      amount: 40,
+      date: DateTime(2026, 8, 12),
+      createdBy: 'u1',
+      createdByName: 'Ada',
+      isDeposit: true,
+      splitGroupId: 'g1',
+    );
+    final map = e.toMap();
+    expect(map['createdBy'], 'u1');
+    expect(map['isDeposit'], isTrue);
+    expect(map['splitGroupId'], 'g1');
+    final parsed = Expense.fromMap('x1', map);
+    expect(parsed.createdByName, 'Ada');
+    expect(parsed.isDeposit, isTrue);
+  });
+
+  test('Household member roles default to editor', () {
+    const household = Household(
+      id: 'h1',
+      name: 'Ours',
+      memberIds: ['a', 'b'],
+      inviteCode: 'ABC123',
+      createdBy: 'a',
+      memberProfiles: {
+        'a': MemberProfile(uid: 'a', name: 'Ann', role: 'owner'),
+        'b': MemberProfile(uid: 'b', name: 'Ben', role: 'viewer'),
+      },
+    );
+    expect(household.canEditPlan('a'), isTrue);
+    expect(household.canEditPlan('b'), isFalse);
+    expect(household.memberName('b'), 'Ben');
   });
 
   test(

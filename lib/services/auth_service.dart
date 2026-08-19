@@ -63,6 +63,10 @@ class AuthService {
     return ensureUserDoc(cred.user!);
   }
 
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
   Future<AppUser> signInWithGoogle() async {
     await _ensureGoogleInitialized();
     try {
