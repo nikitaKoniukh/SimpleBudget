@@ -306,6 +306,12 @@ class AppLocalizations {
   String get unallocated => _t('Unallocated', 'Не распределено', 'לא מוקצה');
   String get logSpend => _t('Spend', 'Трата', 'הוצאה');
   String get logSave => _t('Save', 'Отложить', 'חיסכון');
+  String get logFixed => _t('Monthly', 'Ежемесячно', 'חודשי');
+  String get logFixedHint => _t(
+        'Sets this month’s plan and repeats every new month',
+        'Задаёт план на месяц и повторяется в каждом новом месяце',
+        'קובע את התוכנית לחודש וחוזר בכל חודש חדש',
+      );
   String get logMoreOptions => _t('More', 'Ещё', 'עוד');
   String get editLog => _t('Edit', 'Изменить', 'עריכה');
   String get viewerReadOnlyPlan => _t(
