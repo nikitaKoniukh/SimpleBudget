@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../screens/category/budget_sheets.dart';
-import '../../screens/investments/investments_sheets.dart';
+import '../../screens/home/log_entry_sheet.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
@@ -32,11 +32,11 @@ class SubcategoryBudgetRow extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        if (isSavings) {
-          showDepositEditor(context, subcategory: sub);
-          return;
-        }
-        showExpenseEditor(context, subcategoryId: sub.id);
+        showLogEntrySheet(
+          context,
+          kind: isSavings ? LogKind.save : LogKind.spend,
+          subcategoryId: sub.id,
+        );
       },
       onLongPress: () => showPlanEditor(context, subcategory: sub),
       child: Padding(

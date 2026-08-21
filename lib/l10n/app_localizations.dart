@@ -304,6 +304,10 @@ class AppLocalizations {
   String get sectionDebt => _t('Debt', 'Долги', 'חובות');
   String get cashLeft => _t('Cash left', 'Остаток наличных', 'מזומן שנותר');
   String get unallocated => _t('Unallocated', 'Не распределено', 'לא מוקצה');
+  String get logSpend => _t('Spend', 'Трата', 'הוצאה');
+  String get logSave => _t('Save', 'Отложить', 'חיסכון');
+  String get logMoreOptions => _t('More', 'Ещё', 'עוד');
+  String get editLog => _t('Edit', 'Изменить', 'עריכה');
   String get viewerReadOnlyPlan => _t(
         'You can log income and spends. Plan changes are for editors.',
         'Можно записывать доходы и траты. План меняют редакторы.',

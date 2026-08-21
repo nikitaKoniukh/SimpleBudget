@@ -6,9 +6,8 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../category/budget_sheets.dart';
+import '../home/log_entry_sheet.dart';
 import '../home/quick_log_sheet.dart';
-import '../income/income_dialogs.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -119,7 +118,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(
-                        onPressed: () => showExpenseEditor(context),
+                        onPressed: () =>
+                            showLogEntrySheet(context, kind: LogKind.spend),
                         child: Text(l10n.addFirstExpense),
                       ),
                     ],
@@ -205,10 +205,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             formatIls(e.amount),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          onTap: () => showIncomeEntryEditor(
+                          onTap: () => showLogEntrySheet(
                             context,
-                            sources: state.incomeSources,
-                            entry: e,
+                            kind: LogKind.income,
+                            incomeEntry: e,
                           ),
                         ),
                       );
@@ -267,8 +267,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             formatIls(expense.amount),
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
-                          onTap: () => showExpenseEditor(
+                          onTap: () => showLogEntrySheet(
                             context,
+                            kind: isDeposit ? LogKind.save : LogKind.spend,
                             expense: expense,
                             subcategoryId: expense.subcategoryId,
                           ),
