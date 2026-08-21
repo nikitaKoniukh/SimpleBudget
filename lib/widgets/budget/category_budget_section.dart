@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
-import '../../screens/category/categories_screen.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import 'subcategory_budget_row.dart';
 
+const _amountColWidth = 88.0;
+
+/// Sheet-like category block: header + Name | Spent | Planned rows.
 class CategoryBudgetSection extends StatelessWidget {
   const CategoryBudgetSection({
     super.key,
@@ -28,29 +30,27 @@ class CategoryBudgetSection extends StatelessWidget {
     final actual = state.categoryActual(cat.id);
     final overPlan = actual > planned && planned > 0;
     final overColor = SyncColors.overspend;
-    final ratio = planned <= 0
-        ? (actual > 0 ? 1.0 : 0.0)
-        : (actual / planned).clamp(0.0, 1.0);
     final subs = state.subcategoriesFor(cat.id);
     final color = Color(cat.colorValue);
+    final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
 
     return Padding(
       key: scrollKey,
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              child: Row(
                 children: [
                   Container(
-                    width: 10,
-                    height: 10,
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
                       color: color,
                       shape: BoxShape.circle,
@@ -58,97 +58,55 @@ class CategoryBudgetSection extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          cat.localizedName(state.localeCode),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        Text(
-                          _categoryTypeLabel(l10n, cat.type),
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(color: SyncColors.textMuted),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '${formatIls(actual)} / ${formatIls(planned)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: overPlan ? overColor : null,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_horiz, size: 20),
-                    tooltip: l10n.manageCategoriesLink,
-                    onSelected: (value) {
-                      if (value == 'manage') {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CategoriesScreen(),
+                    child: Text(
+                      cat.localizedName(state.localeCode),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        );
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      PopupMenuItem(
-                        value: 'manage',
-                        child: Text(l10n.manageCategoriesLink),
-                      ),
-                    ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: _amountColWidth,
+                    child: Text(
+                      formatIls(actual),
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: overPlan ? overColor : null,
+                          ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: _amountColWidth,
+                    child: Text(
+                      formatIls(planned),
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: SyncColors.textMuted,
+                          ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 8,
-                  backgroundColor: overPlan
-                      ? overColor.withValues(alpha: 0.18)
-                      : color.withValues(alpha: 0.18),
-                  color: overPlan ? overColor : color,
+            ),
+            if (subs.isEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Text(
+                  l10n.noSubcategories,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SyncColors.textMuted,
+                      ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              if (subs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    l10n.noSubcategories,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: SyncColors.textMuted),
-                  ),
-                )
-              else
-                ...subs.map(
-                  (sub) => SubcategoryBudgetRow(
-                    subcategory: sub,
-                    categoryColor: color,
-                  ),
-                ),
-            ],
-          ),
+              )
+            else
+              for (var i = 0; i < subs.length; i++) ...[
+                Divider(height: 1, thickness: 1, color: hairline),
+                SubcategoryBudgetRow(subcategory: subs[i]),
+              ],
+          ],
         ),
       ),
     );
-  }
-}
-
-String _categoryTypeLabel(AppLocalizations l10n, String type) {
-  switch (type) {
-    case 'savings':
-      return l10n.typeSavings;
-    case 'debt':
-      return l10n.typeDebt;
-    default:
-      return l10n.typeExpense;
   }
 }
