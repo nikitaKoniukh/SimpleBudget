@@ -3,8 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
-import '../../screens/category/budget_sheets.dart';
-import '../../screens/home/log_entry_sheet.dart';
+import '../../screens/category/subcategory_register_sheet.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
@@ -26,19 +25,14 @@ class SubcategoryBudgetRow extends StatelessWidget {
     final planned = state.plannedFor(sub.id);
     final spent = state.spentFor(sub.id);
     final hint = state.installmentHint(sub);
-    final isSavings = state.categoryById(sub.categoryId)?.isSavings ?? false;
     final overPlan = spent > planned && planned > 0;
     final overColor = SyncColors.overspend;
 
     return InkWell(
-      onTap: () {
-        showLogEntrySheet(
-          context,
-          kind: isSavings ? LogKind.save : LogKind.spend,
-          subcategoryId: sub.id,
-        );
-      },
-      onLongPress: () => showPlanEditor(context, subcategory: sub),
+      onTap: () => showSubcategoryRegisterSheet(
+        context,
+        subcategory: sub,
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
