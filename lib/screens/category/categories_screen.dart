@@ -361,6 +361,7 @@ Future<String?> showCategoryEditor(
         : '',
   );
   var type = existing?.type ?? 'expense';
+  if (type == 'debt') type = 'expense';
   var colorValue = existing?.colorValue ?? categoryColorPalette.first;
 
   final ok = await showModalBottomSheet<bool>(
@@ -398,12 +399,8 @@ Future<String?> showCategoryEditor(
                       value: 'savings',
                       label: Text(l10n.typeSavings),
                     ),
-                    ButtonSegment(
-                      value: 'debt',
-                      label: Text(l10n.typeDebt),
-                    ),
                   ],
-                  selected: {type},
+                  selected: {type == 'debt' ? 'expense' : type},
                   onSelectionChanged: (s) => setLocal(() => type = s.first),
                 ),
                 if (type == 'savings' && existing == null)

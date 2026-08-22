@@ -9,6 +9,7 @@ import '../../utils/money.dart';
 import '../../widgets/budget/alerts_section.dart';
 import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
+import '../../widgets/budget/savings_budget_section.dart';
 import '../../widgets/budget/spending_donut_chart.dart';
 import '../category/categories_screen.dart';
 import '../settings/settings_screen.dart';
@@ -47,38 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  List<BudgetCategory> _categoriesByType(List<BudgetCategory> all, String type) {
-    return all.where((c) => c.type == type).toList();
-  }
-
-  Widget _buildTypeSection(
-    BuildContext context,
-    AppLocalizations l10n,
-    String title,
-    List<BudgetCategory> categories,
-  ) {
-    if (categories.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 4, bottom: 8),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: SyncColors.textMuted,
-                ),
-          ),
-        ),
-        ...categories.map(
-          (cat) => CategoryBudgetSection(
-            category: cat,
-            scrollKey: _keyForCategory(cat.id),
-          ),
-        ),
-      ],
-    );
+  List<BudgetCategory> _homeBudgetCategories(List<BudgetCategory> all) {
+    return all.where((c) => !c.isSavings).toList();
   }
 
   @override
@@ -270,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            if (state.categories.isEmpty)
+            if (state.categories.isEmpty && state.savingsPots.isEmpty)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -296,24 +267,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else ...[
-              _buildTypeSection(
-                context,
-                l10n,
-                l10n.sectionExpenses,
-                _categoriesByType(state.categories, 'expense'),
+              ..._homeBudgetCategories(state.categories).map(
+                (cat) => CategoryBudgetSection(
+                  category: cat,
+                  scrollKey: _keyForCategory(cat.id),
+                ),
               ),
-              _buildTypeSection(
-                context,
-                l10n,
-                l10n.sectionSavings,
-                _categoriesByType(state.categories, 'savings'),
-              ),
-              _buildTypeSection(
-                context,
-                l10n,
-                l10n.sectionDebt,
-                _categoriesByType(state.categories, 'debt'),
-              ),
+              const SavingsBudgetSection(),
             ],
           ],
         ),

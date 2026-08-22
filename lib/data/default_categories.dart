@@ -1,4 +1,4 @@
-/// Suggested expense/savings/debt categories with EN + RU names.
+/// Suggested expense and savings categories with EN + RU names.
 /// Used when creating a month, "Add defaults", and the add-category picker.
 class DefaultCategories {
   static const savingsNameEn = 'Savings';
@@ -129,25 +129,18 @@ class DefaultCategories {
       type: 'expense',
       colorValue: 0xFFFFF59D,
     ),
-    // —— Money goals ——
+    DefaultCategory(
+      nameEn: 'Loans & debt',
+      nameRu: 'Кредиты и долги',
+      type: 'expense',
+      colorValue: 0xFFE57373,
+    ),
+    // Savings parent (pots live on Savings tab — not shown on Home).
     DefaultCategory(
       nameEn: savingsNameEn,
       nameRu: savingsNameRu,
       type: 'savings',
       colorValue: savingsColorValue,
-    ),
-    // —— Debt ——
-    DefaultCategory(
-      nameEn: 'Debt & payments',
-      nameRu: 'Долги и платежи',
-      type: 'debt',
-      colorValue: 0xFFE57373,
-    ),
-    DefaultCategory(
-      nameEn: 'Credit cards',
-      nameRu: 'Кредитные карты',
-      type: 'debt',
-      colorValue: 0xFFEF9A9A,
     ),
   ];
 }
