@@ -12,6 +12,20 @@ void main() {
     expect(nextMonthId('2026-12'), '2027-01');
   });
 
+  test('preferredMonthId opens current month when it exists', () {
+    expect(
+      preferredMonthId(['2026-09', '2026-08', '2026-07']),
+      '2026-08',
+    );
+  });
+
+  test('preferredMonthId skips future months when current is missing', () {
+    expect(
+      preferredMonthId(['2026-09', '2026-07']),
+      '2026-07',
+    );
+  });
+
   test('formatIls includes shekel symbol', () {
     final text = formatIls(4650);
     expect(text.contains('₪'), isTrue);

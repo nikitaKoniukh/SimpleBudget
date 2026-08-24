@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/budget_repository.dart';
 import '../data/default_categories.dart';
+import '../utils/money.dart';
 
 class AppState extends ChangeNotifier {
   AppState({AuthService? authService, BudgetRepository? budgetRepository})
@@ -443,15 +444,16 @@ class AppState extends ChangeNotifier {
     );
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
       _months = list;
+      final monthIds = list.map((m) => m.id);
       if (_monthId != null && !list.any((m) => m.id == _monthId)) {
-        _monthId = list.isNotEmpty ? list.first.id : null;
+        _monthId = preferredMonthId(monthIds);
         if (_monthId != null) {
           await _listenMonthData(householdId, _monthId!);
         } else {
           await _detachMonthDataListeners();
         }
       } else if (_monthId == null && list.isNotEmpty) {
-        _monthId = list.first.id;
+        _monthId = preferredMonthId(monthIds);
         await _listenMonthData(householdId, _monthId!);
       }
       notifyListeners();
