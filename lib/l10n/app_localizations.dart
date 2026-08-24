@@ -69,8 +69,9 @@ class AppLocalizations {
   String get continueLabel => isRu ? 'Далее' : 'Continue';
   String get done => isRu ? 'Готово' : 'Done';
   String get edit => isRu ? 'Редактировать' : 'Edit';
-  String get plannedLabel => isRu ? 'План' : 'Planned';
-  String get spentLabel => isRu ? 'Потрачено' : 'Spent';
+  String get plannedLabel =>
+      _t('Monthly budget', 'Бюджет на месяц', 'תקציב לחודש');
+  String get spentLabel => _t('Spent', 'Потрачено', 'הוצא');
 
   String get budget => isRu ? 'Бюджет' : 'Budget';
   String get actual => isRu ? 'Фактически' : 'Actual';
@@ -97,7 +98,23 @@ class AppLocalizations {
       ? 'Введите текущий и общий номер платежа через /'
       : 'Enter current and total payment number separated by /';
   String get note => isRu ? 'Заметка' : 'Note';
-  String get amount => isRu ? 'Сумма' : 'Amount';
+  String get amount =>
+      _t('How much', 'Сколько', 'כמה');
+  String get amountSpend =>
+      _t('How much spent', 'Сколько потратили', 'כמה הוצאתם');
+  String get amountSave =>
+      _t('How much to save', 'Сколько отложить', 'כמה לחסוך');
+  String get amountIncome =>
+      _t('How much earned', 'Сколько получили', 'כמה התקבלו');
+  String get amountMonthly =>
+      _t('Monthly payment', 'Ежемесячный платёж', 'תשלום חודשי');
+  String get amountDebt =>
+      _t('Payment amount', 'Сумма платежа', 'סכום תשלום');
+  String get plannedHelper => _t(
+        'Limit for this line this month',
+        'Лимит по этой строке в этом месяце',
+        'תקרה לשורה זו בחודש הזה',
+      );
 
   String get signIn => isRu ? 'Войти' : 'Sign in';
   String get signUp => isRu ? 'Регистрация' : 'Sign up';

@@ -52,7 +52,10 @@ Future<void> showPlanEditor(
               controller: plannedCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: l10n.plannedLabel),
+              decoration: InputDecoration(
+                labelText: l10n.plannedLabel,
+                helperText: l10n.plannedHelper,
+              ),
               autofocus: true,
             ),
             if (isDebt)
@@ -150,7 +153,10 @@ Future<String?> showAddSubcategorySheet(
               controller: plannedCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: l10n.plannedLabel),
+              decoration: InputDecoration(
+                labelText: l10n.plannedLabel,
+                helperText: l10n.plannedHelper,
+              ),
             ),
             if (isDebt)
               TextField(

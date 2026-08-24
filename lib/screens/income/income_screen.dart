@@ -106,7 +106,7 @@ class IncomeScreen extends StatelessWidget {
               controller: amountCtrl,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: l10n.amount),
+              decoration: InputDecoration(labelText: l10n.amountIncome),
             ),
             TextField(
               controller: noteCtrl,

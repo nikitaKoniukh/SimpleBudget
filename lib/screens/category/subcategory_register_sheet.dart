@@ -154,6 +154,7 @@ Future<void> showSubcategoryRegisterSheet(
                         ),
                         decoration: InputDecoration(
                           labelText: l10n.plannedLabel,
+                          helperText: l10n.plannedHelper,
                         ),
                       ),
                     ),

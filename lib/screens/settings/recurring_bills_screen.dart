@@ -102,7 +102,7 @@ class RecurringBillsScreen extends StatelessWidget {
                     controller: amountCtrl,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(labelText: l10n.amount),
+                    decoration: InputDecoration(labelText: l10n.amountMonthly),
                   ),
                   DropdownButtonFormField<int>(
                     initialValue: day,

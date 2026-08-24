@@ -95,12 +95,30 @@ Future<void> confirmAndDeleteHousehold(BuildContext context) async {
     ),
   );
   if (ok != true || !context.mounted) return;
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => PopScope(
+      canPop: false,
+      child: AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Expanded(child: Text(l10n.loading)),
+          ],
+        ),
+      ),
+    ),
+  );
   try {
     await context.read<AppState>().deleteHousehold();
     if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
     popToRoot(context);
   } catch (e) {
     if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop();
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('${l10n.errorGeneric}: $e')));

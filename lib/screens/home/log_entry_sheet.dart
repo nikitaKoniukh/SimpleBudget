@@ -206,7 +206,15 @@ Future<void> showLogEntrySheet(
                   controller: amountCtrl,
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.amount),
+                  decoration: InputDecoration(
+                    labelText: switch (selectedKind) {
+                      LogKind.spend => l10n.amountSpend,
+                      LogKind.save => l10n.amountSave,
+                      LogKind.income => l10n.amountIncome,
+                      LogKind.monthly => l10n.amountMonthly,
+                      LogKind.debt => l10n.amountDebt,
+                    },
+                  ),
                   autofocus: !editing,
                 ),
                 if (selectedKind == LogKind.spend ||
