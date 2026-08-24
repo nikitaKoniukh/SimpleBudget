@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
 import '../../widgets/budget/savings_budget_section.dart';
 import '../category/category_sheets.dart';
@@ -147,6 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
+            BudgetOverviewBar(totals: state.totals),
             if (!hasAny)
               Card(
                 child: Padding(

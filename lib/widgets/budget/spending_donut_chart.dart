@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
-import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
 class SpendingDonutChart extends StatelessWidget {
@@ -107,37 +106,14 @@ class SpendingDonutChart extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       flex: 2,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.cashLeft,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelSmall
-                                ?.copyWith(color: SyncColors.textMuted),
-                          ),
-                          Text(
-                            formatIls(totals.cashLeft.abs()),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: totals.cashLeft < 0
-                                      ? SyncColors.accent
-                                      : SyncColors.primary,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: SyncColors.textMuted,
-                                ),
-                          ),
-                        ],
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
                       ),
                     ),
                   ],

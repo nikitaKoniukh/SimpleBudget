@@ -66,6 +66,9 @@ Future<void> showLogEntrySheet(
   var selectedSubId = expense?.subcategoryId ??
       subcategoryId ??
       _defaultSubForKind(state, initialKind);
+  var selectedCategoryId =
+      state.subcategoryById(selectedSubId ?? '')?.categoryId ??
+          _catsForKind(state, initialKind).firstOrNull?.id;
   var selectedSourceId =
       incomeEntry?.sourceId ?? incomeSourceId ?? state.incomeSources.firstOrNull?.id;
 
@@ -92,7 +95,7 @@ Future<void> showLogEntrySheet(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
-            final kindSubs = _subsForKind(live, selectedKind);
+            final kindCats = _catsForKind(live, selectedKind);
             final pots = live.savingsPots;
             final sources = live.incomeSources;
 
@@ -102,10 +105,19 @@ Future<void> showLogEntrySheet(
                 selectedSubId = pots.firstOrNull?.id;
               }
             } else if (selectedKind != LogKind.income) {
-              if (selectedSubId != null &&
-                  !kindSubs.any((s) => s.id == selectedSubId)) {
-                selectedSubId = kindSubs.firstOrNull?.id;
+              if (selectedCategoryId != null &&
+                  !kindCats.any((c) => c.id == selectedCategoryId)) {
+                selectedCategoryId = kindCats.firstOrNull?.id;
               }
+              selectedCategoryId ??= kindCats.firstOrNull?.id;
+              final catSubs = selectedCategoryId == null
+                  ? const <Subcategory>[]
+                  : live.subcategoriesFor(selectedCategoryId!);
+              if (selectedSubId != null &&
+                  !catSubs.any((s) => s.id == selectedSubId)) {
+                selectedSubId = catSubs.firstOrNull?.id;
+              }
+              selectedSubId ??= catSubs.firstOrNull?.id;
             }
             if (selectedKind == LogKind.income) {
               if (selectedSourceId != null &&
@@ -114,6 +126,10 @@ Future<void> showLogEntrySheet(
               }
               selectedSourceId ??= sources.firstOrNull?.id;
             }
+
+            final catSubs = selectedCategoryId == null
+                ? const <Subcategory>[]
+                : live.subcategoriesFor(selectedCategoryId!);
 
             final canSave = switch (selectedKind) {
               LogKind.spend ||
@@ -150,6 +166,11 @@ Future<void> showLogEntrySheet(
                                   showMore = false;
                                   selectedSubId =
                                       _defaultSubForKind(live, k);
+                                  selectedCategoryId = live
+                                          .subcategoryById(
+                                              selectedSubId ?? '')
+                                          ?.categoryId ??
+                                      _catsForKind(live, k).firstOrNull?.id;
                                   selectedSourceId =
                                       live.incomeSources.firstOrNull?.id;
                                 });
@@ -186,45 +207,98 @@ Future<void> showLogEntrySheet(
                 if (selectedKind == LogKind.spend ||
                     selectedKind == LogKind.monthly ||
                     selectedKind == LogKind.debt) ...[
-                  if (kindSubs.isEmpty)
+                  if (kindCats.isEmpty)
                     _EmptyPicker(
                       message: l10n.noSubcategories,
                       actions: [
                         OutlinedButton.icon(
                           onPressed: () async {
                             final id = await addCategoryAndSubcategory(ctx);
-                            if (id != null) {
-                              setModal(() => selectedSubId = id);
-                            }
+                            if (id == null) return;
+                            final catId = live
+                                .subcategoryById(id)
+                                ?.categoryId;
+                            setModal(() {
+                              selectedSubId = id;
+                              selectedCategoryId = catId;
+                            });
                           },
                           icon: const Icon(Icons.add),
                           label: Text(l10n.addCategory),
                         ),
                       ],
                     )
-                  else
+                  else ...[
                     DropdownButtonFormField<String>(
-                      key: ValueKey('${selectedKind.name}-$selectedSubId'),
-                      initialValue: selectedSubId,
-                      decoration:
-                          InputDecoration(labelText: l10n.subcategory),
-                      items: kindSubs.map((sub) {
-                        final cat = live.categoryById(sub.categoryId);
-                        final catName =
-                            cat?.localizedName(live.localeCode);
-                        final label = catName == null
-                            ? sub.localizedName(live.localeCode)
-                            : '$catName · ${sub.localizedName(live.localeCode)}';
-                        return DropdownMenuItem(
-                          value: sub.id,
-                          child: Text(label),
-                        );
-                      }).toList(),
+                      key: ValueKey(
+                        'cat-${selectedKind.name}-$selectedCategoryId',
+                      ),
+                      initialValue: selectedCategoryId,
+                      decoration: InputDecoration(labelText: l10n.category),
+                      items: kindCats
+                          .map(
+                            (cat) => DropdownMenuItem(
+                              value: cat.id,
+                              child: Text(
+                                cat.localizedName(live.localeCode),
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (v) {
                         if (v == null) return;
-                        setModal(() => selectedSubId = v);
+                        setModal(() {
+                          selectedCategoryId = v;
+                          selectedSubId =
+                              live.subcategoriesFor(v).firstOrNull?.id;
+                        });
                       },
                     ),
+                    if (catSubs.isEmpty)
+                      _EmptyPicker(
+                        message: l10n.noSubcategories,
+                        actions: [
+                          OutlinedButton.icon(
+                            onPressed: selectedCategoryId == null
+                                ? null
+                                : () async {
+                                    final id = await showAddSubcategorySheet(
+                                      ctx,
+                                      categoryId: selectedCategoryId!,
+                                    );
+                                    if (id != null) {
+                                      setModal(() => selectedSubId = id);
+                                    }
+                                  },
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.addSubcategory),
+                          ),
+                        ],
+                      )
+                    else
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(
+                          'sub-$selectedCategoryId-$selectedSubId',
+                        ),
+                        initialValue: selectedSubId,
+                        decoration:
+                            InputDecoration(labelText: l10n.subcategory),
+                        items: catSubs
+                            .map(
+                              (sub) => DropdownMenuItem(
+                                value: sub.id,
+                                child: Text(
+                                  sub.localizedName(live.localeCode),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setModal(() => selectedSubId = v);
+                        },
+                      ),
+                  ],
                 ],
                 if (selectedKind == LogKind.save) ...[
                   if (pots.isEmpty)
@@ -367,9 +441,13 @@ Future<void> showLogEntrySheet(
                         OutlinedButton.icon(
                           onPressed: () async {
                             final id = await addCategoryAndSubcategory(ctx);
-                            if (id != null) {
-                              setModal(() => selectedSubId = id);
-                            }
+                            if (id == null) return;
+                            final catId =
+                                live.subcategoryById(id)?.categoryId;
+                            setModal(() {
+                              selectedSubId = id;
+                              selectedCategoryId = catId;
+                            });
                           },
                           icon: const Icon(Icons.add),
                           label: Text(l10n.addCategory),
@@ -378,9 +456,13 @@ Future<void> showLogEntrySheet(
                           onPressed: () async {
                             final id =
                                 await pickCategoryAndAddSubcategory(ctx);
-                            if (id != null) {
-                              setModal(() => selectedSubId = id);
-                            }
+                            if (id == null) return;
+                            final catId =
+                                live.subcategoryById(id)?.categoryId;
+                            setModal(() {
+                              selectedSubId = id;
+                              selectedCategoryId = catId;
+                            });
                           },
                           icon: const Icon(Icons.account_tree_outlined),
                           label: Text(l10n.addSubcategory),
@@ -548,6 +630,15 @@ String _kindLabel(AppLocalizations l10n, LogKind kind) {
     LogKind.income => l10n.income,
     LogKind.monthly => l10n.logFixed,
     LogKind.debt => l10n.logDebt,
+  };
+}
+
+List<BudgetCategory> _catsForKind(AppState state, LogKind kind) {
+  return switch (kind) {
+    LogKind.spend => state.categoriesOfType('spend'),
+    LogKind.monthly => state.categoriesOfType('monthly'),
+    LogKind.debt => state.categoriesOfType('debt'),
+    LogKind.save || LogKind.income => const [],
   };
 }
 
