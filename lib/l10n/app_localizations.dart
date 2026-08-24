@@ -110,11 +110,6 @@ class AppLocalizations {
       _t('Monthly payment', 'Ежемесячный платёж', 'תשלום חודשי');
   String get amountDebt =>
       _t('Payment amount', 'Сумма платежа', 'סכום תשלום');
-  String get plannedHelper => _t(
-        'Limit for this line this month',
-        'Лимит по этой строке в этом месяце',
-        'תקרה לשורה זו בחודש הזה',
-      );
 
   String get signIn => isRu ? 'Войти' : 'Sign in';
   String get signUp => isRu ? 'Регистрация' : 'Sign up';

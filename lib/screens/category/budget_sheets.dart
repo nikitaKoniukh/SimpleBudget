@@ -54,7 +54,6 @@ Future<void> showPlanEditor(
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: l10n.plannedLabel,
-                helperText: l10n.plannedHelper,
               ),
               autofocus: true,
             ),
@@ -155,7 +154,6 @@ Future<String?> showAddSubcategorySheet(
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: l10n.plannedLabel,
-                helperText: l10n.plannedHelper,
               ),
             ),
             if (isDebt)
