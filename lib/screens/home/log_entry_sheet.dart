@@ -83,7 +83,6 @@ Future<void> showLogEntrySheet(
     text: expense?.note ?? incomeEntry?.note ?? '',
   );
   var date = expense?.date ?? DateTime.now();
-  var showMore = false;
   var billDay = DateTime.now().day.clamp(1, 28);
 
   final result = await showModalBottomSheet<String>(
@@ -163,7 +162,6 @@ Future<void> showLogEntrySheet(
                               onSelected: (_) {
                                 setModal(() {
                                   selectedKind = k;
-                                  showMore = false;
                                   selectedSubId =
                                       _defaultSubForKind(live, k);
                                   selectedCategoryId = live
@@ -420,56 +418,6 @@ Future<void> showLogEntrySheet(
                       setModal(() => date = picked);
                     },
                   ),
-                if (!editing &&
-                    (selectedKind == LogKind.spend ||
-                        selectedKind == LogKind.debt ||
-                        selectedKind == LogKind.monthly)) ...[
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton(
-                      onPressed: () => setModal(() => showMore = !showMore),
-                      child: Text(
-                        showMore ? l10n.done : l10n.logMoreOptions,
-                      ),
-                    ),
-                  ),
-                  if (showMore)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final id = await addCategoryAndSubcategory(ctx);
-                            if (id == null) return;
-                            final catId =
-                                live.subcategoryById(id)?.categoryId;
-                            setModal(() {
-                              selectedSubId = id;
-                              selectedCategoryId = catId;
-                            });
-                          },
-                          icon: const Icon(Icons.add),
-                          label: Text(l10n.addCategory),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final id =
-                                await pickCategoryAndAddSubcategory(ctx);
-                            if (id == null) return;
-                            final catId =
-                                live.subcategoryById(id)?.categoryId;
-                            setModal(() {
-                              selectedSubId = id;
-                              selectedCategoryId = catId;
-                            });
-                          },
-                          icon: const Icon(Icons.account_tree_outlined),
-                          label: Text(l10n.addSubcategory),
-                        ),
-                      ],
-                    ),
-                ],
                 FilledButton(
                   onPressed:
                       canSave ? () => Navigator.pop(ctx, 'save') : null,
