@@ -74,12 +74,7 @@ Future<void> showSubcategoryRegisterSheet(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  l10n.editSubcategory,
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
                 if (category != null) ...[
-                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
