@@ -426,12 +426,23 @@ Future<void> showCategoryRegisterSheet(
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: canEdit
-                            ? () {
+                            ? () async {
                                 Navigator.pop(ctx, 'add_sub');
-                                showAddSubcategorySheet(
+                                final subId = await showAddSubcategorySheet(
                                   context,
                                   categoryId: cat.id,
                                 );
+                                if (subId == null || !context.mounted) return;
+                                final sub =
+                                    context.read<AppState>().subcategoryById(
+                                          subId,
+                                        );
+                                if (sub != null) {
+                                  showSubcategoryRegisterSheet(
+                                    context,
+                                    subcategory: sub,
+                                  );
+                                }
                               }
                             : null,
                         icon: const Icon(Icons.add, size: 18),

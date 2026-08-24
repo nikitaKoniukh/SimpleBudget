@@ -62,10 +62,9 @@ Future<void> showLogEntrySheet(
 
   final l10n = AppLocalizations.of(context);
 
+  final pinnedSubId = expense?.subcategoryId ?? subcategoryId;
   var selectedKind = initialKind;
-  var selectedSubId = expense?.subcategoryId ??
-      subcategoryId ??
-      _defaultSubForKind(state, initialKind);
+  var selectedSubId = pinnedSubId ?? _defaultSubForKind(state, initialKind);
   var selectedCategoryId =
       state.subcategoryById(selectedSubId ?? '')?.categoryId ??
           _catsForKind(state, initialKind).firstOrNull?.id;
@@ -104,19 +103,27 @@ Future<void> showLogEntrySheet(
                 selectedSubId = pots.firstOrNull?.id;
               }
             } else if (selectedKind != LogKind.income) {
-              if (selectedCategoryId != null &&
-                  !kindCats.any((c) => c.id == selectedCategoryId)) {
-                selectedCategoryId = kindCats.firstOrNull?.id;
+              final pinnedSub = pinnedSubId == null
+                  ? null
+                  : live.subcategoryById(pinnedSubId);
+              if (pinnedSub != null) {
+                selectedCategoryId = pinnedSub.categoryId;
+                selectedSubId = pinnedSub.id;
+              } else {
+                if (selectedCategoryId != null &&
+                    !kindCats.any((c) => c.id == selectedCategoryId)) {
+                  selectedCategoryId = kindCats.firstOrNull?.id;
+                }
+                selectedCategoryId ??= kindCats.firstOrNull?.id;
+                final catSubs = selectedCategoryId == null
+                    ? const <Subcategory>[]
+                    : live.subcategoriesFor(selectedCategoryId!);
+                if (selectedSubId != null &&
+                    !catSubs.any((s) => s.id == selectedSubId)) {
+                  selectedSubId = catSubs.firstOrNull?.id;
+                }
+                selectedSubId ??= catSubs.firstOrNull?.id;
               }
-              selectedCategoryId ??= kindCats.firstOrNull?.id;
-              final catSubs = selectedCategoryId == null
-                  ? const <Subcategory>[]
-                  : live.subcategoriesFor(selectedCategoryId!);
-              if (selectedSubId != null &&
-                  !catSubs.any((s) => s.id == selectedSubId)) {
-                selectedSubId = catSubs.firstOrNull?.id;
-              }
-              selectedSubId ??= catSubs.firstOrNull?.id;
             }
             if (selectedKind == LogKind.income) {
               if (selectedSourceId != null &&

@@ -862,17 +862,44 @@ class AppState extends ChangeNotifier {
       targetAmount: targetAmount,
       targetDate: targetDate,
     );
+    if (!_subcategories.any((s) => s.id == id)) {
+      _subcategories = [
+        ..._subcategories,
+        Subcategory(
+          id: id,
+          categoryId: categoryId,
+          nameEn: en,
+          nameRu: ru,
+          sortOrder: _subcategories.length,
+          installmentTotal: installmentTotal,
+          targetAmount: targetAmount,
+          targetDate: targetDate,
+        ),
+      ];
+    }
     if (_monthId != null && (planned > 0 || installmentCurrent != null)) {
+      final plan = MonthPlan(
+        subcategoryId: id,
+        planned: planned,
+        installmentCurrent: installmentCurrent,
+      );
       await _repo.upsertPlan(
         householdId: hid,
         monthId: _monthId!,
-        plan: MonthPlan(
-          subcategoryId: id,
-          planned: planned,
-          installmentCurrent: installmentCurrent,
-        ),
+        plan: plan,
       );
+      final planIdx = _plans.indexWhere((p) => p.subcategoryId == id);
+      if (planIdx < 0) {
+        _plans = [..._plans, plan];
+      } else {
+        _plans = [
+          ..._plans.sublist(0, planIdx),
+          plan,
+          ..._plans.sublist(planIdx + 1),
+        ];
+      }
     }
+    notifyListeners();
     return id;
   }
 
