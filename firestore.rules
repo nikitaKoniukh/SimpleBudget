@@ -26,13 +26,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/households/$(householdId)).data;
     }
 
+    // Safe role lookup: never error on missing maps/keys (errors deny the request).
+    function memberRole(householdId) {
+      let data = householdData(householdId);
+      return data.get('createdBy', '') == request.auth.uid
+        ? 'owner'
+        : data.get('memberProfiles', {}).get(request.auth.uid, {}).get('role', 'editor');
+    }
+
     function isPlanEditor(householdId) {
-      return isMember(householdId) && (
-        householdData(householdId).createdBy == request.auth.uid
-        || !('memberProfiles' in householdData(householdId))
-        || !(request.auth.uid in householdData(householdId).memberProfiles)
-        || householdData(householdId).memberProfiles[request.auth.uid].role != 'viewer'
-      );
+      return isMember(householdId) && memberRole(householdId) != 'viewer';
     }
 
     function sameHouseholdUser(userId) {

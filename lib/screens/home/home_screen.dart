@@ -6,7 +6,6 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
 import '../../widgets/budget/savings_budget_section.dart';
 import '../category/category_sheets.dart';
@@ -85,11 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final monthId = state.monthId!;
     final monthDate = dateFromMonthId(monthId);
-    final totals = state.totals;
-    final cashLeft = totals.cashLeft;
-    final progress = totals.planned <= 0
-        ? 0.0
-        : (totals.actual / totals.planned).clamp(0.0, 1.0);
 
     final spendCats = state.categoriesOfType('spend');
     final monthlyCats = state.categoriesOfType('monthly');
@@ -129,13 +123,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           actions: [
             IconButton(
-              tooltip: l10n.addCategory,
-              onPressed: state.canEditPlan
-                  ? () => showAddCategoryFlow(context)
-                  : null,
-              icon: const Icon(Icons.create_new_folder_outlined),
-            ),
-            IconButton(
               tooltip: l10n.selectMonth,
               onPressed: () => showSelectMonthSheet(context),
               icon: const Icon(Icons.swap_horiz_rounded),
@@ -160,39 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
-            if (totals.planExceedsIncome)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Chip(
-                  avatar: Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: SyncColors.warning,
-                  ),
-                  label: Text(l10n.planExceedsIncome),
-                  backgroundColor: SyncColors.warning.withValues(alpha: 0.15),
-                ),
-              ),
-            if (totals.planExceedsIncome) const SizedBox(height: 8),
-            _HeroRemaining(
-              label: cashLeft < 0 ? l10n.overspent : l10n.remaining,
-              amount: cashLeft.abs(),
-              negative: cashLeft < 0,
-              progress: progress,
-              overPlan: totals.actual > totals.planned && totals.planned > 0,
-            ),
-            const SizedBox(height: 12),
-            BudgetOverviewBar(totals: totals),
-            if (totals.savedThisMonth > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${l10n.savingsHighlight}: ${formatIls(totals.savedThisMonth)}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SyncColors.textMuted,
-                    ),
-              ),
-            ],
-            const SizedBox(height: 12),
             if (!hasAny)
               Card(
                 child: Padding(
@@ -302,76 +256,6 @@ class _TypedSection extends StatelessWidget {
         ),
         ...categories.map((cat) => CategoryBudgetSection(category: cat)),
       ],
-    );
-  }
-}
-
-class _HeroRemaining extends StatelessWidget {
-  const _HeroRemaining({
-    required this.label,
-    required this.amount,
-    required this.negative,
-    required this.progress,
-    required this.overPlan,
-  });
-
-  final String label;
-  final double amount;
-  final bool negative;
-  final double progress;
-  final bool overPlan;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: SyncColors.text.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: SyncColors.textMuted,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            formatIls(amount),
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: negative ? SyncColors.accent : SyncColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 16),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: progress),
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, _) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: value,
-                  minHeight: 10,
-                  backgroundColor: SyncColors.surfaceMint,
-                  color: overPlan ? SyncColors.accent : SyncColors.primary,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
     );
   }
 }

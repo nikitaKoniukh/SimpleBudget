@@ -107,10 +107,12 @@ Future<void> showLogEntrySheet(
                 selectedSubId = kindSubs.firstOrNull?.id;
               }
             }
-            if (selectedKind == LogKind.income &&
-                selectedSourceId != null &&
-                !sources.any((s) => s.id == selectedSourceId)) {
-              selectedSourceId = sources.firstOrNull?.id;
+            if (selectedKind == LogKind.income) {
+              if (selectedSourceId != null &&
+                  !sources.any((s) => s.id == selectedSourceId)) {
+                selectedSourceId = sources.firstOrNull?.id;
+              }
+              selectedSourceId ??= sources.firstOrNull?.id;
             }
 
             final canSave = switch (selectedKind) {
@@ -151,6 +153,15 @@ Future<void> showLogEntrySheet(
                                   selectedSourceId =
                                       live.incomeSources.firstOrNull?.id;
                                 });
+                                if (k == LogKind.income &&
+                                    live.incomeSources.isEmpty) {
+                                  () async {
+                                    final id =
+                                        await showAddIncomeSourceDialog(ctx);
+                                    if (id == null || !ctx.mounted) return;
+                                    setModal(() => selectedSourceId = id);
+                                  }();
+                                }
                               },
                             ),
                           ),
@@ -254,23 +265,39 @@ Future<void> showLogEntrySheet(
                     ),
                 ],
                 if (selectedKind == LogKind.income) ...[
-                  DropdownButtonFormField<String>(
-                    key: ValueKey('income-$selectedSourceId'),
-                    initialValue: selectedSourceId,
-                    decoration: InputDecoration(labelText: l10n.income),
-                    items: sources
-                        .map(
-                          (s) => DropdownMenuItem(
-                            value: s.id,
-                            child: Text(s.localizedName(live.localeCode)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setModal(() => selectedSourceId = v);
-                    },
-                  ),
+                  if (sources.isEmpty)
+                    _EmptyPicker(
+                      message: l10n.emptyIncome,
+                      actions: [
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final id = await showAddIncomeSourceDialog(ctx);
+                            if (id == null || !ctx.mounted) return;
+                            setModal(() => selectedSourceId = id);
+                          },
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.addIncomeSource),
+                        ),
+                      ],
+                    )
+                  else
+                    DropdownButtonFormField<String>(
+                      key: ValueKey('income-$selectedSourceId'),
+                      initialValue: selectedSourceId,
+                      decoration: InputDecoration(labelText: l10n.income),
+                      items: sources
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s.id,
+                              child: Text(s.localizedName(live.localeCode)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setModal(() => selectedSourceId = v);
+                      },
+                    ),
                 ],
                 if (selectedKind == LogKind.monthly) ...[
                   DropdownButtonFormField<int>(

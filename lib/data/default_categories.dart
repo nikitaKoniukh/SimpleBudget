@@ -8,16 +8,10 @@ class DefaultCategories {
   static const List<DefaultCategory> all = [
     // —— Monthly (same amount each month) ——
     DefaultCategory(
-      nameEn: 'Housing',
-      nameRu: 'Жильё',
+      nameEn: 'Housing & utilities',
+      nameRu: 'Жильё и коммунальные',
       type: 'monthly',
       colorValue: 0xFF81C784,
-    ),
-    DefaultCategory(
-      nameEn: 'Utilities',
-      nameRu: 'Коммунальные',
-      type: 'monthly',
-      colorValue: 0xFF4DB6AC,
     ),
     DefaultCategory(
       nameEn: 'Insurance',
