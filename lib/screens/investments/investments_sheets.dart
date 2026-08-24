@@ -16,35 +16,39 @@ Future<void> showSetAsideActionsSheet(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (ctx) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.add),
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: sheetMaxHeight(ctx)),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.add),
+                  ),
+                  title: Text(l10n.addPot),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    showAddPotFlow(context);
+                  },
                 ),
-                title: Text(l10n.addPot),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showAddPotFlow(context);
-                },
-              ),
-              ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.savings_outlined),
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.savings_outlined),
+                  ),
+                  title: Text(l10n.logDeposit),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    showDepositEditor(context);
+                  },
                 ),
-                title: Text(l10n.logDeposit),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  showDepositEditor(context);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -67,13 +71,11 @@ Future<String?> showAddPotFlow(BuildContext context) async {
     isScrollControlled: true,
     showDragHandle: true,
     builder: (modalContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+      return FormSheet(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
               Text(
                 l10n.addPot,
                 style: Theme.of(context).textTheme.titleLarge,
@@ -115,7 +117,6 @@ Future<String?> showAddPotFlow(BuildContext context) async {
               ),
             ],
           ),
-        ),
       );
     },
   );
@@ -337,12 +338,14 @@ Future<void> showPotDetailSheet(
     showDragHandle: true,
     builder: (ctx) {
       return SafeArea(
-        child: DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.55,
-          minChildSize: 0.35,
-          maxChildSize: 0.9,
-          builder: (ctx, scrollController) {
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: sheetMaxHeight(ctx)),
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.55,
+            minChildSize: 0.35,
+            maxChildSize: 0.9,
+            builder: (ctx, scrollController) {
             final live = ctx.watch<AppState>();
             final pot = live.subcategoryById(subcategory.id) ?? subcategory;
             final deposits = live.expensesFor(pot.id);
@@ -445,6 +448,7 @@ Future<void> showPotDetailSheet(
               ],
             );
           },
+        ),
         ),
       );
     },

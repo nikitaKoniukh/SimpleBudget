@@ -88,12 +88,14 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
     showDragHandle: true,
     builder: (modalContext) {
       return SafeArea(
-        child: DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.65,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
-          builder: (context, scrollController) {
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: sheetMaxHeight(modalContext)),
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.65,
+            minChildSize: 0.4,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
             return ListView(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -143,6 +145,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
               ],
             );
           },
+          ),
         ),
       );
     },

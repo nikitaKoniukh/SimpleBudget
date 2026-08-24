@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/form_sheet.dart';
 
 /// Full-screen create-month flow. Catalog lives on the household, so this
 /// only picks a month and copies the previous plan when one exists.
@@ -214,42 +215,46 @@ Future<void> showSelectMonthSheet(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (ctx) {
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(title: Text(l10n.selectMonth)),
-            if (months.isEmpty)
-              ListTile(title: Text(l10n.emptyMonths))
-            else
-              ...months.map(
-                (m) => ListTile(
-                  title: Text(l10n.monthTitle(dateFromMonthId(m.id))),
-                  trailing:
-                      m.id == currentId ? const Icon(Icons.check) : null,
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    try {
-                      await state.setMonth(m.id);
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('$e')),
-                      );
-                    }
-                  },
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: sheetMaxHeight(ctx)),
+        child: SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(title: Text(l10n.selectMonth)),
+              if (months.isEmpty)
+                ListTile(title: Text(l10n.emptyMonths))
+              else
+                ...months.map(
+                  (m) => ListTile(
+                    title: Text(l10n.monthTitle(dateFromMonthId(m.id))),
+                    trailing:
+                        m.id == currentId ? const Icon(Icons.check) : null,
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      try {
+                        await state.setMonth(m.id);
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$e')),
+                        );
+                      }
+                    },
+                  ),
                 ),
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: Text(l10n.addMonth),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  openCreateMonthFlow(context);
+                },
               ),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: Text(l10n.addMonth),
-              onTap: () {
-                Navigator.pop(ctx);
-                openCreateMonthFlow(context);
-              },
-            ),
-          ],
+            ],
+          ),
         ),
       );
     },

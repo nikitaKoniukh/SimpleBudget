@@ -8,6 +8,7 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
+import '../../widgets/form_sheet.dart';
 import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
 import 'account_actions.dart';
@@ -248,56 +249,63 @@ Future<void> _showMembers(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true,
     builder: (ctx) {
-      return SafeArea(
-        child: Consumer<AppState>(
-          builder: (ctx, state, _) {
-            final household = state.household;
-            if (household == null) return const SizedBox.shrink();
-            return ListView(
-              shrinkWrap: true,
-              children: [
-                ListTile(title: Text(l10n.members)),
-                for (final uid in household.memberIds)
-                  ListTile(
-                    title: Text(state.memberLabel(uid)),
-                    subtitle: Text(
-                      household.isOwnedBy(uid)
-                          ? l10n.roleOwner
-                          : household.roleFor(uid) == 'viewer'
-                              ? l10n.roleViewer
-                              : l10n.roleEditor,
-                    ),
-                    trailing: state.isHouseholdOwner &&
-                            uid != state.currentUid
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                tooltip: l10n.roleViewer,
-                                icon: Icon(
-                                  household.roleFor(uid) == 'viewer'
-                                      ? Icons.visibility
-                                      : Icons.edit_outlined,
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: sheetMaxHeight(ctx)),
+        child: SafeArea(
+          child: Consumer<AppState>(
+            builder: (ctx, state, _) {
+              final household = state.household;
+              if (household == null) return const SizedBox.shrink();
+              return ListView(
+                shrinkWrap: true,
+                children: [
+                  ListTile(title: Text(l10n.members)),
+                  for (final uid in household.memberIds)
+                    ListTile(
+                      title: Text(state.memberLabel(uid)),
+                      subtitle: Text(
+                        household.isOwnedBy(uid)
+                            ? l10n.roleOwner
+                            : household.roleFor(uid) == 'viewer'
+                                ? l10n.roleViewer
+                                : l10n.roleEditor,
+                      ),
+                      trailing: state.isHouseholdOwner &&
+                              uid != state.currentUid
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  tooltip: l10n.roleViewer,
+                                  icon: Icon(
+                                    household.roleFor(uid) == 'viewer'
+                                        ? Icons.visibility
+                                        : Icons.edit_outlined,
+                                  ),
+                                  onPressed: () {
+                                    final next =
+                                        household.roleFor(uid) == 'viewer'
+                                            ? 'editor'
+                                            : 'viewer';
+                                    state.setMemberRole(uid, next);
+                                  },
                                 ),
-                                onPressed: () {
-                                  final next = household.roleFor(uid) == 'viewer'
-                                      ? 'editor'
-                                      : 'viewer';
-                                  state.setMemberRole(uid, next);
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.person_remove_outlined),
-                                onPressed: () => state.removeMember(uid),
-                              ),
-                            ],
-                          )
-                        : null,
-                  ),
-              ],
-            );
-          },
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.person_remove_outlined,
+                                  ),
+                                  onPressed: () => state.removeMember(uid),
+                                ),
+                              ],
+                            )
+                          : null,
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       );
     },
