@@ -126,6 +126,36 @@ class AppState extends ChangeNotifier {
     return subcategoriesFor(cat.id);
   }
 
+  List<BudgetCategory> categoriesOfType(String type) =>
+      _categories.where((c) => c.type == type).toList();
+
+  List<Subcategory> subcategoriesOfType(String type) {
+    final catIds =
+        _categories.where((c) => c.type == type).map((c) => c.id).toSet();
+    return subcategories.where((s) => catIds.contains(s.categoryId)).toList();
+  }
+
+  /// One-shot multi-month snapshot for Statistics (does not replace live month).
+  Future<Map<String, MonthStatsSnapshot>> loadStatsForMonths(
+    List<String> monthIds,
+  ) async {
+    final hid = _appUser?.householdId;
+    if (hid == null) return {};
+    final result = <String, MonthStatsSnapshot>{};
+    for (final monthId in monthIds) {
+      final expenses = await _repo.fetchExpenses(hid, monthId);
+      final plans = await _repo.fetchPlans(hid, monthId);
+      final incomeEntries = await _repo.fetchIncomeEntries(hid, monthId);
+      result[monthId] = MonthStatsSnapshot(
+        monthId: monthId,
+        expenses: expenses,
+        plans: plans,
+        income: incomeEntries.fold<double>(0, (s, e) => s + e.amount),
+      );
+    }
+    return result;
+  }
+
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
     final liveSubIds = subcategories.map((s) => s.id).toSet();
@@ -887,7 +917,6 @@ class AppState extends ChangeNotifier {
     required DateTime date,
     String? note,
     bool isDeposit = false,
-    String? splitGroupId,
   }) async {
     final hid = _appUser?.householdId;
     final mid = _monthId;
@@ -902,27 +931,8 @@ class AppState extends ChangeNotifier {
       createdBy: currentUid,
       createdByName: currentDisplayName,
       isDeposit: isDeposit,
-      splitGroupId: splitGroupId,
     );
     await _adjustSavedTotal(subcategoryId: subcategoryId, delta: amount);
-  }
-
-  Future<void> addSplitExpenses({
-    required DateTime date,
-    String? note,
-    required List<({String subcategoryId, double amount})> parts,
-  }) async {
-    final groupId = DateTime.now().millisecondsSinceEpoch.toString();
-    for (final part in parts) {
-      if (part.amount <= 0) continue;
-      await addExpense(
-        subcategoryId: part.subcategoryId,
-        amount: part.amount,
-        date: date,
-        note: note,
-        splitGroupId: groupId,
-      );
-    }
   }
 
   Future<void> addIncomeEntry({

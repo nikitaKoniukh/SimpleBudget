@@ -11,9 +11,9 @@ import '../../widgets/form_sheet.dart';
 import '../category/budget_sheets.dart';
 import '../income/income_dialogs.dart';
 
-enum LogKind { spend, save, income, fixed }
+enum LogKind { spend, save, income, monthly, debt }
 
-/// One add/edit sheet for spend, save (deposit), income, and monthly fixed.
+/// One add/edit sheet for spend, save, income, monthly, and debt.
 Future<void> showLogEntrySheet(
   BuildContext context, {
   LogKind? kind,
@@ -26,12 +26,31 @@ Future<void> showLogEntrySheet(
   if (!state.hasMonthSelected) return;
 
   final editing = expense != null || incomeEntry != null;
-  final initialKind = kind ??
+  var initialKind = kind ??
       (incomeEntry != null
           ? LogKind.income
           : (expense != null && state.isDepositExpense(expense)
               ? LogKind.save
               : LogKind.spend));
+
+  if (!editing && expense != null) {
+    final cat = state.categoryById(
+      state.subcategoryById(expense.subcategoryId)?.categoryId ?? '',
+    );
+    if (cat?.isDebt ?? false) initialKind = LogKind.debt;
+    if (cat?.isMonthly ?? false) initialKind = LogKind.monthly;
+  } else if (!editing && subcategoryId != null && kind == null) {
+    final cat = state.categoryById(
+      state.subcategoryById(subcategoryId)?.categoryId ?? '',
+    );
+    if (cat?.isDebt ?? false) {
+      initialKind = LogKind.debt;
+    } else if (cat?.isMonthly ?? false) {
+      initialKind = LogKind.monthly;
+    } else if (cat?.isSavings ?? false) {
+      initialKind = LogKind.save;
+    }
+  }
 
   if (initialKind == LogKind.income &&
       !editing &&
@@ -46,9 +65,7 @@ Future<void> showLogEntrySheet(
   var selectedKind = initialKind;
   var selectedSubId = expense?.subcategoryId ??
       subcategoryId ??
-      (initialKind == LogKind.save
-          ? state.savingsPots.firstOrNull?.id
-          : _spendSubs(state).firstOrNull?.id);
+      _defaultSubForKind(state, initialKind);
   var selectedSourceId =
       incomeEntry?.sourceId ?? incomeSourceId ?? state.incomeSources.firstOrNull?.id;
 
@@ -63,15 +80,8 @@ Future<void> showLogEntrySheet(
     text: expense?.note ?? incomeEntry?.note ?? '',
   );
   var date = expense?.date ?? DateTime.now();
-
   var showMore = false;
-  var split = false;
   var billDay = DateTime.now().day.clamp(1, 28);
-  var splitSubId = _spendSubs(state)
-      .where((s) => s.id != selectedSubId)
-      .firstOrNull
-      ?.id;
-  final splitAmountCtrl = TextEditingController();
 
   final result = await showModalBottomSheet<String>(
     context: context,
@@ -82,21 +92,20 @@ Future<void> showLogEntrySheet(
         child: StatefulBuilder(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
-            final spendSubs = _spendSubs(live);
+            final kindSubs = _subsForKind(live, selectedKind);
             final pots = live.savingsPots;
             final sources = live.incomeSources;
 
-            if (selectedKind == LogKind.spend ||
-                selectedKind == LogKind.fixed) {
+            if (selectedKind == LogKind.save) {
               if (selectedSubId != null &&
-                  !spendSubs.any((s) => s.id == selectedSubId)) {
-                selectedSubId = spendSubs.firstOrNull?.id;
+                  !pots.any((s) => s.id == selectedSubId)) {
+                selectedSubId = pots.firstOrNull?.id;
               }
-            }
-            if (selectedKind == LogKind.save &&
-                selectedSubId != null &&
-                !pots.any((s) => s.id == selectedSubId)) {
-              selectedSubId = pots.firstOrNull?.id;
+            } else if (selectedKind != LogKind.income) {
+              if (selectedSubId != null &&
+                  !kindSubs.any((s) => s.id == selectedSubId)) {
+                selectedSubId = kindSubs.firstOrNull?.id;
+              }
             }
             if (selectedKind == LogKind.income &&
                 selectedSourceId != null &&
@@ -105,7 +114,10 @@ Future<void> showLogEntrySheet(
             }
 
             final canSave = switch (selectedKind) {
-              LogKind.spend || LogKind.save || LogKind.fixed =>
+              LogKind.spend ||
+              LogKind.save ||
+              LogKind.monthly ||
+              LogKind.debt =>
                 selectedSubId != null,
               LogKind.income => selectedSourceId != null,
             };
@@ -120,52 +132,35 @@ Future<void> showLogEntrySheet(
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
                 if (!editing)
-                  SegmentedButton<LogKind>(
-                    style: const ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final k in LogKind.values) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text(_kindLabel(l10n, k)),
+                              selected: selectedKind == k,
+                              onSelected: (_) {
+                                setModal(() {
+                                  selectedKind = k;
+                                  showMore = false;
+                                  selectedSubId =
+                                      _defaultSubForKind(live, k);
+                                  selectedSourceId =
+                                      live.incomeSources.firstOrNull?.id;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    segments: [
-                      ButtonSegment(
-                        value: LogKind.spend,
-                        label: Text(l10n.logSpend),
-                      ),
-                      ButtonSegment(
-                        value: LogKind.save,
-                        label: Text(l10n.logSave),
-                      ),
-                      ButtonSegment(
-                        value: LogKind.income,
-                        label: Text(l10n.income),
-                      ),
-                      ButtonSegment(
-                        value: LogKind.fixed,
-                        label: Text(l10n.logFixed),
-                      ),
-                    ],
-                    selected: {selectedKind},
-                    onSelectionChanged: (next) {
-                      final k = next.first;
-                      setModal(() {
-                        selectedKind = k;
-                        split = false;
-                        showMore = false;
-                        selectedSubId = k == LogKind.save
-                            ? live.savingsPots.firstOrNull?.id
-                            : _spendSubs(live).firstOrNull?.id;
-                        selectedSourceId =
-                            live.incomeSources.firstOrNull?.id;
-                      });
-                    },
                   )
                 else
                   Text(
-                    switch (selectedKind) {
-                      LogKind.spend => l10n.logSpend,
-                      LogKind.save => l10n.logSave,
-                      LogKind.income => l10n.income,
-                      LogKind.fixed => l10n.logFixed,
-                    },
+                    _kindLabel(l10n, selectedKind),
                     style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
                           color: SyncColors.textMuted,
                         ),
@@ -178,8 +173,9 @@ Future<void> showLogEntrySheet(
                   autofocus: !editing,
                 ),
                 if (selectedKind == LogKind.spend ||
-                    selectedKind == LogKind.fixed) ...[
-                  if (spendSubs.isEmpty)
+                    selectedKind == LogKind.monthly ||
+                    selectedKind == LogKind.debt) ...[
+                  if (kindSubs.isEmpty)
                     _EmptyPicker(
                       message: l10n.noSubcategories,
                       actions: [
@@ -197,11 +193,11 @@ Future<void> showLogEntrySheet(
                     )
                   else
                     DropdownButtonFormField<String>(
-                      key: ValueKey('spend-$selectedSubId'),
+                      key: ValueKey('${selectedKind.name}-$selectedSubId'),
                       initialValue: selectedSubId,
                       decoration:
                           InputDecoration(labelText: l10n.subcategory),
-                      items: spendSubs.map((sub) {
+                      items: kindSubs.map((sub) {
                         final cat = live.categoryById(sub.categoryId);
                         final catName =
                             cat?.localizedName(live.localeCode);
@@ -240,14 +236,13 @@ Future<void> showLogEntrySheet(
                     DropdownButtonFormField<String>(
                       key: ValueKey('save-$selectedSubId'),
                       initialValue: selectedSubId,
-                      decoration:
-                          InputDecoration(labelText: l10n.subcategory),
+                      decoration: InputDecoration(labelText: l10n.sectionSavings),
                       items: pots
                           .map(
-                            (pot) => DropdownMenuItem(
-                              value: pot.id,
+                            (sub) => DropdownMenuItem(
+                              value: sub.id,
                               child: Text(
-                                pot.localizedName(live.localeCode),
+                                sub.localizedName(live.localeCode),
                               ),
                             ),
                           )
@@ -259,41 +254,25 @@ Future<void> showLogEntrySheet(
                     ),
                 ],
                 if (selectedKind == LogKind.income) ...[
-                  if (sources.isNotEmpty)
-                    DropdownButtonFormField<String>(
-                      key: ValueKey('income-$selectedSourceId'),
-                      initialValue: selectedSourceId,
-                      decoration: InputDecoration(labelText: l10n.income),
-                      items: sources
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s.id,
-                              child: Text(
-                                s.localizedName(live.localeCode),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setModal(() => selectedSourceId = v);
-                      },
-                    ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final id = await showAddIncomeSourceDialog(ctx);
-                        if (id != null) {
-                          setModal(() => selectedSourceId = id);
-                        }
-                      },
-                      icon: const Icon(Icons.add),
-                      label: Text(l10n.addIncomeSource),
-                    ),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('income-$selectedSourceId'),
+                    initialValue: selectedSourceId,
+                    decoration: InputDecoration(labelText: l10n.income),
+                    items: sources
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.localizedName(live.localeCode)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setModal(() => selectedSourceId = v);
+                    },
                   ),
                 ],
-                if (selectedKind == LogKind.fixed) ...[
+                if (selectedKind == LogKind.monthly) ...[
                   DropdownButtonFormField<int>(
                     initialValue: billDay,
                     decoration: InputDecoration(labelText: l10n.billDay),
@@ -316,13 +295,14 @@ Future<void> showLogEntrySheet(
                   controller: noteCtrl,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(
-                    labelText: selectedKind == LogKind.fixed
+                    labelText: selectedKind == LogKind.monthly
                         ? l10n.description
                         : l10n.note,
                   ),
                 ),
                 if (selectedKind == LogKind.spend ||
-                    selectedKind == LogKind.save)
+                    selectedKind == LogKind.save ||
+                    selectedKind == LogKind.debt)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.date),
@@ -339,54 +319,20 @@ Future<void> showLogEntrySheet(
                       setModal(() => date = picked);
                     },
                   ),
-                if (!editing && selectedKind == LogKind.spend) ...[
+                if (!editing &&
+                    (selectedKind == LogKind.spend ||
+                        selectedKind == LogKind.debt ||
+                        selectedKind == LogKind.monthly)) ...[
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () => setModal(() => showMore = !showMore),
                       child: Text(
-                        showMore
-                            ? l10n.done
-                            : l10n.logMoreOptions,
+                        showMore ? l10n.done : l10n.logMoreOptions,
                       ),
                     ),
                   ),
-                  if (showMore && spendSubs.length >= 2) ...[
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.splitSpend),
-                      value: split,
-                      onChanged: (v) => setModal(() => split = v),
-                    ),
-                    if (split) ...[
-                      DropdownButtonFormField<String>(
-                        initialValue: splitSubId,
-                        decoration: InputDecoration(
-                          labelText: '${l10n.splitPart} 2',
-                        ),
-                        items: spendSubs
-                            .where((s) => s.id != selectedSubId)
-                            .map((sub) {
-                          final cat = live.categoryById(sub.categoryId);
-                          return DropdownMenuItem(
-                            value: sub.id,
-                            child: Text(
-                              '${cat?.localizedName(live.localeCode) ?? ''} · ${sub.localizedName(live.localeCode)}',
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (v) => setModal(() => splitSubId = v),
-                      ),
-                      TextField(
-                        controller: splitAmountCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: '${l10n.splitPart} 2 ${l10n.amount}',
-                        ),
-                      ),
-                    ],
+                  if (showMore)
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -414,7 +360,6 @@ Future<void> showLogEntrySheet(
                         ),
                       ],
                     ),
-                  ],
                 ],
                 FilledButton(
                   onPressed:
@@ -468,31 +413,16 @@ Future<void> showLogEntrySheet(
 
   switch (selectedKind) {
     case LogKind.spend:
+    case LogKind.debt:
       final subId = selectedSubId;
       if (subId == null) return;
       if (expense == null) {
-        if (split) {
-          final part2 =
-              double.tryParse(splitAmountCtrl.text.replaceAll(',', '')) ?? 0;
-          final rest = amount - part2;
-          final secondId = splitSubId;
-          if (secondId == null || part2 <= 0 || rest <= 0) return;
-          await live.addSplitExpenses(
-            date: date,
-            note: noteOrNull,
-            parts: [
-              (subcategoryId: subId, amount: rest),
-              (subcategoryId: secondId, amount: part2),
-            ],
-          );
-        } else {
-          await live.addExpense(
-            subcategoryId: subId,
-            amount: amount,
-            date: date,
-            note: noteOrNull,
-          );
-        }
+        await live.addExpense(
+          subcategoryId: subId,
+          amount: amount,
+          date: date,
+          note: noteOrNull,
+        );
       } else {
         await live.updateExpense(
           Expense(
@@ -505,7 +435,6 @@ Future<void> showLogEntrySheet(
             createdBy: expense.createdBy,
             createdByName: expense.createdByName,
             isDeposit: false,
-            splitGroupId: expense.splitGroupId,
           ),
         );
       }
@@ -531,7 +460,6 @@ Future<void> showLogEntrySheet(
             createdBy: expense.createdBy,
             createdByName: expense.createdByName,
             isDeposit: true,
-            splitGroupId: expense.splitGroupId,
           ),
         );
       }
@@ -558,7 +486,7 @@ Future<void> showLogEntrySheet(
           ),
         );
       }
-    case LogKind.fixed:
+    case LogKind.monthly:
       final subId = selectedSubId;
       if (subId == null) return;
       if (!live.canEditPlan) {
@@ -586,11 +514,28 @@ Future<void> showLogEntrySheet(
   }
 }
 
-List<Subcategory> _spendSubs(AppState state) {
-  return state.subcategories.where((sub) {
-    final cat = state.categoryById(sub.categoryId);
-    return cat != null && !cat.isSavings;
-  }).toList();
+String _kindLabel(AppLocalizations l10n, LogKind kind) {
+  return switch (kind) {
+    LogKind.spend => l10n.logSpend,
+    LogKind.save => l10n.logSave,
+    LogKind.income => l10n.income,
+    LogKind.monthly => l10n.logFixed,
+    LogKind.debt => l10n.logDebt,
+  };
+}
+
+List<Subcategory> _subsForKind(AppState state, LogKind kind) {
+  return switch (kind) {
+    LogKind.spend => state.subcategoriesOfType('spend'),
+    LogKind.monthly => state.subcategoriesOfType('monthly'),
+    LogKind.debt => state.subcategoriesOfType('debt'),
+    LogKind.save => state.savingsPots,
+    LogKind.income => const [],
+  };
+}
+
+String? _defaultSubForKind(AppState state, LogKind kind) {
+  return _subsForKind(state, kind).firstOrNull?.id;
 }
 
 Future<String?> _promptAddPot(BuildContext context) async {
@@ -643,7 +588,6 @@ class _EmptyPicker extends StatelessWidget {
   }
 }
 
-/// Thin wrappers so existing call sites keep working.
 Future<void> showExpenseEditor(
   BuildContext context, {
   Expense? expense,

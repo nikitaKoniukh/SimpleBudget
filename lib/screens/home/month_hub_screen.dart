@@ -6,7 +6,7 @@ import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../widgets/summary_card.dart';
 import '../home/log_entry_sheet.dart';
-import '../category/categories_screen.dart';
+import '../category/category_sheets.dart';
 import 'month_actions.dart';
 
 class MonthHubScreen extends StatelessWidget {
@@ -18,8 +18,10 @@ class MonthHubScreen extends StatelessWidget {
         return l10n.typeSavings;
       case 'debt':
         return l10n.typeDebt;
+      case 'monthly':
+        return l10n.typeMonthly;
       default:
-        return l10n.typeExpense;
+        return l10n.typeSpend;
     }
   }
 
@@ -95,23 +97,15 @@ class MonthHubScreen extends StatelessWidget {
             icon: const Icon(Icons.add),
           ),
           IconButton(
-            tooltip: l10n.manageCategories,
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-              );
-            },
+            tooltip: l10n.addCategory,
+            onPressed: () => showAddCategoryFlow(context),
             icon: const Icon(Icons.category_outlined),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: state.categories.isEmpty
-            ? () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CategoriesScreen()),
-                );
-              }
+            ? () => showAddCategoryFlow(context)
             : () => showExpenseEditor(context),
         icon: Icon(state.categories.isEmpty ? Icons.category : Icons.add),
         label: Text(
@@ -186,13 +180,7 @@ class MonthHubScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     TextButton(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const CategoriesScreen(),
-                          ),
-                        );
-                      },
+                      onPressed: () => showAddCategoryFlow(context),
                       child: Text(l10n.addCategory),
                     ),
                   ],
@@ -228,7 +216,10 @@ class MonthHubScreen extends StatelessWidget {
                     formatIls(actual),
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  onTap: () {},
+                  onTap: () => showCategoryRegisterSheet(
+                    context,
+                    category: cat,
+                  ),
                 ),
               );
             }),
@@ -252,6 +243,8 @@ class _CategoryTypeChip extends StatelessWidget {
         bg = const Color(0xFFFFB74D);
       case 'debt':
         bg = const Color(0xFFE57373);
+      case 'monthly':
+        bg = const Color(0xFF81C784);
       default:
         bg = Theme.of(context).colorScheme.surfaceContainerHighest;
     }

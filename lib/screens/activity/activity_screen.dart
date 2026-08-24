@@ -239,7 +239,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           state.memberLabel(expense.createdBy);
                       final subtitleParts = <String>[
                         if (isDeposit) l10n.deposit,
-                        if (expense.splitGroupId != null) l10n.splitSpend,
                         if (cat != null) cat.localizedName(state.localeCode),
                         if (sub != null &&
                             expense.note?.trim().isNotEmpty == true)

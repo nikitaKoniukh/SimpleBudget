@@ -6,7 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
-import 'categories_screen.dart';
+import 'category_sheets.dart';
 
 Future<void> showPlanEditor(
   BuildContext context, {
@@ -32,6 +32,8 @@ Future<void> showPlanEditor(
         ? '${plan!.installmentCurrent}/${subcategory.installmentTotal}'
         : '',
   );
+  final isDebt =
+      state.categoryById(subcategory.categoryId)?.isDebt ?? false;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -53,14 +55,15 @@ Future<void> showPlanEditor(
               decoration: InputDecoration(labelText: l10n.plannedLabel),
               autofocus: true,
             ),
-            TextField(
-              controller: installmentCtrl,
-              decoration: InputDecoration(
-                labelText: '${l10n.installment} (1/12)',
-                hintText: l10n.installmentHint,
-                helperText: l10n.installmentHelper,
+            if (isDebt)
+              TextField(
+                controller: installmentCtrl,
+                decoration: InputDecoration(
+                  labelText: '${l10n.installment} (1/12)',
+                  hintText: l10n.installmentHint,
+                  helperText: l10n.installmentHelper,
+                ),
               ),
-            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l10n.save),
@@ -77,7 +80,7 @@ Future<void> showPlanEditor(
   int? instCur;
   int? instTot;
   final inst = installmentCtrl.text.trim();
-  if (inst.contains('/')) {
+  if (isDebt && inst.contains('/')) {
     final parts = inst.split('/');
     instCur = int.tryParse(parts[0].trim());
     instTot = int.tryParse(parts[1].trim());
@@ -85,10 +88,10 @@ Future<void> showPlanEditor(
   await state.upsertPlan(
     subcategoryId: subcategory.id,
     planned: planned,
-    installmentCurrent: instCur,
-    clearInstallmentCurrent: inst.isEmpty,
+    installmentCurrent: isDebt ? instCur : null,
+    clearInstallmentCurrent: !isDebt || inst.isEmpty,
   );
-  if (instTot != subcategory.installmentTotal) {
+  if (isDebt && instTot != subcategory.installmentTotal) {
     await state.updateSubcategory(
       subcategory.copyWith(
         installmentTotal: instTot,
@@ -120,6 +123,7 @@ Future<String?> showAddSubcategorySheet(
         ? '${plan!.installmentCurrent}/${existing!.installmentTotal}'
         : '',
   );
+  final isDebt = state.categoryById(categoryId)?.isDebt ?? false;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -148,14 +152,15 @@ Future<String?> showAddSubcategorySheet(
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(labelText: l10n.plannedLabel),
             ),
-            TextField(
-              controller: installmentCtrl,
-              decoration: InputDecoration(
-                labelText: '${l10n.installment} (1/12)',
-                hintText: l10n.installmentHint,
-                helperText: l10n.installmentHelper,
+            if (isDebt)
+              TextField(
+                controller: installmentCtrl,
+                decoration: InputDecoration(
+                  labelText: '${l10n.installment} (1/12)',
+                  hintText: l10n.installmentHint,
+                  helperText: l10n.installmentHelper,
+                ),
               ),
-            ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l10n.save),
@@ -174,7 +179,7 @@ Future<String?> showAddSubcategorySheet(
   int? instCur;
   int? instTot;
   final inst = installmentCtrl.text.trim();
-  if (inst.contains('/')) {
+  if (isDebt && inst.contains('/')) {
     final parts = inst.split('/');
     instCur = int.tryParse(parts[0].trim());
     instTot = int.tryParse(parts[1].trim());
@@ -184,15 +189,15 @@ Future<String?> showAddSubcategorySheet(
       existing.copyWith(
         nameEn: name,
         nameRu: name,
-        installmentTotal: instTot,
-        clearInstallmentTotal: instTot == null,
+        installmentTotal: isDebt ? instTot : null,
+        clearInstallmentTotal: !isDebt || instTot == null,
       ),
     );
     await state.upsertPlan(
       subcategoryId: existing.id,
       planned: planned,
-      installmentCurrent: instCur,
-      clearInstallmentCurrent: inst.isEmpty,
+      installmentCurrent: isDebt ? instCur : null,
+      clearInstallmentCurrent: !isDebt || inst.isEmpty,
     );
     return existing.id;
   }
@@ -200,8 +205,8 @@ Future<String?> showAddSubcategorySheet(
     categoryId: categoryId,
     name: name,
     planned: planned,
-    installmentCurrent: instCur,
-    installmentTotal: instTot,
+    installmentCurrent: isDebt ? instCur : null,
+    installmentTotal: isDebt ? instTot : null,
   );
 }
 

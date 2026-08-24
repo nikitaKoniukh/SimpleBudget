@@ -8,6 +8,7 @@ import '../activity/activity_screen.dart';
 import '../auth/auth_screen.dart';
 import '../auth/onboarding_screen.dart';
 import '../investments/investments_screen.dart';
+import '../stats/statistics_screen.dart';
 import 'home_screen.dart';
 
 class RootShell extends StatefulWidget {
@@ -44,6 +45,7 @@ class _RootShellState extends State<RootShell> {
 
     final pages = const [
       HomeScreen(),
+      StatisticsScreen(),
       ActivityScreen(),
       InvestmentsScreen(),
     ];
@@ -63,6 +65,11 @@ class _RootShellState extends State<RootShell> {
               icon: const Icon(Icons.home_outlined),
               selectedIcon: const Icon(Icons.home_rounded),
               label: l10n.home,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.pie_chart_outline),
+              selectedIcon: const Icon(Icons.pie_chart),
+              label: l10n.statistics,
             ),
             NavigationDestination(
               icon: const Icon(Icons.receipt_long_outlined),

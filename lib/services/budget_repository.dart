@@ -449,6 +449,32 @@ class BudgetRepository {
         );
   }
 
+  Future<List<MonthPlan>> fetchPlans(String householdId, String monthId) async {
+    final snap =
+        await _monthRef(householdId, monthId).collection('plans').get();
+    return snap.docs.map((d) => MonthPlan.fromMap(d.id, d.data())).toList();
+  }
+
+  Future<List<Expense>> fetchExpenses(
+    String householdId,
+    String monthId,
+  ) async {
+    final snap =
+        await _monthRef(householdId, monthId).collection('expenses').get();
+    return snap.docs.map((d) => Expense.fromMap(d.id, d.data())).toList();
+  }
+
+  Future<List<IncomeEntry>> fetchIncomeEntries(
+    String householdId,
+    String monthId,
+  ) async {
+    final snap = await _monthRef(
+      householdId,
+      monthId,
+    ).collection('incomeEntries').get();
+    return snap.docs.map((d) => IncomeEntry.fromMap(d.id, d.data())).toList();
+  }
+
   Stream<List<IncomeSource>> watchIncomeSources(
     String householdId,
     String monthId,
@@ -722,7 +748,6 @@ class BudgetRepository {
     String? createdBy,
     String? createdByName,
     bool isDeposit = false,
-    String? splitGroupId,
   }) async {
     final doc = await _monthRef(householdId, monthId)
         .collection('expenses')
@@ -735,7 +760,6 @@ class BudgetRepository {
           'createdBy': createdBy,
           'createdByName': createdByName,
           'isDeposit': isDeposit,
-          'splitGroupId': splitGroupId,
         });
     return doc.id;
   }
@@ -912,7 +936,7 @@ class BudgetRepository {
               'nameEn': nameEn,
               'nameRu': data['nameRu'] as String? ?? nameEn,
               'colorValue': (data['colorValue'] as num?)?.toInt() ?? 0xFFBDBDBD,
-              'type': data['type'] as String? ?? 'expense',
+              'type': data['type'] as String? ?? 'spend',
               'sortOrder': sort,
             }),
           );

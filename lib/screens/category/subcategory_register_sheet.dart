@@ -159,19 +159,19 @@ Future<void> showSubcategoryRegisterSheet(
                     ),
                   ],
                 ),
-                if (!isPot) ...[
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: installmentCtrl,
-                    enabled: canEdit,
-                    decoration: InputDecoration(
-                      labelText: '${l10n.installment} (1/12)',
-                      hintText: l10n.installmentHint,
-                      helperText: l10n.installmentHelper,
-                    ),
-                  ),
-                ],
-                if (isPot) ...[
+                    if (category?.isDebt ?? false) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: installmentCtrl,
+                        enabled: canEdit,
+                        decoration: InputDecoration(
+                          labelText: '${l10n.installment} (1/12)',
+                          hintText: l10n.installmentHint,
+                          helperText: l10n.installmentHelper,
+                        ),
+                      ),
+                    ],
+                    if (isPot) ...[
                   const SizedBox(height: 8),
                   InputDecorator(
                     decoration: InputDecoration(
@@ -328,8 +328,8 @@ Future<void> showSubcategoryRegisterSheet(
   final currentSub =
       live.subcategoryById(subcategory.id) ?? subcategory;
   final currentCat = live.categoryById(currentSub.categoryId);
-  final isPot =
-      currentCat?.isSavings ?? isSavings;
+  final isPot = currentCat?.isSavings ?? isSavings;
+  final isDebt = currentCat?.isDebt ?? false;
 
   if (currentCat != null &&
       (currentCat.isSavings || currentCat.targetAmount != null)) {
@@ -364,8 +364,8 @@ Future<void> showSubcategoryRegisterSheet(
       currentSub.copyWith(
         nameEn: name,
         nameRu: name,
-        installmentTotal: instTot,
-        clearInstallmentTotal: instTot == null && inst.isEmpty,
+        installmentTotal: isDebt ? instTot : null,
+        clearInstallmentTotal: !isDebt || (instTot == null && inst.isEmpty),
       ),
     );
   }
@@ -373,7 +373,7 @@ Future<void> showSubcategoryRegisterSheet(
   await live.upsertPlan(
     subcategoryId: currentSub.id,
     planned: planned,
-    installmentCurrent: instCur,
-    clearInstallmentCurrent: inst.isEmpty,
+    installmentCurrent: isDebt ? instCur : null,
+    clearInstallmentCurrent: !isDebt || inst.isEmpty,
   );
 }

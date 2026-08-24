@@ -6,12 +6,10 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
-import '../../widgets/budget/alerts_section.dart';
 import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
 import '../../widgets/budget/savings_budget_section.dart';
-import '../../widgets/budget/spending_donut_chart.dart';
-import '../category/categories_screen.dart';
+import '../category/category_sheets.dart';
 import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
@@ -24,34 +22,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _scrollController = ScrollController();
-  final _categoryKeys = <String, GlobalKey>{};
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  GlobalKey _keyForCategory(String categoryId) {
-    return _categoryKeys.putIfAbsent(categoryId, GlobalKey.new);
-  }
-
-  void _scrollToCategory(String categoryId) {
-    final key = _categoryKeys[categoryId];
-    if (key?.currentContext == null) return;
-    Scrollable.ensureVisible(
-      key!.currentContext!,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
-      alignment: 0.08,
-    );
-  }
-
-  List<BudgetCategory> _homeBudgetCategories(List<BudgetCategory> all) {
-    return all.where((c) => !c.isSavings).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -120,12 +90,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final progress = totals.planned <= 0
         ? 0.0
         : (totals.actual / totals.planned).clamp(0.0, 1.0);
-    final watch = state.overspendWatchlist();
-    final today = DateTime.now();
-    final upcoming = state.recurringBills
-        .where((b) => b.dayOfMonth >= today.day)
-        .toList()
-      ..sort((a, b) => a.dayOfMonth.compareTo(b.dayOfMonth));
+
+    final spendCats = state.categoriesOfType('spend');
+    final monthlyCats = state.categoriesOfType('monthly');
+    final debtCats = state.categoriesOfType('debt');
+    final hasAny =
+        spendCats.isNotEmpty ||
+        monthlyCats.isNotEmpty ||
+        debtCats.isNotEmpty ||
+        state.savingsPots.isNotEmpty;
 
     return SyncBackground(
       child: Scaffold(
@@ -156,6 +129,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           actions: [
             IconButton(
+              tooltip: l10n.addCategory,
+              onPressed: state.canEditPlan
+                  ? () => showAddCategoryFlow(context)
+                  : null,
+              icon: const Icon(Icons.create_new_folder_outlined),
+            ),
+            IconButton(
               tooltip: l10n.selectMonth,
               onPressed: () => showSelectMonthSheet(context),
               icon: const Icon(Icons.swap_horiz_rounded),
@@ -172,13 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-                heroTag: 'home-log-fab',
-                onPressed: () => showQuickLogSheet(context),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.log),
-              ),
+          heroTag: 'home-log-fab',
+          onPressed: () => showQuickLogSheet(context),
+          icon: const Icon(Icons.add),
+          label: Text(l10n.log),
+        ),
         body: ListView(
-          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           children: [
             if (totals.planExceedsIncome)
@@ -203,45 +182,18 @@ class _HomeScreenState extends State<HomeScreen> {
               overPlan: totals.actual > totals.planned && totals.planned > 0,
             ),
             const SizedBox(height: 12),
-            SpendingDonutChart(onCategoryTap: _scrollToCategory),
             BudgetOverviewBar(totals: totals),
             if (totals.savedThisMonth > 0) ...[
+              const SizedBox(height: 8),
               Text(
                 '${l10n.savingsHighlight}: ${formatIls(totals.savedThisMonth)}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: SyncColors.textMuted,
                     ),
               ),
-              const SizedBox(height: 8),
             ],
-            AlertsSection(
-              watchlist: watch,
-              upcomingBills: upcoming.take(5).toList(),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.categories,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CategoriesScreen(),
-                      ),
-                    );
-                  },
-                  child: Text(l10n.manageCategoriesLink),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (state.categories.isEmpty && state.savingsPots.isEmpty)
+            const SizedBox(height: 12),
+            if (!hasAny)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
@@ -253,31 +205,103 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       FilledButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const CategoriesScreen(),
+                        onPressed: () => showAddCategoryFlow(context),
+                        child: Text(l10n.addCategory),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () async {
+                          final n = await state.addDefaultCategories();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                n > 0
+                                    ? l10n.defaultsAdded
+                                    : l10n.defaultsAlreadyPresent,
+                              ),
                             ),
                           );
                         },
-                        child: Text(l10n.addCategory),
+                        child: Text(l10n.addDefaultCategories),
                       ),
                     ],
                   ),
                 ),
               )
             else ...[
-              ..._homeBudgetCategories(state.categories).map(
-                (cat) => CategoryBudgetSection(
-                  category: cat,
-                  scrollKey: _keyForCategory(cat.id),
-                ),
+              _TypedSection(
+                title: l10n.sectionSpend,
+                categories: spendCats,
+                preferredType: 'spend',
+              ),
+              _TypedSection(
+                title: l10n.sectionMonthly,
+                categories: monthlyCats,
+                preferredType: 'monthly',
+              ),
+              _TypedSection(
+                title: l10n.sectionDebt,
+                categories: debtCats,
+                preferredType: 'debt',
               ),
               const SavingsBudgetSection(),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TypedSection extends StatelessWidget {
+  const _TypedSection({
+    required this.title,
+    required this.categories,
+    required this.preferredType,
+  });
+
+  final String title;
+  final List<BudgetCategory> categories;
+  final String preferredType;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final canEdit = context.watch<AppState>().canEditPlan;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: SyncColors.textMuted,
+                      ),
+                ),
+              ),
+              if (canEdit)
+                IconButton(
+                  tooltip: l10n.addCategory,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => showAddCategoryFlow(
+                    context,
+                    preferredType: preferredType,
+                  ),
+                  icon: const Icon(Icons.add, size: 20),
+                ),
+            ],
+          ),
+        ),
+        ...categories.map((cat) => CategoryBudgetSection(category: cat)),
+      ],
     );
   }
 }

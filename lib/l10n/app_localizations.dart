@@ -146,8 +146,10 @@ class AppLocalizations {
   String get exportCsv => isRu ? 'Экспорт CSV' : 'Export CSV';
   String get exportDone => isRu ? 'CSV готов к отправке' : 'CSV ready to share';
   String get typeSavings => isRu ? 'Накопления' : 'Savings';
-  String get typeExpense => isRu ? 'Расход' : 'Expense';
-  String get typeDebt => isRu ? 'Долг / карта' : 'Debt / card';
+  String get typeExpense => isRu ? 'Траты' : 'Spend';
+  String get typeSpend => typeExpense;
+  String get typeMonthly => isRu ? 'Ежемесячные' : 'Monthly';
+  String get typeDebt => isRu ? 'Долг / платёж' : 'Debt / payment';
   String get emptyCategories => isRu
       ? 'Категорий пока нет. Добавьте при записи траты или из списка.'
       : 'No categories yet. Add one when you log a spend, or from the list.';
@@ -299,13 +301,26 @@ class AppLocalizations {
       _t('Spending by category', 'Расход по категориям', 'הוצאות לפי קטגוריה');
   String get manageCategoriesLink =>
       _t('Manage categories', 'Управление категориями', 'ניהול קטגוריות');
-  String get sectionExpenses => _t('Expenses', 'Расходы', 'הוצאות');
+  String get sectionExpenses => _t('Spend', 'Траты', 'הוצאות');
+  String get sectionSpend => sectionExpenses;
+  String get sectionMonthly => _t('Monthly', 'Ежемесячные', 'חודשי');
   String get sectionSavings => _t('Savings', 'Накопления', 'חיסכון');
-  String get sectionDebt => _t('Debt', 'Долги', 'חובות');
+  String get sectionDebt => _t('Debt / payment', 'Долг / платёж', 'חוב / תשלום');
+  String get statistics => _t('Statistics', 'Статистика', 'סטטיסטיקה');
+  String get compareMonths =>
+      _t('Compare months', 'Сравнение месяцев', 'השוואת חודשים');
+  String get last3Months => _t('Last 3 months', '3 месяца', '3 חודשים');
+  String get last6Months => _t('Last 6 months', '6 месяцев', '6 חודשים');
+  String get thisVsPrev =>
+      _t('This vs previous', 'Этот и прошлый', 'זה מול קודם');
+  String get byCategory => _t('By category', 'По категориям', 'לפי קטגוריה');
+  String get bySubcategory =>
+      _t('By subcategory', 'По подкатегориям', 'לפי תת־קטגוריה');
   String get cashLeft => _t('Cash left', 'Остаток наличных', 'מזומן שנותר');
   String get unallocated => _t('Unallocated', 'Не распределено', 'לא מוקצה');
   String get logSpend => _t('Spend', 'Трата', 'הוצאה');
   String get logSave => _t('Save', 'Отложить', 'חיסכון');
+  String get logDebt => _t('Debt', 'Долг', 'חוב');
   String get logFixed => _t('Monthly', 'Ежемесячно', 'חודשי');
   String get logFixedHint => _t(
         'Sets this month’s plan and repeats every new month',
@@ -314,6 +329,8 @@ class AppLocalizations {
       );
   String get logMoreOptions => _t('More', 'Ещё', 'עוד');
   String get editLog => _t('Edit', 'Изменить', 'עריכה');
+  String get editCategory =>
+      _t('Edit category', 'Изменить категорию', 'עריכת קטגוריה');
   String get viewerReadOnlyPlan => _t(
         'You can log income and spends. Plan changes are for editors.',
         'Можно записывать доходы и траты. План меняют редакторы.',

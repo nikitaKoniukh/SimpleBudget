@@ -1,4 +1,4 @@
-/// Suggested expense and savings categories with EN + RU names.
+/// Suggested spend / monthly / debt / savings categories with EN + RU names.
 /// Used when creating a month, "Add defaults", and the add-category picker.
 class DefaultCategories {
   static const savingsNameEn = 'Savings';
@@ -6,136 +6,136 @@ class DefaultCategories {
   static const savingsColorValue = 0xFFFFB74D;
 
   static const List<DefaultCategory> all = [
-    // —— Everyday living ——
+    // —— Monthly (same amount each month) ——
     DefaultCategory(
       nameEn: 'Housing',
       nameRu: 'Жильё',
-      type: 'expense',
+      type: 'monthly',
       colorValue: 0xFF81C784,
     ),
     DefaultCategory(
       nameEn: 'Utilities',
       nameRu: 'Коммунальные',
-      type: 'expense',
+      type: 'monthly',
       colorValue: 0xFF4DB6AC,
     ),
     DefaultCategory(
+      nameEn: 'Insurance',
+      nameRu: 'Страховка',
+      type: 'monthly',
+      colorValue: 0xFFB0BEC5,
+    ),
+    DefaultCategory(
+      nameEn: 'Subscriptions',
+      nameRu: 'Подписки',
+      type: 'monthly',
+      colorValue: 0xFF7986CB,
+    ),
+    // —— Everyday spend ——
+    DefaultCategory(
       nameEn: 'Groceries',
       nameRu: 'Продукты',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFFFF176,
     ),
     DefaultCategory(
       nameEn: 'Dining out',
       nameRu: 'Кафе и рестораны',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFFFAB91,
     ),
     DefaultCategory(
       nameEn: 'Transport',
       nameRu: 'Транспорт',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF80CBC4,
     ),
     DefaultCategory(
       nameEn: 'Car',
       nameRu: 'Автомобиль',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF90A4AE,
     ),
-    // —— Life & family ——
     DefaultCategory(
       nameEn: 'Health',
       nameRu: 'Здоровье',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFD7CCC8,
-    ),
-    DefaultCategory(
-      nameEn: 'Insurance',
-      nameRu: 'Страховка',
-      type: 'expense',
-      colorValue: 0xFFB0BEC5,
     ),
     DefaultCategory(
       nameEn: 'Family & kids',
       nameRu: 'Семья и дети',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF9CCC65,
     ),
     DefaultCategory(
       nameEn: 'Education',
       nameRu: 'Образование',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF64B5F6,
     ),
     DefaultCategory(
       nameEn: 'Pets',
       nameRu: 'Питомцы',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFA1887F,
     ),
-    // —— Lifestyle ——
     DefaultCategory(
       nameEn: 'Personal',
       nameRu: 'Личное',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFCE93D8,
     ),
     DefaultCategory(
       nameEn: 'Shopping',
       nameRu: 'Покупки',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFF48FB1,
     ),
     DefaultCategory(
       nameEn: 'Entertainment',
       nameRu: 'Развлечения',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFBA68C8,
-    ),
-    DefaultCategory(
-      nameEn: 'Subscriptions',
-      nameRu: 'Подписки',
-      type: 'expense',
-      colorValue: 0xFF7986CB,
     ),
     DefaultCategory(
       nameEn: 'Communications',
       nameRu: 'Связь',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF90CAF9,
     ),
     DefaultCategory(
       nameEn: 'Travel',
       nameRu: 'Путешествия',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFF4FC3F7,
     ),
     DefaultCategory(
       nameEn: 'Gifts & donations',
       nameRu: 'Подарки и благотворительность',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFFF8A65,
     ),
     DefaultCategory(
       nameEn: 'Home maintenance',
       nameRu: 'Ремонт и дом',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFAED581,
     ),
     DefaultCategory(
       nameEn: 'Other',
       nameRu: 'Другое',
-      type: 'expense',
+      type: 'spend',
       colorValue: 0xFFFFF59D,
     ),
+    // —— Debt / payments ——
     DefaultCategory(
       nameEn: 'Loans & debt',
       nameRu: 'Кредиты и долги',
-      type: 'expense',
+      type: 'debt',
       colorValue: 0xFFE57373,
     ),
-    // Savings parent (pots live on Savings tab — not shown on Home).
+    // —— Savings ——
     DefaultCategory(
       nameEn: savingsNameEn,
       nameRu: savingsNameRu,

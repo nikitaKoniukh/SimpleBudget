@@ -22,7 +22,10 @@ void main() {
     for (final cat in DefaultCategories.all) {
       expect(cat.nameEn, isNotEmpty);
       expect(cat.nameRu, isNotEmpty);
-      expect(['expense', 'savings', 'debt'], contains(cat.type));
+      expect(
+        ['spend', 'monthly', 'debt', 'savings'],
+        contains(cat.type),
+      );
     }
     expect(
       DefaultCategories.all.any(
@@ -38,6 +41,14 @@ void main() {
       DefaultCategories.all.any(
         (c) => c.nameEn == 'Savings' && c.type == 'savings',
       ),
+      isTrue,
+    );
+    expect(
+      DefaultCategories.all.any((c) => c.type == 'monthly'),
+      isTrue,
+    );
+    expect(
+      DefaultCategories.all.any((c) => c.type == 'debt'),
       isTrue,
     );
     expect(
@@ -75,7 +86,7 @@ void main() {
           nameEn: 'Car',
           nameRu: 'Автомобиль',
           colorValue: 0xFF00FF00,
-          type: 'expense',
+          type: 'spend',
           sortOrder: 0,
         ),
       ],
@@ -186,7 +197,7 @@ void main() {
     expect(totals.planExceedsIncome, isFalse);
   });
 
-  test('Expense serializes createdBy, deposit, and split', () {
+  test('Expense serializes createdBy and deposit', () {
     final e = Expense(
       id: 'x1',
       subcategoryId: 'sub1',
@@ -195,12 +206,11 @@ void main() {
       createdBy: 'u1',
       createdByName: 'Ada',
       isDeposit: true,
-      splitGroupId: 'g1',
     );
     final map = e.toMap();
     expect(map['createdBy'], 'u1');
     expect(map['isDeposit'], isTrue);
-    expect(map['splitGroupId'], 'g1');
+    expect(map.containsKey('splitGroupId'), isFalse);
     final parsed = Expense.fromMap('x1', map);
     expect(parsed.createdByName, 'Ada');
     expect(parsed.isDeposit, isTrue);

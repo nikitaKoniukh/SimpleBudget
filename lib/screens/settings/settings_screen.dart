@@ -8,7 +8,6 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
-import '../category/categories_screen.dart';
 import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
 import 'account_actions.dart';
@@ -170,18 +169,6 @@ class SettingsScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (_) => const RecurringBillsScreen(),
                   ),
-                );
-              },
-            ),
-            ListTile(
-              title: Text(l10n.manageCategories),
-              subtitle: Text('${state.categories.length}'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: !state.canEditPlan
-                  ? null
-                  : () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CategoriesScreen()),
                 );
               },
             ),

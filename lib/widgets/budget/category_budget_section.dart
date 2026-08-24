@@ -6,11 +6,12 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../screens/category/category_sheets.dart';
 import 'subcategory_budget_row.dart';
 
 const _amountColWidth = 88.0;
 
-/// Sheet-like category block: header + Name | Spent | Planned rows.
+/// Sheet-like category block: tappable header + Name | Spent | Planned rows.
 class CategoryBudgetSection extends StatelessWidget {
   const CategoryBudgetSection({
     super.key,
@@ -44,49 +45,55 @@ class CategoryBudgetSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
+            InkWell(
+              onTap: () => showCategoryRegisterSheet(
+                context,
+                category: cat,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      cat.localizedName(state.localeCode),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        cat.localizedName(state.localeCode),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    width: _amountColWidth,
-                    child: Text(
-                      formatIls(actual),
-                      textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: overPlan ? overColor : null,
-                          ),
+                    SizedBox(
+                      width: _amountColWidth,
+                      child: Text(
+                        formatIls(actual),
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: overPlan ? overColor : null,
+                            ),
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    width: _amountColWidth,
-                    child: Text(
-                      formatIls(planned),
-                      textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: SyncColors.textMuted,
-                          ),
+                    SizedBox(
+                      width: _amountColWidth,
+                      child: Text(
+                        formatIls(planned),
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: SyncColors.textMuted,
+                            ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (subs.isEmpty)

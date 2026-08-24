@@ -268,7 +268,8 @@ class BudgetCategory {
   final String nameEn;
   final String nameRu;
   final int colorValue;
-  final String type; // expense | savings | debt
+  /// spend | monthly | debt | savings
+  final String type;
   final int sortOrder;
 
   /// Optional lifetime goal for savings pots. Null means no target.
@@ -277,7 +278,13 @@ class BudgetCategory {
   /// Cumulative deposits. Written via increment, not [toMap].
   final double savedTotal;
 
+  bool get isSpend => type == 'spend';
+  bool get isMonthly => type == 'monthly';
+  bool get isDebt => type == 'debt';
   bool get isSavings => type == 'savings';
+
+  /// Counts toward monthly spend/plan totals (not savings pots).
+  bool get isBudgetEnvelope => !isSavings;
 
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;
@@ -322,7 +329,7 @@ class BudgetCategory {
       nameEn: map['nameEn'] as String? ?? '',
       nameRu: map['nameRu'] as String? ?? '',
       colorValue: (map['colorValue'] as num?)?.toInt() ?? 0xFFBDBDBD,
-      type: map['type'] as String? ?? 'expense',
+      type: map['type'] as String? ?? 'spend',
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       targetAmount: (map['targetAmount'] as num?)?.toDouble(),
       savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
@@ -509,7 +516,6 @@ class Expense {
     this.createdBy,
     this.createdByName,
     this.isDeposit = false,
-    this.splitGroupId,
   });
 
   final String id;
@@ -521,7 +527,6 @@ class Expense {
   final String? createdBy;
   final String? createdByName;
   final bool isDeposit;
-  final String? splitGroupId;
 
   Expense copyWith({
     String? subcategoryId,
@@ -539,7 +544,6 @@ class Expense {
       createdBy: createdBy,
       createdByName: createdByName,
       isDeposit: isDeposit,
-      splitGroupId: splitGroupId,
     );
   }
 
@@ -552,7 +556,6 @@ class Expense {
     'createdBy': createdBy,
     'createdByName': createdByName,
     'isDeposit': isDeposit,
-    'splitGroupId': splitGroupId,
   };
 
   factory Expense.fromMap(String id, Map<String, dynamic> map) {
@@ -570,7 +573,6 @@ class Expense {
       createdBy: map['createdBy'] as String?,
       createdByName: map['createdByName'] as String?,
       isDeposit: map['isDeposit'] as bool? ?? false,
-      splitGroupId: map['splitGroupId'] as String?,
     );
   }
 }
@@ -592,4 +594,40 @@ class MonthTotals {
   double get cashLeft => income - actual;
   double get unallocated => income - planned;
   bool get planExceedsIncome => planned > income;
+}
+
+/// Immutable snapshot of one month for Statistics aggregation.
+class MonthStatsSnapshot {
+  const MonthStatsSnapshot({
+    required this.monthId,
+    required this.expenses,
+    required this.plans,
+    required this.income,
+  });
+
+  final String monthId;
+  final List<Expense> expenses;
+  final List<MonthPlan> plans;
+  final double income;
+
+  double spentForSub(String subcategoryId) => expenses
+      .where((e) => e.subcategoryId == subcategoryId && !e.isDeposit)
+      .fold(0, (s, e) => s + e.amount);
+
+  double spentForCategory(
+    String categoryId,
+    List<Subcategory> allSubs,
+  ) {
+    final ids =
+        allSubs.where((s) => s.categoryId == categoryId).map((s) => s.id);
+    return ids.fold<double>(0, (s, id) => s + spentForSub(id));
+  }
+
+  double get totalSpent => expenses
+      .where((e) => !e.isDeposit)
+      .fold(0, (s, e) => s + e.amount);
+
+  double get savedThisMonth => expenses
+      .where((e) => e.isDeposit)
+      .fold(0, (s, e) => s + e.amount);
 }
