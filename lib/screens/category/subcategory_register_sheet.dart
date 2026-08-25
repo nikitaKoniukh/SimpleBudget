@@ -293,6 +293,34 @@ Future<void> showSubcategoryRegisterSheet(
                     ),
                   ],
                 ),
+                if (canEdit) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () async {
+                      final ok = await showDialog<bool>(
+                        context: ctx,
+                        builder: (dCtx) => AlertDialog(
+                          title: Text(l10n.delete),
+                          content: Text(sub.localizedName(live.localeCode)),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(dCtx, false),
+                              child: Text(l10n.cancel),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(dCtx, true),
+                              child: Text(l10n.delete),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true && ctx.mounted) {
+                        Navigator.pop(ctx, 'delete');
+                      }
+                    },
+                    child: Text(l10n.delete),
+                  ),
+                ],
               ],
             );
           },
@@ -305,6 +333,10 @@ Future<void> showSubcategoryRegisterSheet(
   if (!context.mounted) return;
 
   final live = context.read<AppState>();
+  if (result == 'delete') {
+    await live.deleteSubcategory(subcategory.id);
+    return;
+  }
   if (!live.canEditPlan) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.viewerReadOnlyPlan)),
