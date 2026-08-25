@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../screens/category/budget_sheets.dart';
 import '../../screens/category/category_sheets.dart';
 import 'subcategory_budget_row.dart';
 
@@ -32,6 +33,7 @@ class CategoryBudgetSection extends StatelessWidget {
     final overPlan = actual > planned && planned > 0;
     final overColor = SyncColors.overspend;
     final subs = state.subcategoriesFor(cat.id);
+    final canEdit = state.canEditPlan;
     final color = Color(cat.colorValue);
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
 
@@ -99,11 +101,33 @@ class CategoryBudgetSection extends StatelessWidget {
             if (subs.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Text(
-                  l10n.noSubcategories,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SyncColors.textMuted,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.noSubcategories,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SyncColors.textMuted,
+                          ),
+                    ),
+                    if (canEdit) ...[
+                      const SizedBox(height: 4),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: SyncColors.textMuted,
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: () => showAddSubcategorySheet(
+                          context,
+                          categoryId: cat.id,
+                        ),
+                        icon: const Icon(Icons.add, size: 20),
+                        label: Text(l10n.addSubcategory),
                       ),
+                    ],
+                  ],
                 ),
               )
             else
