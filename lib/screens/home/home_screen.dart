@@ -244,14 +244,19 @@ class _TypedSection extends StatelessWidget {
                 ),
               ),
               if (canEdit)
-                IconButton(
-                  tooltip: l10n.addCategory,
-                  visualDensity: VisualDensity.compact,
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: SyncColors.textMuted,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   onPressed: () => showAddCategoryFlow(
                     context,
                     preferredType: preferredType,
                   ),
                   icon: const Icon(Icons.add, size: 20),
+                  label: Text(l10n.addCategory),
                 ),
             ],
           ),
