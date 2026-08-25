@@ -268,7 +268,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           ),
                           onTap: () => showLogEntrySheet(
                             context,
-                            kind: isDeposit ? LogKind.save : LogKind.spend,
+                            kind: isDeposit
+                                ? LogKind.save
+                                : (cat?.isDebt ?? false)
+                                    ? LogKind.debt
+                                    : (cat?.isMonthly ?? false)
+                                        ? LogKind.monthly
+                                        : LogKind.spend,
                             expense: expense,
                             subcategoryId: expense.subcategoryId,
                           ),

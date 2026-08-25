@@ -33,22 +33,16 @@ Future<void> showLogEntrySheet(
               ? LogKind.save
               : LogKind.spend));
 
-  if (!editing && expense != null) {
-    final cat = state.categoryById(
-      state.subcategoryById(expense.subcategoryId)?.categoryId ?? '',
-    );
-    if (cat?.isDebt ?? false) initialKind = LogKind.debt;
-    if (cat?.isMonthly ?? false) initialKind = LogKind.monthly;
-  } else if (!editing && subcategoryId != null && kind == null) {
-    final cat = state.categoryById(
-      state.subcategoryById(subcategoryId)?.categoryId ?? '',
-    );
-    if (cat?.isDebt ?? false) {
-      initialKind = LogKind.debt;
-    } else if (cat?.isMonthly ?? false) {
-      initialKind = LogKind.monthly;
-    } else if (cat?.isSavings ?? false) {
+  // Prefer the subcategory's category type over a caller's generic Spend.
+  // Callers (e.g. subcategory register) often pass LogKind.spend for any
+  // non-pot row; pinning a monthly/debt sub into Spend dropdowns asserts.
+  if (incomeEntry == null) {
+    final subId = expense?.subcategoryId ?? subcategoryId;
+    if (expense != null && state.isDepositExpense(expense)) {
       initialKind = LogKind.save;
+    } else if (subId != null) {
+      final fromCat = _kindForSubcategory(state, subId);
+      if (fromCat != null) initialKind = fromCat;
     }
   }
 
@@ -106,7 +100,9 @@ Future<void> showLogEntrySheet(
               final pinnedSub = pinnedSubId == null
                   ? null
                   : live.subcategoryById(pinnedSubId);
-              if (pinnedSub != null) {
+              final pinnedMatchesKind = pinnedSub != null &&
+                  _subMatchesKind(live, pinnedSub, selectedKind);
+              if (pinnedMatchesKind) {
                 selectedCategoryId = pinnedSub.categoryId;
                 selectedSubId = pinnedSub.id;
               } else {
@@ -593,6 +589,29 @@ String _kindLabel(AppLocalizations l10n, LogKind kind) {
     LogKind.income => l10n.income,
     LogKind.monthly => l10n.logFixed,
     LogKind.debt => l10n.logDebt,
+  };
+}
+
+LogKind? _kindForSubcategory(AppState state, String subcategoryId) {
+  final cat = state.categoryById(
+    state.subcategoryById(subcategoryId)?.categoryId ?? '',
+  );
+  if (cat == null) return null;
+  if (cat.isDebt) return LogKind.debt;
+  if (cat.isMonthly) return LogKind.monthly;
+  if (cat.isSavings) return LogKind.save;
+  if (cat.isSpend) return LogKind.spend;
+  return null;
+}
+
+bool _subMatchesKind(AppState state, Subcategory sub, LogKind kind) {
+  final cat = state.categoryById(sub.categoryId);
+  return switch (kind) {
+    LogKind.spend => cat?.isSpend ?? false,
+    LogKind.monthly => cat?.isMonthly ?? false,
+    LogKind.debt => cat?.isDebt ?? false,
+    LogKind.save => cat?.isSavings ?? false,
+    LogKind.income => false,
   };
 }
 

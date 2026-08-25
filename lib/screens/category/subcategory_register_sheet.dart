@@ -253,11 +253,16 @@ Future<void> showSubcategoryRegisterSheet(
                       ),
                       onTap: () {
                         Navigator.pop(ctx, 'edit_expense');
+                        final editKind = isPot || expense.isDeposit
+                            ? LogKind.save
+                            : (category?.isDebt ?? false)
+                                ? LogKind.debt
+                                : (category?.isMonthly ?? false)
+                                    ? LogKind.monthly
+                                    : LogKind.spend;
                         showLogEntrySheet(
                           context,
-                          kind: isPot || expense.isDeposit
-                              ? LogKind.save
-                              : LogKind.spend,
+                          kind: editKind,
                           expense: expense,
                         );
                       },
@@ -270,9 +275,16 @@ Future<void> showSubcategoryRegisterSheet(
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.pop(ctx, 'add');
+                          final addKind = isPot
+                              ? LogKind.save
+                              : (category?.isDebt ?? false)
+                                  ? LogKind.debt
+                                  : (category?.isMonthly ?? false)
+                                      ? LogKind.monthly
+                                      : LogKind.spend;
                           showLogEntrySheet(
                             context,
-                            kind: isPot ? LogKind.save : LogKind.spend,
+                            kind: addKind,
                             subcategoryId: sub.id,
                           );
                         },
