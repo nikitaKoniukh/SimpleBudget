@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/default_categories.dart';
@@ -29,6 +30,8 @@ class InvestmentsScreen extends StatelessWidget {
 
     final pots = state.savingsPots;
     final summable = state.summableSavingsPots;
+    final excluded =
+        pots.where((p) => !p.includeInTotal).toList(growable: false);
     final totalSaved = summable.fold<double>(0, (s, p) => s + p.savedTotal);
     final targeted = summable.where(
       (p) => p.targetAmount != null && p.targetAmount! > 0,
@@ -87,11 +90,38 @@ class InvestmentsScreen extends StatelessWidget {
                     target: hasAnyTarget ? totalTarget : null,
                     progress: overallProgress,
                   ),
-                  const SizedBox(height: 16),
-                  ...pots.map((pot) => _PotCard(subcategory: pot)),
+                  if (summable.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _SectionHeader(title: l10n.sectionInTotal),
+                    const SizedBox(height: 8),
+                    ...summable.map((pot) => _PotCard(subcategory: pot)),
+                  ],
+                  if (excluded.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _SectionHeader(title: l10n.sectionNotInTotal),
+                    const SizedBox(height: 8),
+                    ...excluded.map((pot) => _PotCard(subcategory: pot)),
+                  ],
                 ],
               ),
       ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: SyncColors.textMuted,
+          ),
     );
   }
 }
@@ -183,6 +213,12 @@ class _PotCard extends StatelessWidget {
     final ratio = !hasTarget
         ? (pot.savedTotal > 0 ? 1.0 : 0.0)
         : (pot.savedTotal / pot.targetAmount!).clamp(0.0, 1.0);
+    final monthSaved = state.spentFor(pot.id);
+    final monthPlan = state.plannedFor(pot.id);
+    final showMonth = monthSaved > 0 || monthPlan > 0;
+    final metaStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: SyncColors.textMuted,
+        );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -234,23 +270,29 @@ class _PotCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${l10n.targetAmount}: ${formatIls(pot.targetAmount!)}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: SyncColors.textMuted),
+                    '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}'
+                    ' · ${(ratio * 100).round()}%',
+                    style: metaStyle,
                   ),
-                ] else
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      l10n.savedLabel,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: SyncColors.textMuted),
-                    ),
+                ],
+                if (showMonth) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    monthPlan > 0
+                        ? '${l10n.thisMonthDeposits}: '
+                            '${formatIls(monthSaved)} / ${formatIls(monthPlan)}'
+                        : '${l10n.thisMonthDeposits}: ${formatIls(monthSaved)}',
+                    style: metaStyle,
                   ),
+                ],
+                if (pot.targetDate != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${l10n.targetDate}: '
+                    '${DateFormat.yMMMd().format(pot.targetDate!)}',
+                    style: metaStyle,
+                  ),
+                ],
               ],
             ),
           ),

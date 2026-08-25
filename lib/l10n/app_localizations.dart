@@ -253,6 +253,8 @@ class AppLocalizations {
   String get includeInTotalHint => isRu
       ? 'Если включено, сумма цели входит в общий итог «Отложено». Выключите для долгосрочных целей вроде пенсии.'
       : 'When on, this pot counts toward the Set aside total. Turn off for long-term pots like pension.';
+  String get sectionInTotal => isRu ? 'В итоге' : 'In total';
+  String get sectionNotInTotal => isRu ? 'Не в итоге' : 'Not in total';
   String get alreadySaved => isRu ? 'Уже накоплено' : 'Already saved';
   String get alreadySavedHint => isRu
       ? 'Сумма, которая уже была до этого месяца. Не входит в бюджет месяца.'
