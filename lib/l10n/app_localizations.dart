@@ -248,6 +248,8 @@ class AppLocalizations {
   String get noDepositsThisMonth =>
       isRu ? 'В этом месяце ещё ничего не отложено' : 'No deposits this month';
   String get editPot => isRu ? 'Изменить цель' : 'Edit pot';
+  String get includeInTotal =>
+      isRu ? 'Учитывать в итоге' : 'Include in total';
   String get underspent => isRu ? 'Остаток по позициям' : 'Underspent items';
   String get noData => isRu ? 'Пока нет данных' : 'No data yet';
   String get loading => isRu ? 'Загрузка…' : 'Loading…';

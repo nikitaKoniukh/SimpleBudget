@@ -162,6 +162,7 @@ Future<String?> showEditPotSheet(
   );
 
   var targetDate = existing?.targetDate;
+  var includeInTotal = existing?.includeInTotal ?? true;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -212,6 +213,12 @@ Future<String?> showEditPotSheet(
                     setModal(() => targetDate = picked);
                   },
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.includeInTotal),
+                  value: includeInTotal,
+                  onChanged: (v) => setModal(() => includeInTotal = v),
+                ),
                 FilledButton(
                   onPressed: () => Navigator.pop(ctx, true),
                   child: Text(l10n.save),
@@ -236,6 +243,7 @@ Future<String?> showEditPotSheet(
         name: name,
         targetAmount: target,
         targetDate: targetDate,
+        includeInTotal: includeInTotal,
       );
     }
     await state.updateSubcategory(
@@ -246,6 +254,7 @@ Future<String?> showEditPotSheet(
         clearTargetAmount: target == null,
         targetDate: targetDate,
         clearTargetDate: targetDate == null,
+        includeInTotal: includeInTotal,
       ),
     );
     return existing.id;

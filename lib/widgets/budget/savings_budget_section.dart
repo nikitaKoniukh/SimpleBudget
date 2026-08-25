@@ -20,8 +20,11 @@ class SavingsBudgetSection extends StatelessWidget {
     if (pots.isEmpty) return const SizedBox.shrink();
 
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
-    final saved = pots.fold<double>(0, (s, p) => s + state.spentFor(p.id));
-    final planned = pots.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
+    final summable = state.summableSavingsPots;
+    final saved =
+        summable.fold<double>(0, (s, p) => s + state.spentFor(p.id));
+    final planned =
+        summable.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
 
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 10),

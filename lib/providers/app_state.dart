@@ -127,6 +127,16 @@ class AppState extends ChangeNotifier {
     return subcategoriesFor(cat.id);
   }
 
+  List<Subcategory> get summableSavingsPots =>
+      savingsPots.where((p) => p.includeInTotal).toList();
+
+  bool _includeSubcategoryInSavingsTotal(String subcategoryId) {
+    for (final s in _subcategories) {
+      if (s.id == subcategoryId) return s.includeInTotal;
+    }
+    return true;
+  }
+
   List<BudgetCategory> categoriesOfType(String type) =>
       _categories.where((c) => c.type == type).toList();
 
@@ -174,7 +184,8 @@ class AppState extends ChangeNotifier {
         .where(
           (e) =>
               liveSubIds.contains(e.subcategoryId) &&
-              (e.isDeposit || _isSavingsPot(e.subcategoryId)),
+              (e.isDeposit || _isSavingsPot(e.subcategoryId)) &&
+              _includeSubcategoryInSavingsTotal(e.subcategoryId),
         )
         .fold<double>(0, (s, e) => s + e.amount);
     return MonthTotals(
@@ -798,6 +809,7 @@ class AppState extends ChangeNotifier {
     String? nameRu,
     double? targetAmount,
     DateTime? targetDate,
+    bool includeInTotal = true,
   }) async {
     final catId = await ensureSavingsCategory();
     final trimmed = name.trim();
@@ -813,6 +825,7 @@ class AppState extends ChangeNotifier {
       nameRu: ru,
       targetAmount: targetAmount,
       targetDate: targetDate,
+      includeInTotal: includeInTotal,
     );
   }
 
@@ -848,6 +861,7 @@ class AppState extends ChangeNotifier {
     int? installmentTotal,
     double? targetAmount,
     DateTime? targetDate,
+    bool includeInTotal = true,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
@@ -863,6 +877,7 @@ class AppState extends ChangeNotifier {
       installmentTotal: installmentTotal,
       targetAmount: targetAmount,
       targetDate: targetDate,
+      includeInTotal: includeInTotal,
     );
     if (!_subcategories.any((s) => s.id == id)) {
       _subcategories = [
@@ -876,6 +891,7 @@ class AppState extends ChangeNotifier {
           installmentTotal: installmentTotal,
           targetAmount: targetAmount,
           targetDate: targetDate,
+          includeInTotal: includeInTotal,
         ),
       ];
     }

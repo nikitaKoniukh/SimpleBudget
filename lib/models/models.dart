@@ -349,6 +349,7 @@ class Subcategory {
     this.targetAmount,
     this.savedTotal = 0,
     this.targetDate,
+    this.includeInTotal = true,
   });
 
   final String id;
@@ -368,6 +369,9 @@ class Subcategory {
   /// Optional deadline for a savings pot.
   final DateTime? targetDate;
 
+  /// When false, pot is listed but excluded from aggregated savings totals.
+  final bool includeInTotal;
+
   String localizedName(String localeCode) =>
       localeCode == 'ru' ? nameRu : nameEn;
 
@@ -384,6 +388,7 @@ class Subcategory {
     double? savedTotal,
     DateTime? targetDate,
     bool clearTargetDate = false,
+    bool? includeInTotal,
   }) {
     return Subcategory(
       id: id,
@@ -400,6 +405,7 @@ class Subcategory {
           : (targetAmount ?? this.targetAmount),
       savedTotal: savedTotal ?? this.savedTotal,
       targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
+      includeInTotal: includeInTotal ?? this.includeInTotal,
     );
   }
 
@@ -413,6 +419,7 @@ class Subcategory {
     'archived': archived,
     'targetAmount': targetAmount,
     'targetDate': targetDate?.toIso8601String(),
+    'includeInTotal': includeInTotal,
   };
 
   factory Subcategory.fromMap(String id, Map<String, dynamic> map) {
@@ -429,6 +436,7 @@ class Subcategory {
       targetDate: map['targetDate'] != null
           ? DateTime.tryParse(map['targetDate'] as String)
           : null,
+      includeInTotal: map['includeInTotal'] as bool? ?? true,
     );
   }
 }
@@ -627,7 +635,12 @@ class MonthStatsSnapshot {
       .where((e) => !e.isDeposit)
       .fold(0, (s, e) => s + e.amount);
 
-  double get savedThisMonth => expenses
-      .where((e) => e.isDeposit)
+  /// Deposits this month. When [includeSubcategoryIds] is set, only those pots.
+  double savedThisMonth([Set<String>? includeSubcategoryIds]) => expenses
+      .where((e) {
+        if (!e.isDeposit) return false;
+        if (includeSubcategoryIds == null) return true;
+        return includeSubcategoryIds.contains(e.subcategoryId);
+      })
       .fold(0, (s, e) => s + e.amount);
 }

@@ -28,8 +28,9 @@ class InvestmentsScreen extends StatelessWidget {
     }
 
     final pots = state.savingsPots;
-    final totalSaved = pots.fold<double>(0, (s, p) => s + p.savedTotal);
-    final targeted = pots.where(
+    final summable = state.summableSavingsPots;
+    final totalSaved = summable.fold<double>(0, (s, p) => s + p.savedTotal);
+    final targeted = summable.where(
       (p) => p.targetAmount != null && p.targetAmount! > 0,
     );
     final totalTarget = targeted.fold<double>(0, (s, p) => s + p.targetAmount!);
