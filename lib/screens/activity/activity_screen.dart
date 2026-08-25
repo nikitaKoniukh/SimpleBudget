@@ -272,9 +272,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                 ? LogKind.save
                                 : (cat?.isDebt ?? false)
                                     ? LogKind.debt
-                                    : (cat?.isMonthly ?? false)
-                                        ? LogKind.monthly
-                                        : LogKind.spend,
+                                    : LogKind.spend,
                             expense: expense,
                             subcategoryId: expense.subcategoryId,
                           ),

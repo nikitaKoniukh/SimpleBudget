@@ -257,9 +257,7 @@ Future<void> showSubcategoryRegisterSheet(
                             ? LogKind.save
                             : (category?.isDebt ?? false)
                                 ? LogKind.debt
-                                : (category?.isMonthly ?? false)
-                                    ? LogKind.monthly
-                                    : LogKind.spend;
+                                : LogKind.spend;
                         showLogEntrySheet(
                           context,
                           kind: editKind,
@@ -279,9 +277,7 @@ Future<void> showSubcategoryRegisterSheet(
                               ? LogKind.save
                               : (category?.isDebt ?? false)
                                   ? LogKind.debt
-                                  : (category?.isMonthly ?? false)
-                                      ? LogKind.monthly
-                                      : LogKind.spend;
+                                  : LogKind.spend;
                           showLogEntrySheet(
                             context,
                             kind: addKind,

@@ -598,16 +598,17 @@ LogKind? _kindForSubcategory(AppState state, String subcategoryId) {
   );
   if (cat == null) return null;
   if (cat.isDebt) return LogKind.debt;
-  if (cat.isMonthly) return LogKind.monthly;
+  // Monthly categories take real expenses via Spend; Monthly kind only
+  // sets plan + recurring bill and must not be used for Add expense.
   if (cat.isSavings) return LogKind.save;
-  if (cat.isSpend) return LogKind.spend;
+  if (cat.isSpend || cat.isMonthly) return LogKind.spend;
   return null;
 }
 
 bool _subMatchesKind(AppState state, Subcategory sub, LogKind kind) {
   final cat = state.categoryById(sub.categoryId);
   return switch (kind) {
-    LogKind.spend => cat?.isSpend ?? false,
+    LogKind.spend => cat?.isSpend == true || cat?.isMonthly == true,
     LogKind.monthly => cat?.isMonthly ?? false,
     LogKind.debt => cat?.isDebt ?? false,
     LogKind.save => cat?.isSavings ?? false,
@@ -617,7 +618,10 @@ bool _subMatchesKind(AppState state, Subcategory sub, LogKind kind) {
 
 List<BudgetCategory> _catsForKind(AppState state, LogKind kind) {
   return switch (kind) {
-    LogKind.spend => state.categoriesOfType('spend'),
+    LogKind.spend => [
+        ...state.categoriesOfType('spend'),
+        ...state.categoriesOfType('monthly'),
+      ],
     LogKind.monthly => state.categoriesOfType('monthly'),
     LogKind.debt => state.categoriesOfType('debt'),
     LogKind.save || LogKind.income => const [],
@@ -626,7 +630,10 @@ List<BudgetCategory> _catsForKind(AppState state, LogKind kind) {
 
 List<Subcategory> _subsForKind(AppState state, LogKind kind) {
   return switch (kind) {
-    LogKind.spend => state.subcategoriesOfType('spend'),
+    LogKind.spend => [
+        ...state.subcategoriesOfType('spend'),
+        ...state.subcategoriesOfType('monthly'),
+      ],
     LogKind.monthly => state.subcategoriesOfType('monthly'),
     LogKind.debt => state.subcategoriesOfType('debt'),
     LogKind.save => state.savingsPots,
