@@ -418,7 +418,6 @@ class AppState extends ChangeNotifier {
       return;
     }
 
-    unawaited(_repo.migrateLegacyCatalogIfNeeded(householdId));
     _categoriesSub = _repo
         .watchCategories(householdId)
         .listen(
