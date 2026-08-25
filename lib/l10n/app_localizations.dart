@@ -249,12 +249,26 @@ class AppLocalizations {
       isRu ? 'В этом месяце ещё ничего не отложено' : 'No deposits this month';
   String get editPot => isRu ? 'Изменить цель' : 'Edit pot';
   String get includeInTotal =>
-      isRu ? 'Учитывать в итоге' : 'Include in total';
+      isRu ? 'Считать в «Накоплено»' : 'Count toward Saved';
   String get includeInTotalHint => isRu
-      ? 'Если включено, сумма цели входит в общий итог «Отложено». Выключите для долгосрочных целей вроде пенсии.'
-      : 'When on, this pot counts toward the Set aside total. Turn off for long-term pots like pension.';
-  String get sectionInTotal => isRu ? 'В итоге' : 'In total';
-  String get sectionNotInTotal => isRu ? 'Не в итоге' : 'Not in total';
+      ? 'Если включено, сумма входит в общий итог сверху. Выключите для долгосрочных целей вроде пенсии — они показываются отдельно.'
+      : 'When on, this pot is included in the Saved total above. Turn off for long-term pots like pension — they are listed separately.';
+  String get sectionInTotal =>
+      isRu ? 'Считаются в «Накоплено»' : 'Count toward Saved';
+  String get sectionInTotalHint => isRu
+      ? 'Суммы этих целей складываются в итог сверху'
+      : 'These pots add up in the Saved total above';
+  String get sectionNotInTotal =>
+      isRu ? 'Ведутся отдельно' : 'Tracked separately';
+  String get sectionNotInTotalHint => isRu
+      ? 'Например пенсия — на экране есть, но не в общем итоге'
+      : 'e.g. pension — shown here, but not in the Saved total';
+  String potsTowardSaved(int count) => isRu
+      ? '$count в «Накоплено»'
+      : '$count toward Saved';
+  String potsTrackedSeparately(int count) => isRu
+      ? '$count отдельно'
+      : '$count tracked separately';
   String get alreadySaved => isRu ? 'Уже накоплено' : 'Already saved';
   String get alreadySavedHint => isRu
       ? 'Сумма, которая уже была до этого месяца. Не входит в бюджет месяца.'

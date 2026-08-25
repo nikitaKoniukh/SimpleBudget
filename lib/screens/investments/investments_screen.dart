@@ -100,13 +100,19 @@ class InvestmentsScreen extends StatelessWidget {
                   ),
                   if (summable.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _SectionHeader(title: l10n.sectionInTotal),
+                    _SectionHeader(
+                      title: l10n.sectionInTotal,
+                      subtitle: l10n.sectionInTotalHint,
+                    ),
                     const SizedBox(height: 8),
                     ...summable.map((pot) => _PotCard(subcategory: pot)),
                   ],
                   if (excluded.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    _SectionHeader(title: l10n.sectionNotInTotal),
+                    _SectionHeader(
+                      title: l10n.sectionNotInTotal,
+                      subtitle: l10n.sectionNotInTotalHint,
+                    ),
                     const SizedBox(height: 8),
                     ...excluded.map((pot) => _PotCard(subcategory: pot)),
                   ],
@@ -118,18 +124,32 @@ class InvestmentsScreen extends StatelessWidget {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+  const _SectionHeader({required this.title, this.subtitle});
 
   final String title;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: SyncColors.textMuted,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SyncColors.textMuted,
+                ),
           ),
+        ],
+      ],
     );
   }
 }
@@ -233,9 +253,9 @@ class _SetAsideHero extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             notInTotalCount > 0
-                ? '${l10n.sectionInTotal}: $inTotalCount · '
-                    '${l10n.sectionNotInTotal}: $notInTotalCount'
-                : '${l10n.sectionInTotal}: $inTotalCount',
+                ? '${l10n.potsTowardSaved(inTotalCount)} · '
+                    '${l10n.potsTrackedSeparately(notInTotalCount)}'
+                : l10n.potsTowardSaved(inTotalCount),
             style: metaStyle,
           ),
         ],
