@@ -307,6 +307,10 @@ class BudgetRepository {
   /// Deposits / savings pot entries are not copied (lifetime savedTotal).
   /// Installment current ticks up when it is below the subcategory total.
   ///
+  /// When [rolloverLeftover] is true, unused plan amounts from copied spend
+  /// categories are summed into a dedicated Leftover savings pot plan (not
+  /// added back onto each spend envelope).
+  ///
   /// When [categoryIds] is non-null, only plans and expenses for subcategories
   /// under those categories are copied. Income sources are always copied.
   Future<void> createMonthFromCopy({
@@ -354,6 +358,7 @@ class BudgetRepository {
     }
 
     final spentBySub = <String, double>{};
+    String? leftoverPotId;
     if (rolloverLeftover) {
       for (final doc in expenses.docs) {
         final data = doc.data();
@@ -362,6 +367,15 @@ class BudgetRepository {
         if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
         spentBySub[subId] =
             (spentBySub[subId] ?? 0) + ((data['amount'] as num?)?.toDouble() ?? 0);
+      }
+      final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
+      for (final doc in subs.docs) {
+        final data = doc.data();
+        if (savingsIds.contains(doc.id) &&
+            (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
+          leftoverPotId = doc.id;
+          break;
+        }
       }
     }
 
@@ -378,7 +392,10 @@ class BudgetRepository {
       );
     }
 
+    var totalLeftover = 0.0;
     for (final doc in plans.docs) {
+      // Fresh leftover total is written below; do not copy last month's pot plan.
+      if (leftoverPotId != null && doc.id == leftoverPotId) continue;
       if (categoryIds != null) {
         final catId = subCategoryIds[doc.id] ?? '';
         if (!categoryIds.contains(catId)) continue;
@@ -389,12 +406,12 @@ class BudgetRepository {
       if (total != null && current != null && current < total) {
         data['installmentCurrent'] = current + 1;
       }
-      if (rolloverLeftover) {
+      if (rolloverLeftover && !savingsIds.contains(doc.id)) {
         final planned = (data['planned'] as num?)?.toDouble() ?? 0;
         final spent = spentBySub[doc.id] ?? 0;
         final leftover = planned - spent;
         if (leftover > 0) {
-          data['planned'] = planned + leftover;
+          totalLeftover += leftover;
         }
       }
       ops.add(
@@ -426,10 +443,80 @@ class BudgetRepository {
       );
     }
 
+    if (rolloverLeftover && totalLeftover > 0) {
+      leftoverPotId ??= await _ensureLeftoverPot(
+        householdId: householdId,
+        categoryDocs: cats.docs,
+        subcategoryDocs: subs.docs,
+      );
+      final potId = leftoverPotId;
+      ops.add(
+        (batch) => batch.set(
+          toRef.collection('plans').doc(potId),
+          {'planned': totalLeftover},
+          SetOptions(merge: true),
+        ),
+      );
+    }
+
     await _commitInChunks(ops);
     await applyRecurringBillsToMonth(
       householdId: householdId,
       monthId: toMonthId,
+    );
+  }
+
+  /// Finds or creates the dedicated Leftover savings pot under Savings.
+  Future<String> _ensureLeftoverPot({
+    required String householdId,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> categoryDocs,
+    required List<QueryDocumentSnapshot<Map<String, dynamic>>> subcategoryDocs,
+  }) async {
+    final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
+
+    String? savingsCatId;
+    for (final doc in categoryDocs) {
+      final data = doc.data();
+      if (data['type'] == 'savings' &&
+          (data['nameEn'] as String? ?? '').toLowerCase() ==
+              DefaultCategories.savingsNameEn.toLowerCase()) {
+        savingsCatId = doc.id;
+        break;
+      }
+    }
+    savingsCatId ??= categoryDocs
+        .where((d) => d.data()['type'] == 'savings')
+        .map((d) => d.id)
+        .firstOrNull;
+
+    if (savingsCatId == null) {
+      savingsCatId = await addCategory(
+        householdId: householdId,
+        nameEn: DefaultCategories.savingsNameEn,
+        nameRu: DefaultCategories.savingsNameRu,
+        colorValue: DefaultCategories.savingsColorValue,
+        type: 'savings',
+        sortOrder: categoryDocs.length,
+      );
+    }
+
+    for (final doc in subcategoryDocs) {
+      final data = doc.data();
+      if (data['categoryId'] == savingsCatId &&
+          (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
+        return doc.id;
+      }
+    }
+
+    final potSort = subcategoryDocs
+        .where((d) => d.data()['categoryId'] == savingsCatId)
+        .length;
+    return addSubcategory(
+      householdId: householdId,
+      categoryId: savingsCatId,
+      nameEn: DefaultPots.leftoverNameEn,
+      nameRu: DefaultPots.leftoverNameRu,
+      sortOrder: potSort,
     );
   }
 

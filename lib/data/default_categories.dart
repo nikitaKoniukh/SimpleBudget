@@ -158,6 +158,9 @@ class DefaultCategory {
 
 /// Suggested savings pots installed as subcategories of the Savings parent.
 class DefaultPots {
+  static const leftoverNameEn = 'Leftover';
+  static const leftoverNameRu = 'Остаток';
+
   static const List<DefaultPot> all = [
     DefaultPot(nameEn: 'Emergency fund', nameRu: 'Резервный фонд'),
     DefaultPot(nameEn: 'Investments', nameRu: 'Инвестиции'),

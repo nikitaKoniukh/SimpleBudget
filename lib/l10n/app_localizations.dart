@@ -314,9 +314,9 @@ class AppLocalizations {
   String get splitSpend => _t('Split spend', 'Разделить трату', 'פיצול הוצאה');
   String get splitPart => _t('Part', 'Часть', 'חלק');
   String get rolloverLeftover => _t(
-        'Carry leftover to next month',
-        'Перенести остаток на следующий месяц',
-        'העברת יתרה לחודש הבא',
+        'Move leftover into Leftover pot',
+        'Перенести остаток в копилку «Остаток»',
+        'העברת יתרה לקופת «יתרה»',
       );
   String get copyPlanOnly => _t(
         'Copy plan and expense amounts',
