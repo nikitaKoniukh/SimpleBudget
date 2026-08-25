@@ -41,6 +41,10 @@ class InvestmentsScreen extends StatelessWidget {
     final overallProgress = !hasAnyTarget
         ? 0.0
         : (totalSaved / totalTarget).clamp(0.0, 1.0);
+    final monthSaved =
+        summable.fold<double>(0, (s, p) => s + state.spentFor(p.id));
+    final monthPlan =
+        summable.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
 
     return SyncBackground(
       child: Scaffold(
@@ -89,6 +93,10 @@ class InvestmentsScreen extends StatelessWidget {
                     saved: totalSaved,
                     target: hasAnyTarget ? totalTarget : null,
                     progress: overallProgress,
+                    monthSaved: monthSaved,
+                    monthPlan: monthPlan,
+                    inTotalCount: summable.length,
+                    notInTotalCount: excluded.length,
                   ),
                   if (summable.isNotEmpty) ...[
                     const SizedBox(height: 20),
@@ -132,16 +140,31 @@ class _SetAsideHero extends StatelessWidget {
     required this.saved,
     required this.target,
     required this.progress,
+    required this.monthSaved,
+    required this.monthPlan,
+    required this.inTotalCount,
+    required this.notInTotalCount,
   });
 
   final String label;
   final double saved;
   final double? target;
   final double progress;
+  final double monthSaved;
+  final double monthPlan;
+  final int inTotalCount;
+  final int notInTotalCount;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final metaStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: SyncColors.textMuted,
+        );
+    final showMonth = monthSaved > 0 || monthPlan > 0;
+    final remaining =
+        target != null ? (target! - saved).clamp(0.0, double.infinity) : null;
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
@@ -175,11 +198,17 @@ class _SetAsideHero extends StatelessWidget {
           if (target != null) ...[
             const SizedBox(height: 4),
             Text(
-              '${l10n.targetAmount}: ${formatIls(target!)}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: SyncColors.textMuted,
-                  ),
+              '${formatIls(saved)} / ${formatIls(target!)}'
+              ' · ${(progress * 100).round()}%',
+              style: metaStyle,
             ),
+            if (remaining != null && remaining > 0) ...[
+              const SizedBox(height: 2),
+              Text(
+                '${l10n.remaining}: ${formatIls(remaining)}',
+                style: metaStyle,
+              ),
+            ],
             const SizedBox(height: 16),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -191,6 +220,24 @@ class _SetAsideHero extends StatelessWidget {
               ),
             ),
           ],
+          if (showMonth) ...[
+            const SizedBox(height: 12),
+            Text(
+              monthPlan > 0
+                  ? '${l10n.thisMonthDeposits}: '
+                      '${formatIls(monthSaved)} / ${formatIls(monthPlan)}'
+                  : '${l10n.thisMonthDeposits}: ${formatIls(monthSaved)}',
+              style: metaStyle,
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            notInTotalCount > 0
+                ? '${l10n.sectionInTotal}: $inTotalCount · '
+                    '${l10n.sectionNotInTotal}: $notInTotalCount'
+                : '${l10n.sectionInTotal}: $inTotalCount',
+            style: metaStyle,
+          ),
         ],
       ),
     );
