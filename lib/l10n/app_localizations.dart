@@ -250,6 +250,9 @@ class AppLocalizations {
   String get editPot => isRu ? 'Изменить цель' : 'Edit pot';
   String get includeInTotal =>
       isRu ? 'Учитывать в итоге' : 'Include in total';
+  String get includeInTotalHint => isRu
+      ? 'Если включено, сумма цели входит в общий итог «Отложено». Выключите для долгосрочных целей вроде пенсии.'
+      : 'When on, this pot counts toward the Set aside total. Turn off for long-term pots like pension.';
   String get underspent => isRu ? 'Остаток по позициям' : 'Underspent items';
   String get noData => isRu ? 'Пока нет данных' : 'No data yet';
   String get loading => isRu ? 'Загрузка…' : 'Loading…';

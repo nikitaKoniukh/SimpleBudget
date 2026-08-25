@@ -160,6 +160,11 @@ Future<String?> showEditPotSheet(
         ? existing.targetAmount!.toStringAsFixed(2)
         : '',
   );
+  final existingPlanned =
+      existing != null ? state.plannedFor(existing.id) : 0.0;
+  final plannedCtrl = TextEditingController(
+    text: existingPlanned > 0 ? existingPlanned.toStringAsFixed(2) : '',
+  );
 
   var targetDate = existing?.targetDate;
   var includeInTotal = existing?.includeInTotal ?? true;
@@ -186,6 +191,12 @@ Future<String?> showEditPotSheet(
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.subcategoryName),
                   autofocus: existing == null,
+                ),
+                TextField(
+                  controller: plannedCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.plannedLabel),
                 ),
                 TextField(
                   controller: targetCtrl,
@@ -216,6 +227,7 @@ Future<String?> showEditPotSheet(
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(l10n.includeInTotal),
+                  subtitle: Text(l10n.includeInTotalHint),
                   value: includeInTotal,
                   onChanged: (v) => setModal(() => includeInTotal = v),
                 ),
@@ -236,6 +248,8 @@ Future<String?> showEditPotSheet(
   if (name.isEmpty) return null;
   final parsed = double.tryParse(targetCtrl.text.replaceAll(',', ''));
   final target = parsed != null && parsed > 0 ? parsed : null;
+  final planned =
+      double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
 
   try {
     if (existing == null) {
@@ -244,6 +258,7 @@ Future<String?> showEditPotSheet(
         targetAmount: target,
         targetDate: targetDate,
         includeInTotal: includeInTotal,
+        planned: planned,
       );
     }
     await state.updateSubcategory(
@@ -257,6 +272,7 @@ Future<String?> showEditPotSheet(
         includeInTotal: includeInTotal,
       ),
     );
+    await state.upsertPlan(subcategoryId: existing.id, planned: planned);
     return existing.id;
   } catch (e) {
     if (!context.mounted) return null;

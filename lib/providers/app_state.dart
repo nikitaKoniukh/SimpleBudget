@@ -810,6 +810,7 @@ class AppState extends ChangeNotifier {
     double? targetAmount,
     DateTime? targetDate,
     bool includeInTotal = true,
+    double planned = 0,
   }) async {
     final catId = await ensureSavingsCategory();
     final trimmed = name.trim();
@@ -826,6 +827,7 @@ class AppState extends ChangeNotifier {
       targetAmount: targetAmount,
       targetDate: targetDate,
       includeInTotal: includeInTotal,
+      planned: planned,
     );
   }
 
