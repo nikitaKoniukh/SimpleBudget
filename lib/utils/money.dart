@@ -16,6 +16,24 @@ DateTime dateFromMonthId(String monthId) {
   return DateTime(int.parse(parts[0]), int.parse(parts[1]));
 }
 
+/// Keeps the day-of-month from [source], shifted into [monthId].
+/// Clamps days that do not exist in the target month (e.g. Jan 31 → Feb 28).
+DateTime dateFixedToMonth(DateTime source, String monthId) {
+  final target = dateFromMonthId(monthId);
+  final lastDay = DateTime(target.year, target.month + 1, 0).day;
+  final day = source.day.clamp(1, lastDay);
+  return DateTime(
+    target.year,
+    target.month,
+    day,
+    source.hour,
+    source.minute,
+    source.second,
+    source.millisecond,
+    source.microsecond,
+  );
+}
+
 String nextMonthId(String monthId) {
   final date = dateFromMonthId(monthId);
   final next = DateTime(date.year, date.month + 1);

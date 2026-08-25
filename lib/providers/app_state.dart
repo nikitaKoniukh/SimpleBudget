@@ -537,6 +537,7 @@ class AppState extends ChangeNotifier {
     String? copyFromMonthId,
     bool empty = false,
     bool rolloverLeftover = false,
+    Set<String>? categoryIdsToCopy,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
@@ -552,6 +553,7 @@ class AppState extends ChangeNotifier {
           fromMonthId: copyFrom,
           toMonthId: monthId,
           rolloverLeftover: rolloverLeftover,
+          categoryIds: categoryIdsToCopy,
         );
       } else {
         await _repo.createEmptyMonth(householdId: hid, monthId: monthId);

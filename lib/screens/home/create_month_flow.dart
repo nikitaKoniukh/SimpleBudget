@@ -33,6 +33,8 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
   String? _copyFromId;
   var _empty = false;
   var _rollover = false;
+  final Set<String> _selectedCategoryIds = {};
+  var _categoriesInitialized = false;
 
   @override
   void initState() {
@@ -42,11 +44,22 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     _month = now.month;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final months = context.read<AppState>().months;
-      if (months.isNotEmpty) {
-        setState(() => _copyFromId = months.first.id);
-      }
+      final state = context.read<AppState>();
+      setState(() {
+        if (state.months.isNotEmpty) {
+          _copyFromId = state.months.first.id;
+        }
+        _initCategorySelection(state.categories);
+      });
     });
+  }
+
+  void _initCategorySelection(List<BudgetCategory> categories) {
+    if (_categoriesInitialized || categories.isEmpty) return;
+    _selectedCategoryIds
+      ..clear()
+      ..addAll(categories.map((c) => c.id));
+    _categoriesInitialized = true;
   }
 
   String get _selectedMonthId => monthIdFromDate(DateTime(_year, _month));
@@ -80,6 +93,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
         copyFromMonthId: copyFrom,
         empty: copyFrom == null,
         rolloverLeftover: copyFrom != null && _rollover,
+        categoryIdsToCopy: copyFrom == null ? null : {..._selectedCategoryIds},
       );
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -106,6 +120,13 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     final copyCandidates =
         state.months.where((m) => m.id != monthId).toList();
     final willCopy = !_empty && copyCandidates.isNotEmpty;
+    final categories = state.categories;
+    if (!_categoriesInitialized && categories.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _categoriesInitialized) return;
+        setState(() => _initCategorySelection(categories));
+      });
+    }
 
     return SyncBackground(
       child: Scaffold(
@@ -159,11 +180,57 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.rolloverLeftover),
-                    subtitle: Text(l10n.copyPlanOnly),
                     value: _rollover,
                     onChanged: (v) =>
                         setState(() => _rollover = v ?? false),
                   ),
+                if (!_empty && categories.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.selectCategories,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.copyPlanOnly,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: SyncColors.textMuted,
+                        ),
+                  ),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _selectedCategoryIds
+                            ..clear()
+                            ..addAll(categories.map((c) => c.id));
+                        }),
+                        child: Text(l10n.selectAll),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(_selectedCategoryIds.clear),
+                        child: Text(l10n.selectNone),
+                      ),
+                    ],
+                  ),
+                  for (final cat in categories)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: CircleAvatar(
+                        radius: 10,
+                        backgroundColor: Color(cat.colorValue),
+                      ),
+                      title: Text(cat.localizedName(state.localeCode)),
+                      value: _selectedCategoryIds.contains(cat.id),
+                      onChanged: (v) => setState(() {
+                        if (v ?? false) {
+                          _selectedCategoryIds.add(cat.id);
+                        } else {
+                          _selectedCategoryIds.remove(cat.id);
+                        }
+                      }),
+                    ),
+                ],
               ],
               const SizedBox(height: 28),
               Text(l10n.yearLabel),

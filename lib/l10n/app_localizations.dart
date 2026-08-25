@@ -318,7 +318,11 @@ class AppLocalizations {
         'Перенести остаток на следующий месяц',
         'העברת יתרה לחודש הבא',
       );
-  String get copyPlanOnly => _t('Copy plan amounts', 'Копировать план', 'העתקת הסכומים');
+  String get copyPlanOnly => _t(
+        'Copy plan and expense amounts',
+        'Копировать план и траты',
+        'העתקת סכומי תכנון והוצאות',
+      );
   String get reports => _t('Reports', 'Отчёты', 'דוחות');
   String get targetDate => _t('Target date', 'Срок', 'תאריך יעד');
   String get watchlist => _t('Watchlist', 'Контроль категорий', 'מעקב קטגוריות');

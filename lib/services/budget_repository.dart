@@ -302,13 +302,19 @@ class BudgetRepository {
     );
   }
 
-  /// Copies income sources and plans. Expenses are not copied.
+  /// Copies income sources, plans, and spend expenses.
+  /// Expense dates keep the same day-of-month in [toMonthId].
+  /// Deposits / savings pot entries are not copied (lifetime savedTotal).
   /// Installment current ticks up when it is below the subcategory total.
+  ///
+  /// When [categoryIds] is non-null, only plans and expenses for subcategories
+  /// under those categories are copied. Income sources are always copied.
   Future<void> createMonthFromCopy({
     required String householdId,
     required String fromMonthId,
     required String toMonthId,
     bool rolloverLeftover = false,
+    Set<String>? categoryIds,
   }) async {
     if (fromMonthId == toMonthId) {
       throw StateError('Cannot copy a month onto itself');
@@ -327,21 +333,28 @@ class BudgetRepository {
 
     final sources = await fromRef.collection('incomeSources').get();
     final plans = await fromRef.collection('plans').get();
+    final expenses = await fromRef.collection('expenses').get();
+    final cats = await _categories(householdId).get();
+    final savingsCatIds = {
+      for (final c in cats.docs)
+        if (c.data()['type'] == 'savings') c.id,
+    };
+    final subs = await _subcategories(householdId).get();
+    final savingsIds = <String>{};
+    final subTotals = <String, int?>{};
+    final subCategoryIds = <String, String>{};
+    for (final doc in subs.docs) {
+      final data = doc.data();
+      final catId = data['categoryId'] as String? ?? '';
+      subCategoryIds[doc.id] = catId;
+      subTotals[doc.id] = (data['installmentTotal'] as num?)?.toInt();
+      if (savingsCatIds.contains(catId)) {
+        savingsIds.add(doc.id);
+      }
+    }
+
     final spentBySub = <String, double>{};
     if (rolloverLeftover) {
-      final expenses = await fromRef.collection('expenses').get();
-      final savingsIds = <String>{};
-      final cats = await _categories(householdId).get();
-      final savingsCatIds = {
-        for (final c in cats.docs)
-          if (c.data()['type'] == 'savings') c.id,
-      };
-      final subsSnap = await _subcategories(householdId).get();
-      for (final s in subsSnap.docs) {
-        if (savingsCatIds.contains(s.data()['categoryId'])) {
-          savingsIds.add(s.id);
-        }
-      }
       for (final doc in expenses.docs) {
         final data = doc.data();
         final subId = data['subcategoryId'] as String? ?? '';
@@ -351,11 +364,6 @@ class BudgetRepository {
             (spentBySub[subId] ?? 0) + ((data['amount'] as num?)?.toDouble() ?? 0);
       }
     }
-    final subs = await _subcategories(householdId).get();
-    final subTotals = <String, int?>{
-      for (final doc in subs.docs)
-        doc.id: (doc.data()['installmentTotal'] as num?)?.toInt(),
-    };
 
     final ops = <void Function(WriteBatch)>[
       (batch) => batch.set(toRef, BudgetMonth(id: toMonthId).toMap()),
@@ -371,6 +379,10 @@ class BudgetRepository {
     }
 
     for (final doc in plans.docs) {
+      if (categoryIds != null) {
+        final catId = subCategoryIds[doc.id] ?? '';
+        if (!categoryIds.contains(catId)) continue;
+      }
       final data = Map<String, dynamic>.from(doc.data());
       final total = subTotals[doc.id];
       final current = (data['installmentCurrent'] as num?)?.toInt();
@@ -387,6 +399,30 @@ class BudgetRepository {
       }
       ops.add(
         (batch) => batch.set(toRef.collection('plans').doc(doc.id), data),
+      );
+    }
+
+    for (final doc in expenses.docs) {
+      final data = Map<String, dynamic>.from(doc.data());
+      final subId = data['subcategoryId'] as String? ?? '';
+      if (subId.isEmpty) continue;
+      if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
+      if (categoryIds != null) {
+        final catId = subCategoryIds[subId] ?? '';
+        if (!categoryIds.contains(catId)) continue;
+      }
+      final rawDate = data['date'] as String?;
+      if (rawDate != null) {
+        final parsed = DateTime.tryParse(rawDate);
+        if (parsed != null) {
+          data['date'] = dateFixedToMonth(parsed, toMonthId).toIso8601String();
+        }
+      }
+      ops.add(
+        (batch) => batch.set(
+          toRef.collection('expenses').doc(_uuid.v4()),
+          data,
+        ),
       );
     }
 
