@@ -686,6 +686,7 @@ class BudgetRepository {
     double? targetAmount,
     DateTime? targetDate,
     bool includeInTotal = true,
+    double savedTotal = 0,
   }) async {
     final doc = await _subcategories(householdId).add({
       'categoryId': categoryId,
@@ -697,7 +698,7 @@ class BudgetRepository {
       'targetAmount': targetAmount,
       'targetDate': targetDate?.toIso8601String(),
       'includeInTotal': includeInTotal,
-      'savedTotal': 0,
+      'savedTotal': savedTotal,
     });
     return doc.id;
   }

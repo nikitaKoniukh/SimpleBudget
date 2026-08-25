@@ -811,6 +811,7 @@ class AppState extends ChangeNotifier {
     DateTime? targetDate,
     bool includeInTotal = true,
     double planned = 0,
+    double priorSaved = 0,
   }) async {
     final catId = await ensureSavingsCategory();
     final trimmed = name.trim();
@@ -828,6 +829,7 @@ class AppState extends ChangeNotifier {
       targetDate: targetDate,
       includeInTotal: includeInTotal,
       planned: planned,
+      priorSaved: priorSaved,
     );
   }
 
@@ -864,12 +866,14 @@ class AppState extends ChangeNotifier {
     double? targetAmount,
     DateTime? targetDate,
     bool includeInTotal = true,
+    double priorSaved = 0,
   }) async {
     final hid = _appUser?.householdId;
     if (hid == null) throw StateError('No household');
     final trimmed = name.trim();
     final en = (nameEn ?? trimmed).trim();
     final ru = (nameRu ?? trimmed).trim();
+    final initialSaved = priorSaved > 0 ? priorSaved : 0.0;
     final id = await _repo.addSubcategory(
       householdId: hid,
       categoryId: categoryId,
@@ -880,6 +884,7 @@ class AppState extends ChangeNotifier {
       targetAmount: targetAmount,
       targetDate: targetDate,
       includeInTotal: includeInTotal,
+      savedTotal: initialSaved,
     );
     if (!_subcategories.any((s) => s.id == id)) {
       _subcategories = [
@@ -894,6 +899,7 @@ class AppState extends ChangeNotifier {
           targetAmount: targetAmount,
           targetDate: targetDate,
           includeInTotal: includeInTotal,
+          savedTotal: initialSaved,
         ),
       ];
     }
@@ -1014,6 +1020,15 @@ class AppState extends ChangeNotifier {
       note: note,
       isDeposit: true,
     );
+  }
+
+  /// Increases lifetime saved total without a month deposit/expense.
+  Future<void> addPriorSavings({
+    required String subcategoryId,
+    required double amount,
+  }) async {
+    if (amount <= 0) return;
+    await _adjustSavedTotal(subcategoryId: subcategoryId, delta: amount);
   }
 
   Future<void> updateExpense(Expense expense) async {

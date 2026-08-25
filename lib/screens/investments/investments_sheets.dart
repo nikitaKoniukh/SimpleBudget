@@ -47,6 +47,17 @@ Future<void> showSetAsideActionsSheet(BuildContext context) async {
                     showDepositEditor(context);
                   },
                 ),
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.account_balance_wallet_outlined),
+                  ),
+                  title: Text(l10n.addPriorSavings),
+                  subtitle: Text(l10n.alreadySavedHint),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    showAddPriorSavingsSheet(context);
+                  },
+                ),
               ],
             ),
           ),
@@ -165,6 +176,7 @@ Future<String?> showEditPotSheet(
   final plannedCtrl = TextEditingController(
     text: existingPlanned > 0 ? existingPlanned.toStringAsFixed(2) : '',
   );
+  final priorSavedCtrl = TextEditingController();
 
   var targetDate = existing?.targetDate;
   var includeInTotal = existing?.includeInTotal ?? true;
@@ -198,6 +210,16 @@ Future<String?> showEditPotSheet(
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(labelText: l10n.plannedLabel),
                 ),
+                if (existing == null)
+                  TextField(
+                    controller: priorSavedCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: l10n.alreadySaved,
+                      helperText: l10n.alreadySavedHint,
+                    ),
+                  ),
                 TextField(
                   controller: targetCtrl,
                   keyboardType:
@@ -250,6 +272,8 @@ Future<String?> showEditPotSheet(
   final target = parsed != null && parsed > 0 ? parsed : null;
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
+  final priorSaved =
+      double.tryParse(priorSavedCtrl.text.replaceAll(',', '')) ?? 0;
 
   try {
     if (existing == null) {
@@ -259,6 +283,7 @@ Future<String?> showEditPotSheet(
         targetDate: targetDate,
         includeInTotal: includeInTotal,
         planned: planned,
+        priorSaved: priorSaved > 0 ? priorSaved : 0,
       );
     }
     await state.updateSubcategory(
@@ -281,6 +306,94 @@ Future<String?> showEditPotSheet(
     );
   }
   return null;
+}
+
+Future<void> showAddPriorSavingsSheet(
+  BuildContext context, {
+  Subcategory? subcategory,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final state = context.read<AppState>();
+  final pots = state.savingsPots;
+  if (pots.isEmpty) return;
+
+  var selected = subcategory ?? pots.first;
+  final amountCtrl = TextEditingController();
+
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return FormSheet(
+        child: StatefulBuilder(
+          builder: (ctx, setModal) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                Text(
+                  l10n.addPriorSavings,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                Text(
+                  l10n.alreadySavedHint,
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+                if (pots.length > 1)
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('prior-pot-${selected?.id}'),
+                    initialValue: selected?.id,
+                    decoration: InputDecoration(labelText: l10n.sectionSavings),
+                    items: [
+                      for (final p in pots)
+                        DropdownMenuItem(
+                          value: p.id,
+                          child: Text(p.localizedName(state.localeCode)),
+                        ),
+                    ],
+                    onChanged: (id) {
+                      if (id == null) return;
+                      setModal(() {
+                        selected = pots.firstWhere((p) => p.id == id);
+                      });
+                    },
+                  ),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: l10n.alreadySaved),
+                  autofocus: true,
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.save),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
+
+  if (ok != true || !context.mounted) return;
+  final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
+  if (amount <= 0) return;
+
+  try {
+    await context.read<AppState>().addPriorSavings(
+          subcategoryId: selected.id,
+          amount: amount,
+        );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+    );
+  }
 }
 
 Future<void> showSetTargetSheet(
@@ -432,6 +545,17 @@ Future<void> showPotDetailSheet(
                       },
                       icon: const Icon(Icons.flag_outlined, size: 18),
                       label: Text(l10n.setTarget),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        showAddPriorSavingsSheet(context, subcategory: pot);
+                      },
+                      icon: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                        size: 18,
+                      ),
+                      label: Text(l10n.addPriorSavings),
                     ),
                   ],
                 ),
