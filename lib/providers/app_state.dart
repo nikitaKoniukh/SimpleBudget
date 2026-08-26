@@ -30,6 +30,8 @@ class AppState extends ChangeNotifier {
   String? _monthId;
   String _localeCode = 'en';
   bool _loading = true;
+  /// False until the first months (and selected month) snapshots arrive.
+  bool _budgetDataReady = false;
   String? _error;
 
   List<BudgetMonth> _months = [];
@@ -58,6 +60,7 @@ class AppState extends ChangeNotifier {
   List<String> _priorMonthIds = [];
 
   bool get loading => _loading;
+  bool get budgetDataReady => _budgetDataReady;
   String? get error => _error;
   AppUser? get appUser => _appUser;
   Household? get household => _household;
@@ -355,6 +358,7 @@ class AppState extends ChangeNotifier {
       _appUser = null;
       _household = null;
       _monthId = null;
+      _budgetDataReady = false;
       _loading = false;
       notifyListeners();
       return;
@@ -572,6 +576,7 @@ class AppState extends ChangeNotifier {
     _recurringBills = [];
     _memberLabels = {};
     _monthId = null;
+    _budgetDataReady = false;
   }
 
   @override
@@ -585,6 +590,7 @@ class AppState extends ChangeNotifier {
   Future<void> _attachHousehold(String? householdId) async {
     await _detachBudgetListeners();
     if (householdId == null || householdId.isEmpty) {
+      _budgetDataReady = true;
       notifyListeners();
       return;
     }
@@ -616,18 +622,26 @@ class AppState extends ChangeNotifier {
     final household = await ready.future;
     if (household == null) {
       await _clearStaleHousehold();
+      _budgetDataReady = true;
+      notifyListeners();
       return;
     }
+
+    final categoriesReady = Completer<void>();
+    final subcategoriesReady = Completer<void>();
+    final monthsReady = Completer<void>();
 
     _categoriesSub = _repo
         .watchCategories(householdId)
         .listen(
           (v) {
             _categories = v;
+            if (!categoriesReady.isCompleted) categoriesReady.complete();
             notifyListeners();
           },
           onError: (Object e) {
             _error = e.toString();
+            if (!categoriesReady.isCompleted) categoriesReady.complete();
             notifyListeners();
           },
         );
@@ -636,10 +650,12 @@ class AppState extends ChangeNotifier {
         .listen(
           (v) {
             _subcategories = v;
+            if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
             notifyListeners();
           },
           onError: (Object e) {
             _error = e.toString();
+            if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
             notifyListeners();
           },
         );
@@ -653,32 +669,70 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       },
     );
+    var isFirstMonths = true;
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
       _months = list;
-      final monthIds = list.map((m) => m.id);
-      if (_monthId != null && !list.any((m) => m.id == _monthId)) {
-        _monthId = preferredMonthId(monthIds);
-        if (_monthId != null) {
-          await _listenMonthData(householdId, _monthId!);
-        } else {
-          await _detachMonthDataListeners();
+      try {
+        final monthIds = list.map((m) => m.id);
+        if (_monthId != null && !list.any((m) => m.id == _monthId)) {
+          _monthId = preferredMonthId(monthIds);
+          if (_monthId != null) {
+            await _listenMonthData(
+              householdId,
+              _monthId!,
+              waitForFirst: isFirstMonths,
+            );
+          } else {
+            await _detachMonthDataListeners();
+          }
+        } else if (_monthId == null && list.isNotEmpty) {
+          _monthId = preferredMonthId(monthIds);
+          await _listenMonthData(
+            householdId,
+            _monthId!,
+            waitForFirst: isFirstMonths,
+          );
+        } else if (_monthId != null) {
+          if (isFirstMonths) {
+            await _listenMonthData(
+              householdId,
+              _monthId!,
+              waitForFirst: true,
+            );
+          } else {
+            final nextPrior = list
+                .map((m) => m.id)
+                .where((id) => id.compareTo(_monthId!) < 0)
+                .toList()
+              ..sort();
+            if (!_listEquals(nextPrior, _priorMonthIds)) {
+              await _listenPriorMonthsData(householdId, _monthId!);
+            }
+          }
         }
-      } else if (_monthId == null && list.isNotEmpty) {
-        _monthId = preferredMonthId(monthIds);
-        await _listenMonthData(householdId, _monthId!);
-      } else if (_monthId != null) {
-        final nextPrior = list
-            .map((m) => m.id)
-            .where((id) => id.compareTo(_monthId!) < 0)
-            .toList()
-          ..sort();
-        if (!_listEquals(nextPrior, _priorMonthIds)) {
-          await _listenPriorMonthsData(householdId, _monthId!);
+      } finally {
+        if (isFirstMonths) {
+          isFirstMonths = false;
+          if (!monthsReady.isCompleted) monthsReady.complete();
         }
+        notifyListeners();
       }
+    }, onError: (Object e) {
+      _error = e.toString();
+      if (!monthsReady.isCompleted) monthsReady.complete();
       notifyListeners();
     });
-    notifyListeners();
+
+    try {
+      await Future.wait([
+        categoriesReady.future,
+        subcategoriesReady.future,
+        monthsReady.future,
+      ]);
+    } finally {
+      _budgetDataReady = true;
+      notifyListeners();
+    }
   }
 
   Future<void> _clearStaleHousehold() async {
@@ -702,24 +756,97 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _listenMonthData(String hid, String monthId) async {
+  Future<void> _listenMonthData(
+    String hid,
+    String monthId, {
+    bool waitForFirst = false,
+  }) async {
     await _detachCurrentMonthListeners();
-    _sourcesSub = _repo.watchIncomeSources(hid, monthId).listen((v) {
-      _incomeSources = v;
-      notifyListeners();
-    });
-    _entriesSub = _repo.watchIncomeEntries(hid, monthId).listen((v) {
-      _incomeEntries = v;
-      notifyListeners();
-    });
-    _plansSub = _repo.watchPlans(hid, monthId).listen((v) {
-      _plans = v;
-      notifyListeners();
-    });
-    _expensesSub = _repo.watchExpenses(hid, monthId).listen((v) {
-      _expenses = v;
-      notifyListeners();
-    });
+
+    Completer<void>? sourcesReady;
+    Completer<void>? entriesReady;
+    Completer<void>? plansReady;
+    Completer<void>? expensesReady;
+    if (waitForFirst) {
+      sourcesReady = Completer<void>();
+      entriesReady = Completer<void>();
+      plansReady = Completer<void>();
+      expensesReady = Completer<void>();
+    }
+
+    _sourcesSub = _repo.watchIncomeSources(hid, monthId).listen(
+      (v) {
+        _incomeSources = v;
+        if (sourcesReady != null && !sourcesReady.isCompleted) {
+          sourcesReady.complete();
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (sourcesReady != null && !sourcesReady.isCompleted) {
+          sourcesReady.complete();
+        }
+        notifyListeners();
+      },
+    );
+    _entriesSub = _repo.watchIncomeEntries(hid, monthId).listen(
+      (v) {
+        _incomeEntries = v;
+        if (entriesReady != null && !entriesReady.isCompleted) {
+          entriesReady.complete();
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (entriesReady != null && !entriesReady.isCompleted) {
+          entriesReady.complete();
+        }
+        notifyListeners();
+      },
+    );
+    _plansSub = _repo.watchPlans(hid, monthId).listen(
+      (v) {
+        _plans = v;
+        if (plansReady != null && !plansReady.isCompleted) {
+          plansReady.complete();
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (plansReady != null && !plansReady.isCompleted) {
+          plansReady.complete();
+        }
+        notifyListeners();
+      },
+    );
+    _expensesSub = _repo.watchExpenses(hid, monthId).listen(
+      (v) {
+        _expenses = v;
+        if (expensesReady != null && !expensesReady.isCompleted) {
+          expensesReady.complete();
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (expensesReady != null && !expensesReady.isCompleted) {
+          expensesReady.complete();
+        }
+        notifyListeners();
+      },
+    );
+
+    if (waitForFirst) {
+      await Future.wait([
+        sourcesReady!.future,
+        entriesReady!.future,
+        plansReady!.future,
+        expensesReady!.future,
+      ]);
+    }
 
     await _listenPriorMonthsData(hid, monthId);
   }

@@ -26,7 +26,7 @@ class _RootShellState extends State<RootShell> {
     final state = context.watch<AppState>();
     final l10n = AppLocalizations.of(context);
 
-    if (state.loading) {
+    if (state.loading || (state.hasHousehold && !state.budgetDataReady)) {
       return const SyncBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
