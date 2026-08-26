@@ -252,8 +252,7 @@ void main() {
     expect(household.memberName('b'), 'Ben');
   });
 
-  test(
-    'Household.isOwnedBy uses createdBy, or sole member if owner is missing',
+  test('Household.isOwnedBy uses createdBy, or sole member if owner is missing',
     () {
       const owned = Household(
         id: 'h1',
@@ -284,4 +283,28 @@ void main() {
       expect(legacyShared.isOwnedBy('b'), isFalse);
     },
   );
+
+  test('AppUser supports multiple householdIds and activeHouseholdId', () {
+    final user = AppUser.fromMap('u1', {
+      'email': 'a@b.c',
+      'householdIds': ['h1', 'h2'],
+      'activeHouseholdId': 'h2',
+      'localeCode': 'en',
+    });
+    expect(user.householdIds, ['h1', 'h2']);
+    expect(user.activeHouseholdId, 'h2');
+    expect(user.hasHouseholds, isTrue);
+
+    final repaired = AppUser.fromMap('u1', {
+      'email': 'a@b.c',
+      'householdIds': ['h1', 'h2'],
+      'activeHouseholdId': 'missing',
+    });
+    expect(repaired.activeHouseholdId, 'h1');
+
+    final empty = AppUser.fromMap('u1', {'email': 'a@b.c'});
+    expect(empty.householdIds, isEmpty);
+    expect(empty.activeHouseholdId, isNull);
+    expect(empty.hasHouseholds, isFalse);
+  });
 }

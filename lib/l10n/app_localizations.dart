@@ -151,6 +151,19 @@ class AppLocalizations {
   String get householdName => isRu ? 'Название семьи' : 'Household name';
   String get editHouseholdName =>
       isRu ? 'Изменить название семьи' : 'Edit household name';
+  String get myHouseholds => _t('My households', 'Мои семьи', 'המשפחות שלי');
+  String get activeHousehold => _t('Active', 'Активная', 'פעילה');
+  String get createAnotherHousehold =>
+      _t('Create another household', 'Создать ещё семью', 'יצירת משפחה נוספת');
+  String get joinAnotherHousehold => _t(
+        'Join another household',
+        'Присоединиться к другой семье',
+        'הצטרפות למשפחה נוספת',
+      );
+  String get switchHousehold =>
+      _t('Switch household', 'Сменить семью', 'החלפת משפחה');
+  String get noHouseholdsYet =>
+      _t('No households yet', 'Пока нет семей', 'אין עדיין משפחות');
   String get inviteCode => isRu ? 'Код приглашения' : 'Invite code';
   String get invitePartner => isRu ? 'Пригласить партнёра' : 'Invite partner';
   String get shareInvite => isRu ? 'Поделиться приглашением' : 'Share invite';

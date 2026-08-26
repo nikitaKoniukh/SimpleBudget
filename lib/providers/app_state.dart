@@ -25,6 +25,7 @@ class AppState extends ChangeNotifier {
   User? _firebaseUser;
   AppUser? _appUser;
   Household? _household;
+  List<Household> _myHouseholds = [];
   String? _monthId;
   String _localeCode = 'en';
   bool _loading = true;
@@ -53,15 +54,24 @@ class AppState extends ChangeNotifier {
   String? get error => _error;
   AppUser? get appUser => _appUser;
   Household? get household => _household;
+  List<Household> get myHouseholds => _myHouseholds;
+  String? get activeHouseholdId =>
+      _household?.id ?? _appUser?.activeHouseholdId;
   String? get monthId => _monthId;
   String get localeCode => _localeCode;
   bool get isSignedIn => _firebaseUser != null;
-  bool get hasHousehold => _household != null;
+  bool get hasHousehold => _appUser?.hasHouseholds == true;
   bool get isHouseholdOwner {
     final uid = _firebaseUser?.uid;
     final household = _household;
     if (uid == null || household == null) return false;
     return household.isOwnedBy(uid);
+  }
+
+  bool get ownsAnyHousehold {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return false;
+    return _myHouseholds.any((h) => h.isOwnedBy(uid));
   }
 
   bool get canEditPlan {
@@ -150,7 +160,7 @@ class AppState extends ChangeNotifier {
   Future<Map<String, MonthStatsSnapshot>> loadStatsForMonths(
     List<String> monthIds,
   ) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) return {};
     final result = <String, MonthStatsSnapshot>{};
     for (final monthId in monthIds) {
@@ -266,7 +276,7 @@ class AppState extends ChangeNotifier {
   }) async {
     if (delta == 0) return;
     if (!_isSavingsPot(subcategoryId)) return;
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) return;
     await _repo.incrementSavedTotal(
       householdId: hid,
@@ -300,11 +310,14 @@ class AppState extends ChangeNotifier {
       .where((e) => e.sourceId == sourceId)
       .fold(0, (s, e) => s + e.amount);
 
+  String? get _activeHid => _household?.id ?? _appUser?.activeHouseholdId;
+
   Future<void> _onAuthChanged(User? user) async {
     _firebaseUser = user;
     await _userSub?.cancel();
     _userSub = null;
     await _detachBudgetListeners();
+    _myHouseholds = [];
     if (user == null) {
       _appUser = null;
       _household = null;
@@ -320,19 +333,66 @@ class AppState extends ChangeNotifier {
       _localeCode = _appUser!.localeCode;
       _userSub = _auth.watchAppUser(user.uid).listen((u) async {
         if (u == null) return;
-        final householdChanged = u.householdId != _appUser?.householdId;
+        final prevActive = _appUser?.activeHouseholdId;
+        final prevIds = _appUser?.householdIds ?? const <String>[];
+        final activeChanged = u.activeHouseholdId != prevActive;
+        final idsChanged = !_listEquals(u.householdIds, prevIds);
         _appUser = u;
         _localeCode = u.localeCode;
-        if (householdChanged) {
-          await _attachHousehold(u.householdId);
+        if (idsChanged) {
+          unawaited(_refreshMyHouseholds());
+        }
+        if (activeChanged) {
+          await _attachHousehold(u.activeHouseholdId);
         }
         notifyListeners();
       });
-      await _attachHousehold(_appUser!.householdId);
+      await _refreshMyHouseholds();
+      await _attachHousehold(_appUser!.activeHouseholdId);
     } catch (e) {
       _error = e.toString();
     } finally {
       _loading = false;
+      notifyListeners();
+    }
+  }
+
+  bool _listEquals(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  Future<void> _refreshMyHouseholds() async {
+    final ids = _appUser?.householdIds ?? const [];
+    if (ids.isEmpty) {
+      _myHouseholds = [];
+      notifyListeners();
+      return;
+    }
+    try {
+      final list = await _repo.fetchHouseholdsByIds(ids);
+      _myHouseholds = list;
+      // Drop stale ids that no longer resolve.
+      if (list.length < ids.length) {
+        final live = list.map((h) => h.id).toSet();
+        for (final id in ids) {
+          if (!live.contains(id)) {
+            final uid = _firebaseUser?.uid;
+            if (uid != null) {
+              try {
+                await _auth.removeHouseholdMembership(uid, id);
+              } catch (_) {}
+            }
+          }
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
       notifyListeners();
     }
   }
@@ -473,21 +533,14 @@ class AppState extends ChangeNotifier {
 
   Future<void> _clearStaleHousehold() async {
     final uid = _firebaseUser?.uid;
+    final staleId = _appUser?.activeHouseholdId ?? _household?.id;
     await _householdSub?.cancel();
     _householdSub = null;
     _household = null;
     _memberLabels = {};
-    if (_appUser != null) {
-      _appUser = AppUser(
-        id: _appUser!.id,
-        email: _appUser!.email,
-        displayName: _appUser!.displayName,
-        localeCode: _appUser!.localeCode,
-      );
-    }
-    if (uid != null) {
+    if (uid != null && staleId != null) {
       try {
-        await _auth.clearHouseholdId(uid);
+        await _auth.removeHouseholdMembership(uid, staleId);
       } catch (_) {}
     }
     notifyListeners();
@@ -520,7 +573,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> setMonth(String monthId) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) return;
     final exists = await _repo.monthExists(hid, monthId);
     if (!exists) {
@@ -538,7 +591,7 @@ class AppState extends ChangeNotifier {
     bool rolloverLeftover = false,
     Set<String>? categoryIdsToCopy,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     if (empty) {
       await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
@@ -578,14 +631,21 @@ class AppState extends ChangeNotifier {
       creatorUid: uid,
       creatorName: currentDisplayName,
     );
-    _appUser = _appUser?.copyWith(householdId: h.id);
+    final ids = [...?_appUser?.householdIds];
+    if (!ids.contains(h.id)) ids.add(h.id);
+    _appUser = _appUser?.copyWith(
+      householdIds: ids,
+      activeHouseholdId: h.id,
+    );
+    await _refreshMyHouseholds();
     await _attachHousehold(h.id);
   }
 
   Future<void> updateHouseholdName(String name) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.updateHouseholdName(householdId: hid, name: name);
+    await _refreshMyHouseholds();
   }
 
   Future<void> joinHousehold(String inviteCode) async {
@@ -596,8 +656,29 @@ class AppState extends ChangeNotifier {
       uid: uid,
       displayName: currentDisplayName,
     );
-    _appUser = _appUser?.copyWith(householdId: h.id);
+    final ids = [...?_appUser?.householdIds];
+    if (!ids.contains(h.id)) ids.add(h.id);
+    _appUser = _appUser?.copyWith(
+      householdIds: ids,
+      activeHouseholdId: h.id,
+    );
+    await _refreshMyHouseholds();
     await _attachHousehold(h.id);
+  }
+
+  Future<void> switchHousehold(String householdId) async {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return;
+    if (_appUser?.activeHouseholdId == householdId &&
+        _household?.id == householdId) {
+      return;
+    }
+    if (!(_appUser?.householdIds.contains(householdId) ?? false)) {
+      throw StateError('Not a member of this household');
+    }
+    await _auth.setActiveHouseholdId(uid, householdId);
+    _appUser = _appUser?.copyWith(activeHouseholdId: householdId);
+    await _attachHousehold(householdId);
   }
 
   Future<void> signOut() => _auth.signOut();
@@ -609,14 +690,28 @@ class AppState extends ChangeNotifier {
     if (!household.isOwnedBy(uid)) {
       throw StateError('Only the owner can delete the household');
     }
+    final deletedId = household.id;
     await _detachBudgetListeners();
     try {
-      await _repo.deleteHousehold(householdId: household.id, ownerUid: uid);
+      await _repo.deleteHousehold(householdId: deletedId, ownerUid: uid);
     } catch (e) {
-      await _attachHousehold(household.id);
+      await _attachHousehold(deletedId);
       rethrow;
     }
-    await _clearStaleHousehold();
+    final remaining =
+        (_appUser?.householdIds ?? const []).where((id) => id != deletedId).toList();
+    _appUser = _appUser?.copyWith(
+      householdIds: remaining,
+      activeHouseholdId: remaining.isEmpty ? null : remaining.first,
+      clearActiveHouseholdId: remaining.isEmpty,
+    );
+    await _refreshMyHouseholds();
+    if (remaining.isEmpty) {
+      _household = null;
+      notifyListeners();
+    } else {
+      await _attachHousehold(remaining.first);
+    }
   }
 
   Future<void> leaveHousehold() async {
@@ -626,9 +721,22 @@ class AppState extends ChangeNotifier {
     if (household.isOwnedBy(uid)) {
       throw StateError('owner-must-delete');
     }
-    await _repo.leaveHousehold(householdId: household.id, uid: uid);
-    await _detachBudgetListeners();
-    await _clearStaleHousehold();
+    final leftId = household.id;
+    await _repo.leaveHousehold(householdId: leftId, uid: uid);
+    final remaining =
+        (_appUser?.householdIds ?? const []).where((id) => id != leftId).toList();
+    _appUser = _appUser?.copyWith(
+      householdIds: remaining,
+      activeHouseholdId: remaining.isEmpty ? null : remaining.first,
+      clearActiveHouseholdId: remaining.isEmpty,
+    );
+    await _refreshMyHouseholds();
+    if (remaining.isEmpty) {
+      await _detachBudgetListeners();
+      notifyListeners();
+    } else {
+      await _attachHousehold(remaining.first);
+    }
   }
 
   Future<void> removeMember(String memberUid) async {
@@ -658,7 +766,7 @@ class AppState extends ChangeNotifier {
     required int dayOfMonth,
     String? subcategoryId,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.addRecurringBill(
       householdId: hid,
@@ -670,31 +778,34 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> deleteRecurringBill(String billId) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.deleteRecurringBill(householdId: hid, billId: billId);
   }
 
   Future<void> deleteAccount({String? password}) async {
-    if (isHouseholdOwner) {
-      throw StateError('must-delete-household-first');
-    }
     final uid = _firebaseUser?.uid;
     if (uid == null) throw StateError('Not signed in');
-    final hid = _household?.id ?? _appUser?.householdId;
-    if (hid != null) {
+    for (final h in _myHouseholds) {
+      if (h.isOwnedBy(uid)) {
+        throw StateError('must-delete-household-first');
+      }
+    }
+    final ids = List<String>.from(_appUser?.householdIds ?? const []);
+    for (final hid in ids) {
       try {
         await _repo.leaveHousehold(householdId: hid, uid: uid);
       } catch (_) {}
-      await _detachBudgetListeners();
-      _household = null;
     }
+    await _detachBudgetListeners();
+    _household = null;
+    _myHouseholds = [];
     await _auth.deleteUserDoc(uid);
     await _auth.deleteAuthUser(password: password);
   }
 
   Future<String> duplicateCurrentMonth() async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final from = _monthId;
     if (hid == null || from == null) throw StateError('No month selected');
     final next = await _repo.duplicateMonth(
@@ -714,7 +825,7 @@ class AppState extends ChangeNotifier {
     String? nameRu,
     double? targetAmount,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     final trimmed = name.trim();
     final en = (nameEn ?? trimmed).trim();
@@ -781,7 +892,7 @@ class AppState extends ChangeNotifier {
   Future<String> ensureSavingsCategory() async {
     final existing = savingsCategory;
     if (existing != null) return existing.id;
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     final id = await _repo.addCategory(
       householdId: hid,
@@ -845,19 +956,19 @@ class AppState extends ChangeNotifier {
   }
 
   Future<int> addDefaultCategories() async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     return _repo.addDefaultCategories(householdId: hid);
   }
 
   Future<void> updateCategory(BudgetCategory category) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.updateCategory(householdId: hid, category: category);
   }
 
   Future<void> deleteCategory(String categoryId) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.deleteCategory(householdId: hid, categoryId: categoryId);
   }
@@ -875,7 +986,7 @@ class AppState extends ChangeNotifier {
     bool includeInTotal = true,
     double priorSaved = 0,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     final trimmed = name.trim();
     final en = (nameEn ?? trimmed).trim();
@@ -937,13 +1048,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updateSubcategory(Subcategory subcategory) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.updateSubcategory(householdId: hid, subcategory: subcategory);
   }
 
   Future<void> deleteSubcategory(String subcategoryId) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     await _repo.deleteSubcategory(
       householdId: hid,
@@ -957,7 +1068,7 @@ class AppState extends ChangeNotifier {
     int? installmentCurrent,
     bool clearInstallmentCurrent = false,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
     await _repo.upsertPlan(
@@ -978,7 +1089,7 @@ class AppState extends ChangeNotifier {
     String? note,
     bool isDeposit = false,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
     await _repo.addExpense(
@@ -1000,7 +1111,7 @@ class AppState extends ChangeNotifier {
     required double amount,
     String? note,
   }) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
     await _repo.addIncomeEntry(
@@ -1039,7 +1150,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> updateExpense(Expense expense) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
     Expense? old;
@@ -1075,7 +1186,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> deleteExpense(String expenseId) async {
-    final hid = _appUser?.householdId;
+    final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
     Expense? old;

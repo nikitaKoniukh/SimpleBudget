@@ -461,7 +461,7 @@ Future<void> showLogEntrySheet(
     if (expense != null) {
       await live.deleteExpense(expense.id);
     } else if (incomeEntry != null) {
-      final hid = live.appUser?.householdId;
+      final hid = live.activeHouseholdId;
       final monthId = live.monthId;
       if (hid != null && monthId != null) {
         await live.repo.deleteIncomeEntry(
@@ -541,7 +541,7 @@ Future<void> showLogEntrySheet(
           note: noteOrNull,
         );
       } else {
-        final hid = live.appUser?.householdId;
+        final hid = live.activeHouseholdId;
         final monthId = live.monthId;
         if (hid == null || monthId == null) return;
         await live.repo.updateIncomeEntry(

@@ -9,6 +9,7 @@ import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
+import '../household/household_sheets.dart';
 import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
 import 'account_actions.dart';
@@ -83,8 +84,37 @@ class SettingsScreen extends StatelessWidget {
         body: ListView(
           children: [
             ListTile(
+              title: Text(l10n.myHouseholds),
+              subtitle: Text(
+                state.myHouseholds.isEmpty
+                    ? '—'
+                    : state.myHouseholds.map((h) => h.name).join(', '),
+              ),
+              trailing: const Icon(Icons.swap_horiz_rounded),
+              onTap: () => showHouseholdSwitcher(context),
+            ),
+            ListTile(
+              title: Text(l10n.createAnotherHousehold),
+              leading: const Icon(Icons.add_home_outlined),
+              onTap: () => showCreateOrJoinHouseholdSheet(
+                context,
+                joining: false,
+              ),
+            ),
+            ListTile(
+              title: Text(l10n.joinAnotherHousehold),
+              leading: const Icon(Icons.group_add_outlined),
+              onTap: () =>
+                  showCreateOrJoinHouseholdSheet(context, joining: true),
+            ),
+            const Divider(),
+            ListTile(
               title: Text(l10n.household),
-              subtitle: Text(household?.name ?? '—'),
+              subtitle: Text(
+                household == null
+                    ? '—'
+                    : '${household.name}${state.myHouseholds.length > 1 ? ' (${l10n.activeHousehold})' : ''}',
+              ),
               trailing: const Icon(Icons.edit_outlined),
               onTap: household == null
                   ? null

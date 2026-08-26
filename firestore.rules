@@ -38,12 +38,22 @@ service cloud.firestore {
       return isMember(householdId) && memberRole(householdId) != 'viewer';
     }
 
+    function userHouseholdIds(userId) {
+      return get(/databases/$(database)/documents/users/$(userId))
+          .data.get('householdIds', []);
+    }
+
+    // Shared membership: overlapping householdIds (multi-household).
     function sameHouseholdUser(userId) {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && exists(/databases/$(database)/documents/users/$(userId))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.householdId
-            == get(/databases/$(database)/documents/users/$(userId)).data.householdId;
+        && userHouseholdIds(request.auth.uid).hasAny(userHouseholdIds(userId));
+    }
+
+    function membershipFieldsOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['householdIds', 'activeHouseholdId']);
     }
 
     match /users/{userId} {
@@ -52,7 +62,12 @@ service cloud.firestore {
         || sameHouseholdUser(userId)
       );
       allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if signedIn() && request.auth.uid == userId;
+      // Self can update freely; others may only adjust membership index
+      // (owner remove/delete household cleanup).
+      allow update: if signedIn() && (
+        request.auth.uid == userId
+        || membershipFieldsOnly()
+      );
       allow delete: if signedIn() && request.auth.uid == userId;
     }
 

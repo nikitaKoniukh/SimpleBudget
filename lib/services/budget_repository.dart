@@ -76,9 +76,7 @@ class BudgetRepository {
       },
     );
     await ref.set({...household.toMap(), 'catalogVersion': 1});
-    await _db.collection('users').doc(creatorUid).update({
-      'householdId': household.id,
-    });
+    await _addUserMembership(creatorUid, household.id);
     return household;
   }
 
@@ -101,16 +99,52 @@ class BudgetRepository {
     final members = List<String>.from(data['memberIds'] as List? ?? []);
     if (!members.contains(uid)) {
       members.add(uid);
+      final profileName = (displayName ?? '').trim().isEmpty
+          ? 'Member'
+          : displayName!.trim();
+      await doc.reference.update({
+        'memberIds': members,
+        'memberProfiles.$uid': {'name': profileName, 'role': 'editor'},
+      });
     }
-    final profileName = (displayName ?? '').trim().isEmpty
-        ? 'Member'
-        : displayName!.trim();
-    await doc.reference.update({
-      'memberIds': members,
-      'memberProfiles.$uid': {'name': profileName, 'role': 'editor'},
-    });
-    await _db.collection('users').doc(uid).update({'householdId': doc.id});
+    await _addUserMembership(uid, doc.id);
     return Household.fromMap(doc.id, {...data, 'memberIds': members});
+  }
+
+  Future<void> _addUserMembership(String uid, String householdId) async {
+    await _db.collection('users').doc(uid).update({
+      'householdIds': FieldValue.arrayUnion([householdId]),
+      'activeHouseholdId': householdId,
+    });
+  }
+
+  Future<void> _removeUserMembership(String uid, String householdId) async {
+    final ref = _db.collection('users').doc(uid);
+    final snap = await ref.get();
+    final data = snap.data() ?? {};
+    final ids = List<String>.from(data['householdIds'] as List? ?? const []);
+    ids.remove(householdId);
+    final active = data['activeHouseholdId'] as String?;
+    final newActive =
+        ids.contains(active) ? active : (ids.isEmpty ? null : ids.first);
+    await ref.update({
+      'householdIds': ids,
+      if (newActive == null)
+        'activeHouseholdId': FieldValue.delete()
+      else
+        'activeHouseholdId': newActive,
+    });
+  }
+
+  Future<List<Household>> fetchHouseholdsByIds(List<String> ids) async {
+    final result = <Household>[];
+    for (final id in ids) {
+      if (id.isEmpty) continue;
+      final snap = await _householdRef(id).get();
+      if (!snap.exists || snap.data() == null) continue;
+      result.add(Household.fromMap(snap.id, snap.data()!));
+    }
+    return result;
   }
 
   Future<void> updateHouseholdName({
@@ -136,6 +170,14 @@ class BudgetRepository {
     required String householdId,
     required String ownerUid,
   }) async {
+    final snap = await _householdRef(householdId).get();
+    final memberIds = List<String>.from(
+      snap.data()?['memberIds'] as List? ?? [ownerUid],
+    );
+    if (!memberIds.contains(ownerUid)) {
+      memberIds.add(ownerUid);
+    }
+
     const monthSubs = [
       'incomeSources',
       'incomeEntries',
@@ -155,9 +197,12 @@ class BudgetRepository {
     await _deleteQueryDocs(_subcategories(householdId));
     await _deleteQueryDocs(_householdRef(householdId).collection('recurringBills'));
     await _householdRef(householdId).delete();
-    await _db.collection('users').doc(ownerUid).update({
-      'householdId': FieldValue.delete(),
-    });
+
+    for (final uid in memberIds) {
+      try {
+        await _removeUserMembership(uid, householdId);
+      } catch (_) {}
+    }
   }
 
   Future<void> leaveHousehold({
@@ -176,9 +221,7 @@ class BudgetRepository {
         'memberProfiles.$uid': FieldValue.delete(),
       });
     }
-    await _db.collection('users').doc(uid).update({
-      'householdId': FieldValue.delete(),
-    });
+    await _removeUserMembership(uid, householdId);
   }
 
   Future<void> removeMember({

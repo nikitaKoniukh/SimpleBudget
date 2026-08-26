@@ -333,13 +333,42 @@ class AuthService {
     await _db.collection('users').doc(uid).update({'localeCode': localeCode});
   }
 
-  Future<void> setHouseholdId(String uid, String householdId) async {
-    await _db.collection('users').doc(uid).update({'householdId': householdId});
+  Future<void> addHouseholdMembership(String uid, String householdId) async {
+    await _db.collection('users').doc(uid).update({
+      'householdIds': FieldValue.arrayUnion([householdId]),
+      'activeHouseholdId': householdId,
+    });
   }
 
-  Future<void> clearHouseholdId(String uid) async {
+  Future<void> setActiveHouseholdId(String uid, String householdId) async {
+    final snap = await _db.collection('users').doc(uid).get();
+    final ids = List<String>.from(
+      snap.data()?['householdIds'] as List? ?? const [],
+    );
+    if (!ids.contains(householdId)) {
+      throw StateError('Not a member of this household');
+    }
     await _db.collection('users').doc(uid).update({
-      'householdId': FieldValue.delete(),
+      'activeHouseholdId': householdId,
+    });
+  }
+
+  /// Removes [householdId] from the user's membership index and fixes active.
+  Future<void> removeHouseholdMembership(String uid, String householdId) async {
+    final ref = _db.collection('users').doc(uid);
+    final snap = await ref.get();
+    final data = snap.data() ?? {};
+    final ids = List<String>.from(data['householdIds'] as List? ?? const []);
+    ids.remove(householdId);
+    final active = data['activeHouseholdId'] as String?;
+    final newActive =
+        ids.contains(active) ? active : (ids.isEmpty ? null : ids.first);
+    await ref.update({
+      'householdIds': ids,
+      if (newActive == null)
+        'activeHouseholdId': FieldValue.delete()
+      else
+        'activeHouseholdId': newActive,
     });
   }
 

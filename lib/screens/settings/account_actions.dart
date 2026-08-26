@@ -128,7 +128,7 @@ Future<void> confirmAndDeleteHousehold(BuildContext context) async {
 Future<void> confirmAndDeleteAccount(BuildContext context) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
-  if (state.isHouseholdOwner) {
+  if (state.ownsAnyHousehold) {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

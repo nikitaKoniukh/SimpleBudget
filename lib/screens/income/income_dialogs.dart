@@ -43,7 +43,7 @@ Future<IncomeSource?> _createIncomeSource(BuildContext context) async {
   final state = context.read<AppState>();
   final sortOrder = state.incomeSources.length;
   final id = await state.repo.addIncomeSource(
-    householdId: state.appUser!.householdId!,
+    householdId: state.activeHouseholdId!,
     monthId: state.monthId!,
     nameEn: name,
     nameRu: name,

@@ -3,26 +3,35 @@ class AppUser {
     required this.id,
     required this.email,
     this.displayName,
-    this.householdId,
+    this.householdIds = const [],
+    this.activeHouseholdId,
     this.localeCode = 'en',
   });
 
   final String id;
   final String email;
   final String? displayName;
-  final String? householdId;
+  final List<String> householdIds;
+  final String? activeHouseholdId;
   final String localeCode;
+
+  bool get hasHouseholds => householdIds.isNotEmpty;
 
   AppUser copyWith({
     String? displayName,
-    String? householdId,
+    List<String>? householdIds,
+    String? activeHouseholdId,
+    bool clearActiveHouseholdId = false,
     String? localeCode,
   }) {
     return AppUser(
       id: id,
       email: email,
       displayName: displayName ?? this.displayName,
-      householdId: householdId ?? this.householdId,
+      householdIds: householdIds ?? this.householdIds,
+      activeHouseholdId: clearActiveHouseholdId
+          ? null
+          : (activeHouseholdId ?? this.activeHouseholdId),
       localeCode: localeCode ?? this.localeCode,
     );
   }
@@ -30,16 +39,25 @@ class AppUser {
   Map<String, dynamic> toMap() => {
     'email': email,
     'displayName': displayName,
-    'householdId': householdId,
+    'householdIds': householdIds,
+    if (activeHouseholdId != null) 'activeHouseholdId': activeHouseholdId,
     'localeCode': localeCode,
   };
 
   factory AppUser.fromMap(String id, Map<String, dynamic> map) {
+    final ids = List<String>.from(map['householdIds'] as List? ?? const []);
+    var active = map['activeHouseholdId'] as String?;
+    if (active != null && active.isNotEmpty && !ids.contains(active)) {
+      active = ids.isEmpty ? null : ids.first;
+    } else if ((active == null || active.isEmpty) && ids.isNotEmpty) {
+      active = ids.first;
+    }
     return AppUser(
       id: id,
       email: map['email'] as String? ?? '',
       displayName: map['displayName'] as String?,
-      householdId: map['householdId'] as String?,
+      householdIds: ids,
+      activeHouseholdId: active,
       localeCode: map['localeCode'] as String? ?? 'en',
     );
   }

@@ -10,6 +10,7 @@ import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
 import '../../widgets/budget/savings_budget_section.dart';
 import '../category/category_sheets.dart';
+import '../household/household_sheets.dart';
 import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
@@ -32,7 +33,33 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(
-            title: Text(l10n.appTitle),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.appTitle),
+                if (state.household != null)
+                  InkWell(
+                    onTap: () => showHouseholdSwitcher(context),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          state.household!.name,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(color: SyncColors.textMuted),
+                        ),
+                        Icon(
+                          Icons.expand_more,
+                          size: 16,
+                          color: SyncColors.textMuted,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings_outlined),
@@ -113,11 +140,29 @@ class _HomeScreenState extends State<HomeScreen> {
               if (state.household != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    state.household!.name,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  child: InkWell(
+                    onTap: () => showHouseholdSwitcher(context),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            state.household!.name,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(color: SyncColors.textMuted),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Icon(
+                          Icons.expand_more,
+                          size: 16,
                           color: SyncColors.textMuted,
                         ),
+                      ],
+                    ),
                   ),
                 ),
             ],

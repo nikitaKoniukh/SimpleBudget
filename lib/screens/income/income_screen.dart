@@ -132,7 +132,7 @@ class IncomeScreen extends StatelessWidget {
     if (amount <= 0) return;
     final noteText = sentenceCase(noteCtrl.text);
     final state = context.read<AppState>();
-    final hid = state.appUser!.householdId!;
+    final hid = state.activeHouseholdId!;
     await state.repo.addIncomeEntry(
       householdId: hid,
       monthId: state.monthId!,
@@ -171,7 +171,7 @@ class IncomeScreen extends StatelessWidget {
     if (name.isEmpty) return;
     final state = context.read<AppState>();
     await state.repo.addIncomeSource(
-      householdId: state.appUser!.householdId!,
+      householdId: state.activeHouseholdId!,
       monthId: state.monthId!,
       nameEn: name,
       nameRu: name,
