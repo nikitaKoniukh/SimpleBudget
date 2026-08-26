@@ -53,6 +53,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Future<void> _reload() async {
     final state = context.read<AppState>();
     if (!state.hasHousehold) return;
+    await state.refreshBudget();
+    if (!mounted) return;
     final ids = _monthIdsForRange(state);
     if (ids.isEmpty) {
       setState(() {
@@ -92,7 +94,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(title: Text(l10n.statistics)),
-          body: Center(child: Text(l10n.noMonthSelected)),
+          body: RefreshIndicator(
+            onRefresh: _reload,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.4,
+                  child: Center(child: Text(l10n.noMonthSelected)),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -108,6 +121,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         body: RefreshIndicator(
           onRefresh: _reload,
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             children: [
               Text(

@@ -42,7 +42,18 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
         child: Scaffold(
           backgroundColor: Colors.transparent,
           appBar: AppBar(title: Text(l10n.savingsHighlight)),
-          body: Center(child: Text(l10n.noMonthSelected)),
+          body: RefreshIndicator(
+            onRefresh: () => context.read<AppState>().refreshBudget(),
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.4,
+                  child: Center(child: Text(l10n.noMonthSelected)),
+                ),
+              ],
+            ),
+          ),
         ),
       );
     }
@@ -81,72 +92,75 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
           icon: const Icon(Icons.add),
           label: Text(l10n.log),
         ),
-        body: pots.isEmpty
-            ? Center(
-                child: Padding(
+        body: RefreshIndicator(
+          onRefresh: () => context.read<AppState>().refreshBudget(),
+          child: pots.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.savings_outlined,
-                        size: 56,
-                        color: SyncColors.primary.withValues(alpha: 0.65),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.emptyPots,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: SyncColors.textMuted,
-                            ),
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton(
+                  children: [
+                    const SizedBox(height: 48),
+                    Icon(
+                      Icons.savings_outlined,
+                      size: 56,
+                      color: SyncColors.primary.withValues(alpha: 0.65),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.emptyPots,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: SyncColors.textMuted,
+                          ),
+                    ),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: FilledButton(
                         onPressed: () => showAddPotFlow(context),
                         child: Text(l10n.addPot),
                       ),
+                    ),
+                  ],
+                )
+              : ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  children: [
+                    _SetAsideHero(
+                      label: l10n.savedLabel,
+                      saved: totalSaved,
+                      target: hasAnyTarget ? totalTarget : null,
+                      progress: overallProgress,
+                      monthSaved: monthSaved,
+                      monthPlan: monthPlan,
+                      inTotalCount: summable.length,
+                      notInTotalCount: excluded.length,
+                    ),
+                    if (leftoverPot != null) ...[
+                      const SizedBox(height: 12),
+                      _PotCard(subcategory: leftoverPot),
                     ],
-                  ),
+                    if (summable.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      _SectionHeader(
+                        title: l10n.sectionInTotal,
+                        subtitle: l10n.sectionInTotalHint,
+                      ),
+                      const SizedBox(height: 8),
+                      ...summable.map((pot) => _PotCard(subcategory: pot)),
+                    ],
+                    if (excluded.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _SectionHeader(
+                        title: l10n.sectionNotInTotal,
+                        subtitle: l10n.sectionNotInTotalHint,
+                      ),
+                      const SizedBox(height: 8),
+                      ...excluded.map((pot) => _PotCard(subcategory: pot)),
+                    ],
+                  ],
                 ),
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                children: [
-                  _SetAsideHero(
-                    label: l10n.savedLabel,
-                    saved: totalSaved,
-                    target: hasAnyTarget ? totalTarget : null,
-                    progress: overallProgress,
-                    monthSaved: monthSaved,
-                    monthPlan: monthPlan,
-                    inTotalCount: summable.length,
-                    notInTotalCount: excluded.length,
-                  ),
-                  if (leftoverPot != null) ...[
-                    const SizedBox(height: 12),
-                    _PotCard(subcategory: leftoverPot),
-                  ],
-                  if (summable.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    _SectionHeader(
-                      title: l10n.sectionInTotal,
-                      subtitle: l10n.sectionInTotalHint,
-                    ),
-                    const SizedBox(height: 8),
-                    ...summable.map((pot) => _PotCard(subcategory: pot)),
-                  ],
-                  if (excluded.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _SectionHeader(
-                      title: l10n.sectionNotInTotal,
-                      subtitle: l10n.sectionNotInTotalHint,
-                    ),
-                    const SizedBox(height: 8),
-                    ...excluded.map((pot) => _PotCard(subcategory: pot)),
-                  ],
-                ],
-              ),
+        ),
       ),
     );
   }

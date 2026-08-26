@@ -443,7 +443,7 @@ class AppState extends ChangeNotifier {
 
   int _priorListenGeneration = 0;
 
-  Future<void> _detachCurrentMonthListeners() async {
+  Future<void> _detachCurrentMonthListeners({bool clearData = true}) async {
     await _sourcesSub?.cancel();
     await _entriesSub?.cancel();
     await _plansSub?.cancel();
@@ -452,18 +452,22 @@ class AppState extends ChangeNotifier {
     _entriesSub = null;
     _plansSub = null;
     _expensesSub = null;
-    _incomeSources = [];
-    _incomeEntries = [];
-    _plans = [];
-    _expenses = [];
+    if (clearData) {
+      _incomeSources = [];
+      _incomeEntries = [];
+      _plans = [];
+      _expenses = [];
+    }
   }
 
-  Future<void> _detachMonthDataListeners() async {
-    await _detachCurrentMonthListeners();
+  Future<void> _detachMonthDataListeners({bool clearData = true}) async {
+    await _detachCurrentMonthListeners(clearData: clearData);
     await _detachPriorMonthsListeners();
-    _priorExpensesByMonth.clear();
-    _priorIncomeByMonth.clear();
-    _priorMonthIds = [];
+    if (clearData) {
+      _priorExpensesByMonth.clear();
+      _priorIncomeByMonth.clear();
+      _priorMonthIds = [];
+    }
   }
 
   Future<List<String>> _priorMonthIdsFor(
@@ -557,26 +561,28 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _detachBudgetListeners() async {
+  Future<void> _detachBudgetListeners({bool clearData = true}) async {
     await _householdSub?.cancel();
     await _monthsSub?.cancel();
     await _categoriesSub?.cancel();
     await _subcategoriesSub?.cancel();
     await _billsSub?.cancel();
-    await _detachMonthDataListeners();
+    await _detachMonthDataListeners(clearData: clearData);
     _householdSub = null;
     _monthsSub = null;
     _categoriesSub = null;
     _subcategoriesSub = null;
     _billsSub = null;
-    _household = null;
-    _months = [];
-    _categories = [];
-    _subcategories = [];
-    _recurringBills = [];
-    _memberLabels = {};
-    _monthId = null;
-    _budgetDataReady = false;
+    if (clearData) {
+      _household = null;
+      _months = [];
+      _categories = [];
+      _subcategories = [];
+      _recurringBills = [];
+      _memberLabels = {};
+      _monthId = null;
+      _budgetDataReady = false;
+    }
   }
 
   @override
@@ -587,10 +593,20 @@ class AppState extends ChangeNotifier {
     super.dispose();
   }
 
-  Future<void> _attachHousehold(String? householdId) async {
-    await _detachBudgetListeners();
+  /// Rebinds Firestore listeners without clearing the UI loading gate.
+  Future<void> refreshBudget() async {
+    final hid = _activeHid;
+    if (hid == null || hid.isEmpty) return;
+    await _attachHousehold(hid, soft: true);
+  }
+
+  Future<void> _attachHousehold(
+    String? householdId, {
+    bool soft = false,
+  }) async {
+    await _detachBudgetListeners(clearData: !soft);
     if (householdId == null || householdId.isEmpty) {
-      _budgetDataReady = true;
+      if (!soft) _budgetDataReady = true;
       notifyListeners();
       return;
     }
@@ -622,7 +638,7 @@ class AppState extends ChangeNotifier {
     final household = await ready.future;
     if (household == null) {
       await _clearStaleHousehold();
-      _budgetDataReady = true;
+      if (!soft) _budgetDataReady = true;
       notifyListeners();
       return;
     }
@@ -730,7 +746,7 @@ class AppState extends ChangeNotifier {
         monthsReady.future,
       ]);
     } finally {
-      _budgetDataReady = true;
+      if (!soft) _budgetDataReady = true;
       notifyListeners();
     }
   }
