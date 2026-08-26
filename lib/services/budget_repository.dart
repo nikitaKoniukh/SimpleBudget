@@ -345,14 +345,20 @@ class BudgetRepository {
     );
   }
 
-  /// Copies income sources, plans, and spend expenses.
-  /// Expense dates keep the same day-of-month in [toMonthId].
-  /// Deposits / savings pot entries are not copied (lifetime savedTotal).
-  /// Installment current ticks up when it is below the subcategory total.
+  /// Copies income sources, plans, and selected expenses into [toMonthId].
+  ///
+  /// Expenses are copied only for **monthly**, **savings**, and **debt**
+  /// subcategories (not regular spend). Copied savings deposits also bump each
+  /// pot's lifetime [Subcategory.savedTotal]. Expense dates keep the same
+  /// day-of-month in [toMonthId].
+  ///
+  /// Debt installment `current` ticks up on the new month plan. If after the
+  /// bump `current > total`, that debt is omitted from the new month (no plan,
+  /// no expenses).
   ///
   /// When [rolloverLeftover] is true, ensures the Leftover savings pot exists.
-  /// The leftover amount is computed live from the previous month (not stored
-  /// as a plan on the new month).
+  /// The leftover amount is computed live from prior months (not stored as a
+  /// plan on the new month).
   ///
   /// When [categoryIds] is non-null, only plans and expenses for subcategories
   /// under those categories are copied. Income sources are always copied.
@@ -382,12 +388,26 @@ class BudgetRepository {
     final plans = await fromRef.collection('plans').get();
     final expenses = await fromRef.collection('expenses').get();
     final cats = await _categories(householdId).get();
-    final savingsCatIds = {
+    final catTypeById = <String, String>{
       for (final c in cats.docs)
-        if (c.data()['type'] == 'savings') c.id,
+        c.id: (c.data()['type'] as String? ?? 'spend'),
+    };
+    final savingsCatIds = {
+      for (final e in catTypeById.entries)
+        if (e.value == 'savings') e.key,
+    };
+    final monthlyCatIds = {
+      for (final e in catTypeById.entries)
+        if (e.value == 'monthly') e.key,
+    };
+    final debtCatIds = {
+      for (final e in catTypeById.entries)
+        if (e.value == 'debt') e.key,
     };
     final subs = await _subcategories(householdId).get();
     final savingsIds = <String>{};
+    final monthlyIds = <String>{};
+    final debtIds = <String>{};
     final subTotals = <String, int?>{};
     final subCategoryIds = <String, String>{};
     for (final doc in subs.docs) {
@@ -397,20 +417,25 @@ class BudgetRepository {
       subTotals[doc.id] = (data['installmentTotal'] as num?)?.toInt();
       if (savingsCatIds.contains(catId)) {
         savingsIds.add(doc.id);
+      } else if (monthlyCatIds.contains(catId)) {
+        monthlyIds.add(doc.id);
+      } else if (debtCatIds.contains(catId)) {
+        debtIds.add(doc.id);
       }
     }
+    final copyExpenseSubIds = {...monthlyIds, ...savingsIds, ...debtIds};
 
     String? leftoverPotId;
-    if (rolloverLeftover) {
-      final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
-      for (final doc in subs.docs) {
-        final data = doc.data();
-        if (savingsIds.contains(doc.id) &&
-            (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
-          leftoverPotId = doc.id;
-          break;
-        }
+    final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
+    for (final doc in subs.docs) {
+      final data = doc.data();
+      if (savingsIds.contains(doc.id) &&
+          (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
+        leftoverPotId = doc.id;
+        break;
       }
+    }
+    if (rolloverLeftover) {
       leftoverPotId ??= await _ensureLeftoverPot(
         householdId: householdId,
         categoryDocs: cats.docs,
@@ -431,29 +456,41 @@ class BudgetRepository {
       );
     }
 
+    final completedDebtIds = <String>{};
     for (final doc in plans.docs) {
-      // Leftover is derived live from the previous month — do not copy its plan.
+      // Leftover is derived live from prior months — do not copy its plan.
       if (leftoverPotId != null && doc.id == leftoverPotId) continue;
       if (categoryIds != null) {
         final catId = subCategoryIds[doc.id] ?? '';
         if (!categoryIds.contains(catId)) continue;
       }
       final data = Map<String, dynamic>.from(doc.data());
-      final total = subTotals[doc.id];
-      final current = (data['installmentCurrent'] as num?)?.toInt();
-      if (total != null && current != null && current < total) {
-        data['installmentCurrent'] = current + 1;
+      if (debtIds.contains(doc.id)) {
+        final total = subTotals[doc.id];
+        final current = (data['installmentCurrent'] as num?)?.toInt();
+        if (total != null && current != null) {
+          final next = current + 1;
+          if (next > total) {
+            completedDebtIds.add(doc.id);
+            continue;
+          }
+          data['installmentCurrent'] = next;
+        }
       }
       ops.add(
         (batch) => batch.set(toRef.collection('plans').doc(doc.id), data),
       );
     }
 
+    final savingsSavedDeltas = <String, double>{};
     for (final doc in expenses.docs) {
       final data = Map<String, dynamic>.from(doc.data());
       final subId = data['subcategoryId'] as String? ?? '';
       if (subId.isEmpty) continue;
-      if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
+      if (completedDebtIds.contains(subId)) continue;
+      if (leftoverPotId != null && subId == leftoverPotId) continue;
+      // Only monthly / savings / debt expenses — not regular spend.
+      if (!copyExpenseSubIds.contains(subId)) continue;
       if (categoryIds != null) {
         final catId = subCategoryIds[subId] ?? '';
         if (!categoryIds.contains(catId)) continue;
@@ -465,10 +502,25 @@ class BudgetRepository {
           data['date'] = dateFixedToMonth(parsed, toMonthId).toIso8601String();
         }
       }
+      if (savingsIds.contains(subId)) {
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0;
+        if (amount != 0) {
+          savingsSavedDeltas[subId] =
+              (savingsSavedDeltas[subId] ?? 0) + amount;
+        }
+      }
       ops.add(
         (batch) => batch.set(
           toRef.collection('expenses').doc(_uuid.v4()),
           data,
+        ),
+      );
+    }
+    for (final entry in savingsSavedDeltas.entries) {
+      ops.add(
+        (batch) => batch.update(
+          _subcategories(householdId).doc(entry.key),
+          {'savedTotal': FieldValue.increment(entry.value)},
         ),
       );
     }
