@@ -303,7 +303,7 @@ class BudgetCategory {
   bool get isDebt => type == 'debt';
   bool get isSavings => type == 'savings';
 
-  /// Counts toward monthly spend/plan totals (not savings pots).
+  /// Non-savings categories (spend, monthly, debt). Month totals include savings too.
   bool get isBudgetEnvelope => !isSavings;
 
   String localizedName(String localeCode) =>
@@ -644,7 +644,7 @@ class MonthStatsSnapshot {
   final double income;
 
   double spentForSub(String subcategoryId) => expenses
-      .where((e) => e.subcategoryId == subcategoryId && !e.isDeposit)
+      .where((e) => e.subcategoryId == subcategoryId)
       .fold(0, (s, e) => s + e.amount);
 
   double spentForCategory(
@@ -656,9 +656,8 @@ class MonthStatsSnapshot {
     return ids.fold<double>(0, (s, id) => s + spentForSub(id));
   }
 
-  double get totalSpent => expenses
-      .where((e) => !e.isDeposit)
-      .fold(0, (s, e) => s + e.amount);
+  double get totalSpent =>
+      expenses.fold(0, (s, e) => s + e.amount);
 
   /// Deposits this month. When [includeSubcategoryIds] is set, only those pots.
   double savedThisMonth([Set<String>? includeSubcategoryIds]) => expenses

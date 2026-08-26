@@ -99,8 +99,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
     final totals = state.totals;
     final compareIds = _monthIdsForRange(state);
-    final envelopeCats =
-        state.categories.where((c) => c.isBudgetEnvelope).toList();
+    final envelopeCats = state.categories.toList();
 
     return SyncBackground(
       child: Scaffold(

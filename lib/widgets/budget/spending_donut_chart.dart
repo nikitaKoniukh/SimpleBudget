@@ -21,7 +21,7 @@ class SpendingDonutChart extends StatelessWidget {
     final totals = state.totals;
 
     final segments = <_ChartSegment>[];
-    for (final cat in state.categories.where((c) => !c.isSavings)) {
+    for (final cat in state.categories) {
       final spent = state.categoryActual(cat.id);
       final planned = state.categoryPlanned(cat.id);
       final value = spent > 0 ? spent : planned;

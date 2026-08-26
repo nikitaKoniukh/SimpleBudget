@@ -173,15 +173,11 @@ class AppState extends ChangeNotifier {
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
     final liveSubIds = subcategories.map((s) => s.id).toSet();
-    final spendSubIds = liveSubIds.where((id) => !_isSavingsPot(id)).toSet();
     final planned = _plans
-        .where((p) => spendSubIds.contains(p.subcategoryId))
+        .where((p) => liveSubIds.contains(p.subcategoryId))
         .fold<double>(0, (s, p) => s + p.planned);
     final actual = _expenses
-        .where(
-          (e) =>
-              spendSubIds.contains(e.subcategoryId) && !e.isDeposit,
-        )
+        .where((e) => liveSubIds.contains(e.subcategoryId))
         .fold<double>(0, (s, e) => s + e.amount);
     final savedThisMonth = _expenses
         .where(
