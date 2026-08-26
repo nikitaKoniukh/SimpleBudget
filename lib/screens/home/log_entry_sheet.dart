@@ -363,7 +363,7 @@ Future<void> showLogEntrySheet(
                         ),
                       ],
                     )
-                  else
+                  else ...[
                     DropdownButtonFormField<String>(
                       key: ValueKey('income-$selectedSourceId'),
                       initialValue: selectedSourceId,
@@ -381,6 +381,19 @@ Future<void> showLogEntrySheet(
                         setModal(() => selectedSourceId = v);
                       },
                     ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final id = await showAddIncomeSourceDialog(ctx);
+                          if (id == null || !ctx.mounted) return;
+                          setModal(() => selectedSourceId = id);
+                        },
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.addIncomeSource),
+                      ),
+                    ),
+                  ],
                 ],
                 if (selectedKind == LogKind.monthly) ...[
                   DropdownButtonFormField<int>(
