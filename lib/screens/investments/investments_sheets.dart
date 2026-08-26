@@ -176,7 +176,15 @@ Future<String?> showEditPotSheet(
   final plannedCtrl = TextEditingController(
     text: existingPlanned > 0 ? existingPlanned.toStringAsFixed(2) : '',
   );
-  final priorSavedCtrl = TextEditingController();
+  final existingMonthDeposits = existing == null
+      ? 0.0
+      : state.expensesFor(existing.id).fold<double>(0, (s, e) => s + e.amount);
+  final existingPrior = existing == null
+      ? 0.0
+      : (existing.savedTotal - existingMonthDeposits);
+  final priorSavedCtrl = TextEditingController(
+    text: existingPrior > 0 ? existingPrior.toStringAsFixed(2) : '',
+  );
 
   var targetDate = existing?.targetDate;
   var includeInTotal = existing?.includeInTotal ?? true;
@@ -210,16 +218,15 @@ Future<String?> showEditPotSheet(
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(labelText: l10n.plannedLabel),
                 ),
-                if (existing == null)
-                  TextField(
-                    controller: priorSavedCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: l10n.alreadySaved,
-                      helperText: l10n.alreadySavedHint,
-                    ),
+                TextField(
+                  controller: priorSavedCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.alreadySaved,
+                    helperText: l10n.alreadySavedHint,
                   ),
+                ),
                 TextField(
                   controller: targetCtrl,
                   keyboardType:
@@ -298,6 +305,10 @@ Future<String?> showEditPotSheet(
       ),
     );
     await state.upsertPlan(subcategoryId: existing.id, planned: planned);
+    await state.setPriorSavings(
+      subcategoryId: existing.id,
+      amount: priorSaved > 0 ? priorSaved : 0,
+    );
     return existing.id;
   } catch (e) {
     if (!context.mounted) return null;

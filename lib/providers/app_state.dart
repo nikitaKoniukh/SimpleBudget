@@ -1149,6 +1149,24 @@ class AppState extends ChangeNotifier {
     await _adjustSavedTotal(subcategoryId: subcategoryId, delta: amount);
   }
 
+  /// Sets the non-deposit (prior) portion of [savedTotal] for a pot.
+  /// This month's deposits are left unchanged.
+  Future<void> setPriorSavings({
+    required String subcategoryId,
+    required double amount,
+  }) async {
+    final pot = subcategoryById(subcategoryId);
+    if (pot == null || !_isSavingsPot(subcategoryId)) return;
+    final monthDeposits = expensesFor(subcategoryId)
+        .fold<double>(0, (s, e) => s + e.amount);
+    final currentPrior = pot.savedTotal - monthDeposits;
+    final newPrior = amount < 0 ? 0.0 : amount;
+    await _adjustSavedTotal(
+      subcategoryId: subcategoryId,
+      delta: newPrior - currentPrior,
+    );
+  }
+
   Future<void> updateExpense(Expense expense) async {
     final hid = _activeHid;
     final mid = _monthId;
