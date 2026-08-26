@@ -33,10 +33,14 @@ Future<void> showSubcategoryRegisterSheet(
         ? plan.planned.toStringAsFixed(2)
         : '',
   );
-  final installmentCtrl = TextEditingController(
-    text: plan?.installmentCurrent != null &&
-            subcategory.installmentTotal != null
-        ? '${plan!.installmentCurrent}/${subcategory.installmentTotal}'
+  final installmentCurrentCtrl = TextEditingController(
+    text: plan?.installmentCurrent != null
+        ? '${plan!.installmentCurrent}'
+        : '',
+  );
+  final installmentTotalCtrl = TextEditingController(
+    text: subcategory.installmentTotal != null
+        ? '${subcategory.installmentTotal}'
         : '',
   );
   final targetCtrl = TextEditingController(
@@ -159,14 +163,37 @@ Future<void> showSubcategoryRegisterSheet(
                 ),
                     if (category?.isDebt ?? false) ...[
                       const SizedBox(height: 8),
-                      TextField(
-                        controller: installmentCtrl,
-                        enabled: canEdit,
-                        decoration: InputDecoration(
-                          labelText: '${l10n.installment} (1/12)',
-                          hintText: l10n.installmentHint,
-                          helperText: l10n.installmentHelper,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: installmentCurrentCtrl,
+                              enabled: canEdit,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: l10n.installmentCurrent,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: installmentTotalCtrl,
+                              enabled: canEdit,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: l10n.installmentTotal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.installmentHelper,
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: SyncColors.textMuted,
+                            ),
                       ),
                     ],
                     if (isPot) ...[
@@ -354,14 +381,10 @@ Future<void> showSubcategoryRegisterSheet(
 
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
-  int? instCur;
-  int? instTot;
-  final inst = installmentCtrl.text.trim();
-  if (inst.contains('/')) {
-    final parts = inst.split('/');
-    instCur = int.tryParse(parts[0].trim());
-    instTot = int.tryParse(parts[1].trim());
-  }
+  final curText = installmentCurrentCtrl.text.trim();
+  final totText = installmentTotalCtrl.text.trim();
+  final instCur = int.tryParse(curText);
+  final instTot = int.tryParse(totText);
 
   final currentSub =
       live.subcategoryById(subcategory.id) ?? subcategory;
@@ -403,7 +426,7 @@ Future<void> showSubcategoryRegisterSheet(
         nameEn: name,
         nameRu: name,
         installmentTotal: isDebt ? instTot : null,
-        clearInstallmentTotal: !isDebt || (instTot == null && inst.isEmpty),
+        clearInstallmentTotal: !isDebt || totText.isEmpty,
       ),
     );
   }
@@ -412,6 +435,6 @@ Future<void> showSubcategoryRegisterSheet(
     subcategoryId: currentSub.id,
     planned: planned,
     installmentCurrent: isDebt ? instCur : null,
-    clearInstallmentCurrent: !isDebt || inst.isEmpty,
+    clearInstallmentCurrent: !isDebt || curText.isEmpty,
   );
 }

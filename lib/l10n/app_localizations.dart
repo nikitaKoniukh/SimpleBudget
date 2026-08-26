@@ -93,10 +93,15 @@ class AppLocalizations {
   String get category => isRu ? 'Категория' : 'Category';
   String get categories => isRu ? 'Категории' : 'Categories';
   String get installment => isRu ? 'Рассрочка' : 'Installment';
-  String get installmentHint => isRu ? 'Например, 1/12' : 'For example, 1/12';
-  String get installmentHelper => isRu
-      ? 'Введите текущий и общий номер платежа через /'
-      : 'Enter current and total payment number separated by /';
+  String get installmentCurrent =>
+      _t('Current payment', 'Текущий платёж', 'תשלום נוכחי');
+  String get installmentTotal =>
+      _t('Total payments', 'Всего платежей', 'סה״כ תשלומים');
+  String get installmentHelper => _t(
+        'Which payment this month, and how many in total',
+        'Какой платёж в этом месяце и сколько всего',
+        'איזה תשלום החודש וכמה בסך הכול',
+      );
   String get note => isRu ? 'Заметка' : 'Note';
   String get amount =>
       _t('How much', 'Сколько', 'כמה');
