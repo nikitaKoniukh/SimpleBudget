@@ -326,7 +326,7 @@ Future<void> showLogEntrySheet(
                         ),
                       ],
                     )
-                  else
+                  else ...[
                     DropdownButtonFormField<String>(
                       key: ValueKey('save-$selectedSubId'),
                       initialValue: selectedSubId,
@@ -346,6 +346,19 @@ Future<void> showLogEntrySheet(
                         setModal(() => selectedSubId = v);
                       },
                     ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final id = await _promptAddPot(ctx);
+                          if (id == null || !ctx.mounted) return;
+                          setModal(() => selectedSubId = id);
+                        },
+                        icon: const Icon(Icons.add),
+                        label: Text(l10n.addPot),
+                      ),
+                    ),
+                  ],
                 ],
                 if (selectedKind == LogKind.income) ...[
                   if (sources.isEmpty)
