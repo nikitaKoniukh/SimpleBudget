@@ -8,6 +8,7 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../utils/text_format.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/form_sheet.dart';
 import '../home/log_entry_sheet.dart';
 
@@ -77,13 +78,10 @@ Future<void> showSubcategoryRegisterSheet(
                 if (category != null) ...[
                   Row(
                     children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: Color(category.colorValue),
-                          shape: BoxShape.circle,
-                        ),
+                      CategoryColorIcon(
+                        colorValue: category.colorValue,
+                        iconKey: category.iconKey,
+                        size: 22,
                       ),
                       const SizedBox(width: 8),
                       Expanded(

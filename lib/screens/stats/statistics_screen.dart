@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/budget/spending_donut_chart.dart';
 import '../../widgets/summary_card.dart';
 
@@ -227,13 +228,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: Color(cat.colorValue),
-                              shape: BoxShape.circle,
-                            ),
+                          CategoryColorIcon(
+                            colorValue: cat.colorValue,
+                            iconKey: cat.iconKey,
+                            size: 22,
                           ),
                           const SizedBox(width: 8),
                           SizedBox(

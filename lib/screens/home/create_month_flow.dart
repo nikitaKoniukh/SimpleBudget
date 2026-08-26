@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/form_sheet.dart';
 
 /// Full-screen create-month flow. Catalog lives on the household, so this
@@ -216,9 +217,10 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
                   for (final cat in categories)
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
-                      secondary: CircleAvatar(
-                        radius: 10,
-                        backgroundColor: Color(cat.colorValue),
+                      secondary: CategoryColorIcon(
+                        colorValue: cat.colorValue,
+                        iconKey: cat.iconKey,
+                        size: 28,
                       ),
                       title: Text(cat.localizedName(state.localeCode)),
                       value: _selectedCategoryIds.contains(cat.id),

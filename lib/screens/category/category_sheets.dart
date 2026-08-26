@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../data/category_icons.dart';
 import '../../data/default_categories.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/form_sheet.dart';
 import 'budget_sheets.dart';
 import 'subcategory_register_sheet.dart';
@@ -42,6 +44,43 @@ String categoryTypeLabel(AppLocalizations l10n, String type) {
     default:
       return l10n.typeSpend;
   }
+}
+
+Widget _iconPicker({
+  required String iconKey,
+  required int colorValue,
+  required ValueChanged<String> onSelected,
+  bool enabled = true,
+}) {
+  return Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: categoryIconCatalog.map((entry) {
+      final selected = entry.key == iconKey;
+      return GestureDetector(
+        onTap: enabled ? () => onSelected(entry.key) : null,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Color(colorValue),
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(width: 3, color: Colors.black87)
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            entry.icon,
+            size: 20,
+            color: Color(colorValue).computeLuminance() > 0.55
+                ? Colors.black87
+                : Colors.white,
+          ),
+        ),
+      );
+    }).toList(),
+  );
 }
 
 /// Opens picker: choose from suggested list, or create a custom category.
@@ -116,9 +155,10 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
                     runSpacing: 8,
                     children: available.map((cat) {
                       return ActionChip(
-                        avatar: CircleAvatar(
-                          backgroundColor: Color(cat.colorValue),
-                          radius: 8,
+                        avatar: CategoryColorIcon(
+                          colorValue: cat.colorValue,
+                          iconKey: cat.iconKey,
+                          size: 24,
                         ),
                         label: Text(
                           '${cat.localizedName(state.localeCode)} · ${categoryTypeLabel(l10n, cat.type)}',
@@ -169,6 +209,7 @@ Future<String?> showCategoryEditor(
   );
   var type = existing?.type ?? preferredType ?? 'spend';
   var colorValue = existing?.colorValue ?? categoryColorPalette.first;
+  var iconKey = existing?.iconKey ?? defaultCategoryIconKey;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -241,6 +282,12 @@ Future<String?> showCategoryEditor(
                       );
                     }).toList(),
                   ),
+                  Text(l10n.categoryIcon),
+                  _iconPicker(
+                    iconKey: iconKey,
+                    colorValue: colorValue,
+                    onSelected: (key) => setLocal(() => iconKey = key),
+                  ),
                 ],
                 FilledButton(
                   onPressed: () => Navigator.pop(ctx, true),
@@ -270,6 +317,7 @@ Future<String?> showCategoryEditor(
       return await state.addCategory(
         name: name,
         colorValue: colorValue,
+        iconKey: iconKey,
         type: type,
       );
     } else {
@@ -278,6 +326,7 @@ Future<String?> showCategoryEditor(
           nameEn: name,
           nameRu: name,
           colorValue: colorValue,
+          iconKey: iconKey,
           type: type,
           targetAmount: target,
           clearTargetAmount: target == null,
@@ -311,6 +360,7 @@ Future<void> showCategoryRegisterSheet(
   );
   var type = category.type;
   var colorValue = category.colorValue;
+  var iconKey = category.iconKey;
 
   final result = await showModalBottomSheet<String>(
     context: context,
@@ -394,6 +444,15 @@ Future<void> showCategoryRegisterSheet(
                         ),
                       );
                     }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l10n.categoryIcon),
+                  const SizedBox(height: 8),
+                  _iconPicker(
+                    iconKey: iconKey,
+                    colorValue: colorValue,
+                    enabled: canEdit,
+                    onSelected: (key) => setModal(() => iconKey = key),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -522,6 +581,7 @@ Future<void> showCategoryRegisterSheet(
       nameEn: name,
       nameRu: name,
       colorValue: colorValue,
+      iconKey: iconKey,
       type: type,
       targetAmount: target,
       clearTargetAmount: target == null,

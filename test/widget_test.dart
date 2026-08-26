@@ -100,6 +100,7 @@ void main() {
           nameEn: 'Car',
           nameRu: 'Автомобиль',
           colorValue: 0xFF00FF00,
+          iconKey: 'directions_car',
           type: 'spend',
           sortOrder: 0,
         ),
@@ -144,6 +145,7 @@ void main() {
         nameEn: 'Emergency fund',
         nameRu: 'Резервный фонд',
         colorValue: 0xFFFFCC80,
+        iconKey: 'savings',
         type: 'savings',
         sortOrder: 0,
         targetAmount: 30000,
@@ -152,11 +154,13 @@ void main() {
       expect(cat.isSavings, isTrue);
       final map = cat.toMap();
       expect(map['targetAmount'], 30000);
+      expect(map['iconKey'], 'savings');
       expect(map.containsKey('savedTotal'), isFalse);
 
       final parsed = BudgetCategory.fromMap('c1', {...map, 'savedTotal': 1200});
       expect(parsed.targetAmount, 30000);
       expect(parsed.savedTotal, 1200);
+      expect(parsed.iconKey, 'savings');
 
       final noTarget = BudgetCategory.fromMap('c2', {
         'nameEn': 'Savings',
@@ -167,6 +171,7 @@ void main() {
       });
       expect(noTarget.targetAmount, isNull);
       expect(noTarget.savedTotal, 0);
+      expect(noTarget.iconKey, 'category');
     },
   );
 

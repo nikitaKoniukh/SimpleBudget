@@ -708,6 +708,7 @@ class AppState extends ChangeNotifier {
   Future<String> addCategory({
     required String name,
     required int colorValue,
+    required String iconKey,
     required String type,
     String? nameEn,
     String? nameRu,
@@ -734,6 +735,7 @@ class AppState extends ChangeNotifier {
       nameEn: en,
       nameRu: ru,
       colorValue: colorValue,
+      iconKey: iconKey,
       type: type,
       sortOrder: _categories.length,
       targetAmount: targetAmount,
@@ -746,6 +748,7 @@ class AppState extends ChangeNotifier {
           nameEn: en,
           nameRu: ru,
           colorValue: colorValue,
+          iconKey: iconKey,
           type: type,
           sortOrder: _categories.length,
           targetAmount: targetAmount,
@@ -770,6 +773,7 @@ class AppState extends ChangeNotifier {
       nameEn: suggested.nameEn,
       nameRu: suggested.nameRu,
       colorValue: suggested.colorValue,
+      iconKey: suggested.iconKey,
       type: suggested.type,
     );
   }
@@ -784,6 +788,7 @@ class AppState extends ChangeNotifier {
       nameEn: DefaultCategories.savingsNameEn,
       nameRu: DefaultCategories.savingsNameRu,
       colorValue: DefaultCategories.savingsColorValue,
+      iconKey: DefaultCategories.savingsIconKey,
       type: 'savings',
       sortOrder: _categories.length,
     );
@@ -795,6 +800,7 @@ class AppState extends ChangeNotifier {
           nameEn: DefaultCategories.savingsNameEn,
           nameRu: DefaultCategories.savingsNameRu,
           colorValue: DefaultCategories.savingsColorValue,
+          iconKey: DefaultCategories.savingsIconKey,
           type: 'savings',
           sortOrder: _categories.length,
         ),

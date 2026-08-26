@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../home/log_entry_sheet.dart';
 import '../home/quick_log_sheet.dart';
 
@@ -249,17 +250,23 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: Color(
-                              cat?.colorValue ?? 0xFF90A4AE,
-                            ).withValues(alpha: 0.35),
-                            child: Icon(
-                              isDeposit
-                                  ? Icons.savings_outlined
-                                  : Icons.arrow_upward_rounded,
-                              color: SyncColors.accent,
-                            ),
-                          ),
+                          leading: cat != null
+                              ? CategoryColorIcon(
+                                  colorValue: cat.colorValue,
+                                  iconKey: cat.iconKey,
+                                  size: 40,
+                                )
+                              : CircleAvatar(
+                                  backgroundColor: Color(
+                                    0xFF90A4AE,
+                                  ).withValues(alpha: 0.35),
+                                  child: Icon(
+                                    isDeposit
+                                        ? Icons.savings_outlined
+                                        : Icons.arrow_upward_rounded,
+                                    color: SyncColors.accent,
+                                  ),
+                                ),
                           title: Text(title),
                           subtitle: Text(subtitleParts.join(' · ')),
                           trailing: Text(

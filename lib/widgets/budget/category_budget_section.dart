@@ -8,6 +8,7 @@ import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../screens/category/budget_sheets.dart';
 import '../../screens/category/category_sheets.dart';
+import 'category_color_icon.dart';
 import 'subcategory_budget_row.dart';
 
 const _amountColWidth = 88.0;
@@ -34,7 +35,6 @@ class CategoryBudgetSection extends StatelessWidget {
     final overColor = SyncColors.overspend;
     final subs = state.subcategoriesFor(cat.id);
     final canEdit = state.canEditPlan;
-    final color = Color(cat.colorValue);
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
 
     return Padding(
@@ -56,13 +56,10 @@ class CategoryBudgetSection extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                 child: Row(
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                      ),
+                    CategoryColorIcon(
+                      colorValue: cat.colorValue,
+                      iconKey: cat.iconKey,
+                      size: 28,
                     ),
                     const SizedBox(width: 8),
                     Expanded(

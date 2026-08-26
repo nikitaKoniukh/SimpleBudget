@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
+import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/summary_card.dart';
 import '../home/log_entry_sheet.dart';
 import '../category/category_sheets.dart';
@@ -195,6 +196,11 @@ class MonthHubScreen extends StatelessWidget {
                 margin: const EdgeInsets.only(bottom: 10),
                 color: Color(cat.colorValue).withValues(alpha: 0.35),
                 child: ListTile(
+                  leading: CategoryColorIcon(
+                    colorValue: cat.colorValue,
+                    iconKey: cat.iconKey,
+                    size: 36,
+                  ),
                   title: Row(
                     children: [
                       Expanded(

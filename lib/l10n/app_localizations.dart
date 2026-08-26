@@ -217,6 +217,7 @@ class AppLocalizations {
   String get categoryName => isRu ? 'Название категории' : 'Category name';
   String get categoryType => isRu ? 'Тип' : 'Type';
   String get categoryColor => isRu ? 'Цвет' : 'Color';
+  String get categoryIcon => isRu ? 'Иконка' : 'Icon';
   String get monthCreated => isRu ? 'Месяц создан' : 'Month created';
   String get selectMonth => isRu ? 'Выбрать месяц' : 'Select month';
   String get yearLabel => isRu ? 'Год' : 'Year';

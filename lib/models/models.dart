@@ -258,6 +258,7 @@ class BudgetCategory {
     required this.nameEn,
     required this.nameRu,
     required this.colorValue,
+    required this.iconKey,
     required this.type,
     required this.sortOrder,
     this.targetAmount,
@@ -268,6 +269,7 @@ class BudgetCategory {
   final String nameEn;
   final String nameRu;
   final int colorValue;
+  final String iconKey;
   /// spend | monthly | debt | savings
   final String type;
   final int sortOrder;
@@ -293,6 +295,7 @@ class BudgetCategory {
     String? nameEn,
     String? nameRu,
     int? colorValue,
+    String? iconKey,
     String? type,
     int? sortOrder,
     double? targetAmount,
@@ -304,6 +307,7 @@ class BudgetCategory {
       nameEn: nameEn ?? this.nameEn,
       nameRu: nameRu ?? this.nameRu,
       colorValue: colorValue ?? this.colorValue,
+      iconKey: iconKey ?? this.iconKey,
       type: type ?? this.type,
       sortOrder: sortOrder ?? this.sortOrder,
       targetAmount: clearTargetAmount
@@ -318,17 +322,20 @@ class BudgetCategory {
     'nameEn': nameEn,
     'nameRu': nameRu,
     'colorValue': colorValue,
+    'iconKey': iconKey,
     'type': type,
     'sortOrder': sortOrder,
     'targetAmount': targetAmount,
   };
 
   factory BudgetCategory.fromMap(String id, Map<String, dynamic> map) {
+    final rawIcon = map['iconKey'] as String? ?? '';
     return BudgetCategory(
       id: id,
       nameEn: map['nameEn'] as String? ?? '',
       nameRu: map['nameRu'] as String? ?? '',
       colorValue: (map['colorValue'] as num?)?.toInt() ?? 0xFFBDBDBD,
+      iconKey: rawIcon.isEmpty ? 'category' : rawIcon,
       type: map['type'] as String? ?? 'spend',
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       targetAmount: (map['targetAmount'] as num?)?.toDouble(),
