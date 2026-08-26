@@ -284,7 +284,7 @@ Future<void> showLogEntrySheet(
                           ),
                         ],
                       )
-                    else
+                    else ...[
                       DropdownButtonFormField<String>(
                         key: ValueKey(
                           'sub-$selectedCategoryId-$selectedSubId',
@@ -307,6 +307,24 @@ Future<void> showLogEntrySheet(
                           setModal(() => selectedSubId = v);
                         },
                       ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: selectedCategoryId == null
+                              ? null
+                              : () async {
+                                  final id = await showAddSubcategorySheet(
+                                    ctx,
+                                    categoryId: selectedCategoryId!,
+                                  );
+                                  if (id == null || !ctx.mounted) return;
+                                  setModal(() => selectedSubId = id);
+                                },
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.addSubcategory),
+                        ),
+                      ),
+                    ],
                   ],
                 ],
                 if (selectedKind == LogKind.save) ...[
