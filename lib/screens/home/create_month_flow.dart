@@ -181,6 +181,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.rolloverLeftover),
+                    subtitle: Text(l10n.leftoverPotHint),
                     value: _rollover,
                     onChanged: (v) =>
                         setState(() => _rollover = v ?? false),

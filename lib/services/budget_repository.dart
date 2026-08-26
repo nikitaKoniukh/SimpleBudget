@@ -350,9 +350,9 @@ class BudgetRepository {
   /// Deposits / savings pot entries are not copied (lifetime savedTotal).
   /// Installment current ticks up when it is below the subcategory total.
   ///
-  /// When [rolloverLeftover] is true, unused plan amounts from copied spend
-  /// categories are summed into a dedicated Leftover savings pot plan (not
-  /// added back onto each spend envelope).
+  /// When [rolloverLeftover] is true, ensures the Leftover savings pot exists.
+  /// The leftover amount is computed live from the previous month (not stored
+  /// as a plan on the new month).
   ///
   /// When [categoryIds] is non-null, only plans and expenses for subcategories
   /// under those categories are copied. Income sources are always copied.
@@ -400,17 +400,8 @@ class BudgetRepository {
       }
     }
 
-    final spentBySub = <String, double>{};
     String? leftoverPotId;
     if (rolloverLeftover) {
-      for (final doc in expenses.docs) {
-        final data = doc.data();
-        final subId = data['subcategoryId'] as String? ?? '';
-        if (subId.isEmpty) continue;
-        if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
-        spentBySub[subId] =
-            (spentBySub[subId] ?? 0) + ((data['amount'] as num?)?.toDouble() ?? 0);
-      }
       final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
       for (final doc in subs.docs) {
         final data = doc.data();
@@ -420,6 +411,11 @@ class BudgetRepository {
           break;
         }
       }
+      leftoverPotId ??= await _ensureLeftoverPot(
+        householdId: householdId,
+        categoryDocs: cats.docs,
+        subcategoryDocs: subs.docs,
+      );
     }
 
     final ops = <void Function(WriteBatch)>[
@@ -435,9 +431,8 @@ class BudgetRepository {
       );
     }
 
-    var totalLeftover = 0.0;
     for (final doc in plans.docs) {
-      // Fresh leftover total is written below; do not copy last month's pot plan.
+      // Leftover is derived live from the previous month — do not copy its plan.
       if (leftoverPotId != null && doc.id == leftoverPotId) continue;
       if (categoryIds != null) {
         final catId = subCategoryIds[doc.id] ?? '';
@@ -448,14 +443,6 @@ class BudgetRepository {
       final current = (data['installmentCurrent'] as num?)?.toInt();
       if (total != null && current != null && current < total) {
         data['installmentCurrent'] = current + 1;
-      }
-      if (rolloverLeftover && !savingsIds.contains(doc.id)) {
-        final planned = (data['planned'] as num?)?.toDouble() ?? 0;
-        final spent = spentBySub[doc.id] ?? 0;
-        final leftover = planned - spent;
-        if (leftover > 0) {
-          totalLeftover += leftover;
-        }
       }
       ops.add(
         (batch) => batch.set(toRef.collection('plans').doc(doc.id), data),
@@ -482,22 +469,6 @@ class BudgetRepository {
         (batch) => batch.set(
           toRef.collection('expenses').doc(_uuid.v4()),
           data,
-        ),
-      );
-    }
-
-    if (rolloverLeftover && totalLeftover > 0) {
-      leftoverPotId ??= await _ensureLeftoverPot(
-        householdId: householdId,
-        categoryDocs: cats.docs,
-        subcategoryDocs: subs.docs,
-      );
-      final potId = leftoverPotId;
-      ops.add(
-        (batch) => batch.set(
-          toRef.collection('plans').doc(potId),
-          {'planned': totalLeftover},
-          SetOptions(merge: true),
         ),
       );
     }

@@ -333,9 +333,24 @@ class AppLocalizations {
   String get splitSpend => _t('Split spend', 'Разделить трату', 'פיצול הוצאה');
   String get splitPart => _t('Part', 'Часть', 'חלק');
   String get rolloverLeftover => _t(
-        'Move leftover into Leftover pot',
-        'Перенести остаток в копилку «Остаток»',
-        'העברת יתרה לקופת «יתרה»',
+        'Track leftover from previous month',
+        'Отслеживать остаток прошлого месяца',
+        'מעקב אחרי יתרה מהחודש הקודם',
+      );
+  String get leftoverPotHint => _t(
+        'Sum of (income − spent) from all months before this one. Updates when any earlier month changes.',
+        'Сумма (доход − траты) по всем месяцам до текущего. Обновляется при изменениях в прошлых месяцах.',
+        'סכום (הכנסה − הוצאות) מכל החודשים שלפני הנוכחי. מתעדכן כשמשנים חודש קודם.',
+      );
+  String leftoverThroughPeriod(String monthTitle) => _t(
+        'Through $monthTitle',
+        'По $monthTitle включительно',
+        'עד $monthTitle כולל',
+      );
+  String get leftoverNoPreviousMonth => _t(
+        'No previous months yet',
+        'Пока нет предыдущих месяцев',
+        'אין עדיין חודשים קודמים',
       );
   String get copyPlanOnly => _t(
         'Copy plan and expense amounts',

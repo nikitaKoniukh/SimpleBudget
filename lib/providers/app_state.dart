@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/budget_repository.dart';
 import '../data/default_categories.dart';
+import '../utils/leftover.dart';
 import '../utils/money.dart';
 
 class AppState extends ChangeNotifier {
@@ -49,6 +50,12 @@ class AppState extends ChangeNotifier {
   StreamSubscription<List<IncomeEntry>>? _entriesSub;
   StreamSubscription<List<MonthPlan>>? _plansSub;
   StreamSubscription<List<Expense>>? _expensesSub;
+  final List<StreamSubscription<dynamic>> _priorMonthSubs = [];
+
+  final Map<String, List<Expense>> _priorExpensesByMonth = {};
+  final Map<String, List<IncomeEntry>> _priorIncomeByMonth = {};
+  /// Prior month ids included in leftover (sorted ascending).
+  List<String> _priorMonthIds = [];
 
   bool get loading => _loading;
   String? get error => _error;
@@ -140,6 +147,39 @@ class AppState extends ChangeNotifier {
   List<Subcategory> get summableSavingsPots =>
       savingsPots.where((p) => p.includeInTotal).toList();
 
+  String? get leftoverPotId {
+    for (final pot in savingsPots) {
+      if (DefaultPots.isLeftoverName(pot.nameEn)) return pot.id;
+    }
+    return null;
+  }
+
+  /// Most recent prior month included in leftover (for period label).
+  String? get leftoverSourceMonthId =>
+      _priorMonthIds.isEmpty ? null : _priorMonthIds.last;
+
+  /// Cumulative cash left from all months before the selected one:
+  /// Σ (income − spent), using the same spent rules as Home.
+  double get leftoverFromPreviousMonth {
+    if (_priorMonthIds.isEmpty) return 0;
+    var income = 0.0;
+    for (final id in _priorMonthIds) {
+      for (final e in _priorIncomeByMonth[id] ?? const <IncomeEntry>[]) {
+        income += e.amount;
+      }
+    }
+    final leftoverId = leftoverPotId;
+    final liveSubIds = subcategories.map((s) => s.id).toSet();
+    final expenses = <Expense>[
+      for (final id in _priorMonthIds)
+        for (final e in _priorExpensesByMonth[id] ?? const <Expense>[])
+          if (e.subcategoryId != leftoverId &&
+              (liveSubIds.isEmpty || liveSubIds.contains(e.subcategoryId)))
+            e,
+    ];
+    return computeUnspentLeftover(income: income, expenses: expenses);
+  }
+
   List<BudgetCategory> categoriesOfType(String type) =>
       _categories.where((c) => c.type == type).toList();
 
@@ -173,8 +213,13 @@ class AppState extends ChangeNotifier {
   MonthTotals get totals {
     final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
     final liveSubIds = subcategories.map((s) => s.id).toSet();
+    final leftoverId = leftoverPotId;
     final planned = _plans
-        .where((p) => liveSubIds.contains(p.subcategoryId))
+        .where(
+          (p) =>
+              liveSubIds.contains(p.subcategoryId) &&
+              p.subcategoryId != leftoverId,
+        )
         .fold<double>(0, (s, p) => s + p.planned);
     final actual = _expenses
         .where((e) => liveSubIds.contains(e.subcategoryId))
@@ -385,7 +430,16 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<void> _detachMonthDataListeners() async {
+  Future<void> _detachPriorMonthsListeners() async {
+    for (final sub in _priorMonthSubs) {
+      await sub.cancel();
+    }
+    _priorMonthSubs.clear();
+  }
+
+  int _priorListenGeneration = 0;
+
+  Future<void> _detachCurrentMonthListeners() async {
     await _sourcesSub?.cancel();
     await _entriesSub?.cancel();
     await _plansSub?.cancel();
@@ -398,6 +452,105 @@ class AppState extends ChangeNotifier {
     _incomeEntries = [];
     _plans = [];
     _expenses = [];
+  }
+
+  Future<void> _detachMonthDataListeners() async {
+    await _detachCurrentMonthListeners();
+    await _detachPriorMonthsListeners();
+    _priorExpensesByMonth.clear();
+    _priorIncomeByMonth.clear();
+    _priorMonthIds = [];
+  }
+
+  Future<List<String>> _priorMonthIdsFor(
+    String hid,
+    String currentMonthId,
+  ) async {
+    final fromList = _months
+        .map((m) => m.id)
+        .where((id) => id.compareTo(currentMonthId) < 0)
+        .toSet();
+    final prevId = previousMonthId(currentMonthId);
+    if (!fromList.contains(prevId)) {
+      try {
+        if (await _repo.monthExists(hid, prevId)) {
+          fromList.add(prevId);
+        }
+      } catch (_) {}
+    }
+    final ids = fromList.toList()..sort();
+    return ids;
+  }
+
+  Future<void> _listenPriorMonthsData(String hid, String currentMonthId) async {
+    final generation = ++_priorListenGeneration;
+    final priorIds = await _priorMonthIdsFor(hid, currentMonthId);
+    if (generation != _priorListenGeneration) return;
+
+    if (priorIds.isEmpty) {
+      await _detachPriorMonthsListeners();
+      _priorExpensesByMonth.clear();
+      _priorIncomeByMonth.clear();
+      _priorMonthIds = [];
+      notifyListeners();
+      return;
+    }
+
+    if (_listEquals(priorIds, _priorMonthIds) && _priorMonthSubs.isNotEmpty) {
+      return;
+    }
+
+    final incomeByMonth = <String, List<IncomeEntry>>{};
+    final expensesByMonth = <String, List<Expense>>{};
+    try {
+      for (final id in priorIds) {
+        if (generation != _priorListenGeneration) return;
+        incomeByMonth[id] = await _repo.fetchIncomeEntries(hid, id);
+        expensesByMonth[id] = await _repo.fetchExpenses(hid, id);
+      }
+    } catch (e) {
+      if (generation != _priorListenGeneration) return;
+      _error = e.toString();
+      notifyListeners();
+      return;
+    }
+    if (generation != _priorListenGeneration) return;
+
+    await _detachPriorMonthsListeners();
+    if (generation != _priorListenGeneration) return;
+
+    _priorMonthIds = priorIds;
+    _priorIncomeByMonth
+      ..clear()
+      ..addAll(incomeByMonth);
+    _priorExpensesByMonth
+      ..clear()
+      ..addAll(expensesByMonth);
+    notifyListeners();
+
+    for (final id in priorIds) {
+      if (generation != _priorListenGeneration) return;
+      _priorMonthSubs.add(
+        _repo.watchIncomeEntries(hid, id).listen((v) {
+          if (generation != _priorListenGeneration) return;
+          if (v.isEmpty && (_priorIncomeByMonth[id]?.isNotEmpty ?? false)) {
+            return;
+          }
+          _priorIncomeByMonth[id] = v;
+          notifyListeners();
+        }),
+      );
+      _priorMonthSubs.add(
+        _repo.watchExpenses(hid, id).listen((v) {
+          if (generation != _priorListenGeneration) return;
+          if (v.isEmpty && (_priorExpensesByMonth[id]?.isNotEmpty ?? false)) {
+            return;
+          }
+          _priorExpensesByMonth[id] = v;
+          notifyListeners();
+        }),
+      );
+    }
   }
 
   Future<void> _detachBudgetListeners() async {
@@ -513,6 +666,15 @@ class AppState extends ChangeNotifier {
       } else if (_monthId == null && list.isNotEmpty) {
         _monthId = preferredMonthId(monthIds);
         await _listenMonthData(householdId, _monthId!);
+      } else if (_monthId != null) {
+        final nextPrior = list
+            .map((m) => m.id)
+            .where((id) => id.compareTo(_monthId!) < 0)
+            .toList()
+          ..sort();
+        if (!_listEquals(nextPrior, _priorMonthIds)) {
+          await _listenPriorMonthsData(householdId, _monthId!);
+        }
       }
       notifyListeners();
     });
@@ -541,7 +703,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _listenMonthData(String hid, String monthId) async {
-    await _detachMonthDataListeners();
+    await _detachCurrentMonthListeners();
     _sourcesSub = _repo.watchIncomeSources(hid, monthId).listen((v) {
       _incomeSources = v;
       notifyListeners();
@@ -558,6 +720,8 @@ class AppState extends ChangeNotifier {
       _expenses = v;
       notifyListeners();
     });
+
+    await _listenPriorMonthsData(hid, monthId);
   }
 
   Future<void> setMonth(String monthId) async {
@@ -941,6 +1105,19 @@ class AppState extends ChangeNotifier {
 
   Future<String> addSuggestedPot(DefaultPot pot) async {
     return addPot(name: pot.nameEn, nameEn: pot.nameEn, nameRu: pot.nameRu);
+  }
+
+  /// Ensures the default Leftover pot exists under Savings (Set aside).
+  Future<String?> ensureLeftoverPot() async {
+    if (_activeHid == null) return null;
+    for (final pot in savingsPots) {
+      if (DefaultPots.isLeftoverName(pot.nameEn)) return pot.id;
+    }
+    return addPot(
+      name: DefaultPots.leftoverNameEn,
+      nameEn: DefaultPots.leftoverNameEn,
+      nameRu: DefaultPots.leftoverNameRu,
+    );
   }
 
   Future<int> addDefaultCategories() async {

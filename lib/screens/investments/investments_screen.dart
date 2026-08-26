@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -10,8 +12,25 @@ import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import 'investments_sheets.dart';
 
-class InvestmentsScreen extends StatelessWidget {
+class InvestmentsScreen extends StatefulWidget {
   const InvestmentsScreen({super.key});
+
+  @override
+  State<InvestmentsScreen> createState() => _InvestmentsScreenState();
+}
+
+class _InvestmentsScreenState extends State<InvestmentsScreen> {
+  var _ensuredLeftover = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_ensuredLeftover) return;
+    final state = context.read<AppState>();
+    if (!state.hasMonthSelected) return;
+    _ensuredLeftover = true;
+    unawaited(state.ensureLeftoverPot());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,9 +48,15 @@ class InvestmentsScreen extends StatelessWidget {
     }
 
     final pots = state.savingsPots;
-    final summable = state.summableSavingsPots;
+    final leftoverPot = pots
+        .where((p) => DefaultPots.isLeftoverName(p.nameEn))
+        .firstOrNull;
+    final otherPots =
+        pots.where((p) => !DefaultPots.isLeftoverName(p.nameEn)).toList();
+    final summable =
+        otherPots.where((p) => p.includeInTotal).toList(growable: false);
     final excluded =
-        pots.where((p) => !p.includeInTotal).toList(growable: false);
+        otherPots.where((p) => !p.includeInTotal).toList(growable: false);
     final totalSaved = summable.fold<double>(0, (s, p) => s + p.savedTotal);
     final targeted = summable.where(
       (p) => p.targetAmount != null && p.targetAmount! > 0,
@@ -42,9 +67,9 @@ class InvestmentsScreen extends StatelessWidget {
         ? 0.0
         : (totalSaved / totalTarget).clamp(0.0, 1.0);
     final monthSaved =
-        pots.fold<double>(0, (s, p) => s + state.spentFor(p.id));
+        otherPots.fold<double>(0, (s, p) => s + state.spentFor(p.id));
     final monthPlan =
-        pots.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
+        otherPots.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
 
     return SyncBackground(
       child: Scaffold(
@@ -98,6 +123,10 @@ class InvestmentsScreen extends StatelessWidget {
                     inTotalCount: summable.length,
                     notInTotalCount: excluded.length,
                   ),
+                  if (leftoverPot != null) ...[
+                    const SizedBox(height: 12),
+                    _PotCard(subcategory: leftoverPot),
+                  ],
                   if (summable.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     _SectionHeader(
@@ -276,13 +305,18 @@ class _PotCard extends StatelessWidget {
     final pot = state.subcategoryById(subcategory.id) ?? subcategory;
     final colorValue = state.categoryById(pot.categoryId)?.colorValue ??
         DefaultCategories.savingsColorValue;
-    final hasTarget = pot.targetAmount != null && pot.targetAmount! > 0;
+    final isLeftover = DefaultPots.isLeftoverName(pot.nameEn);
+    final leftoverAmount =
+        isLeftover ? state.leftoverFromPreviousMonth : pot.savedTotal;
+    final leftoverSourceId = isLeftover ? state.leftoverSourceMonthId : null;
+    final hasTarget =
+        !isLeftover && pot.targetAmount != null && pot.targetAmount! > 0;
     final ratio = !hasTarget
         ? (pot.savedTotal > 0 ? 1.0 : 0.0)
         : (pot.savedTotal / pot.targetAmount!).clamp(0.0, 1.0);
     final monthSaved = state.spentFor(pot.id);
     final monthPlan = state.plannedFor(pot.id);
-    final showMonth = monthSaved > 0 || monthPlan > 0;
+    final showMonth = !isLeftover && (monthSaved > 0 || monthPlan > 0);
     final metaStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           color: SyncColors.textMuted,
         );
@@ -294,7 +328,9 @@ class _PotCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => showPotDetailSheet(context, subcategory: pot),
+          onTap: isLeftover
+              ? null
+              : () => showPotDetailSheet(context, subcategory: pot),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
             child: Column(
@@ -318,11 +354,24 @@ class _PotCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      formatIls(pot.savedTotal),
+                      formatIls(isLeftover ? leftoverAmount : pot.savedTotal),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
+                if (isLeftover) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    leftoverSourceId == null
+                        ? l10n.leftoverNoPreviousMonth
+                        : l10n.leftoverThroughPeriod(
+                            l10n.monthTitle(dateFromMonthId(leftoverSourceId)),
+                          ),
+                    style: metaStyle,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(l10n.leftoverPotHint, style: metaStyle),
+                ],
                 if (hasTarget) ...[
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -352,7 +401,7 @@ class _PotCard extends StatelessWidget {
                     style: metaStyle,
                   ),
                 ],
-                if (pot.targetDate != null) ...[
+                if (!isLeftover && pot.targetDate != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     '${l10n.targetDate}: '

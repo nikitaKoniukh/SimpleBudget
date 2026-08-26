@@ -185,7 +185,11 @@ class DefaultPots {
   static const leftoverNameEn = 'Leftover';
   static const leftoverNameRu = 'Остаток';
 
+  static bool isLeftoverName(String nameEn) =>
+      nameEn.toLowerCase() == leftoverNameEn.toLowerCase();
+
   static const List<DefaultPot> all = [
+    DefaultPot(nameEn: leftoverNameEn, nameRu: leftoverNameRu),
     DefaultPot(nameEn: 'Emergency fund', nameRu: 'Резервный фонд'),
     DefaultPot(nameEn: 'Investments', nameRu: 'Инвестиции'),
   ];

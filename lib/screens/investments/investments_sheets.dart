@@ -212,21 +212,24 @@ Future<String?> showEditPotSheet(
                   decoration: InputDecoration(labelText: l10n.subcategoryName),
                   autofocus: existing == null,
                 ),
-                TextField(
-                  controller: plannedCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: l10n.plannedLabel),
-                ),
-                TextField(
-                  controller: priorSavedCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: l10n.alreadySaved,
-                    helperText: l10n.alreadySavedHint,
+                if (existing == null ||
+                    !DefaultPots.isLeftoverName(existing.nameEn)) ...[
+                  TextField(
+                    controller: plannedCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(labelText: l10n.plannedLabel),
                   ),
-                ),
+                  TextField(
+                    controller: priorSavedCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: l10n.alreadySaved,
+                      helperText: l10n.alreadySavedHint,
+                    ),
+                  ),
+                ],
                 TextField(
                   controller: targetCtrl,
                   keyboardType:
@@ -304,11 +307,13 @@ Future<String?> showEditPotSheet(
         includeInTotal: includeInTotal,
       ),
     );
-    await state.upsertPlan(subcategoryId: existing.id, planned: planned);
-    await state.setPriorSavings(
-      subcategoryId: existing.id,
-      amount: priorSaved > 0 ? priorSaved : 0,
-    );
+    if (!DefaultPots.isLeftoverName(existing.nameEn)) {
+      await state.upsertPlan(subcategoryId: existing.id, planned: planned);
+      await state.setPriorSavings(
+        subcategoryId: existing.id,
+        amount: priorSaved > 0 ? priorSaved : 0,
+      );
+    }
     return existing.id;
   } catch (e) {
     if (!context.mounted) return null;

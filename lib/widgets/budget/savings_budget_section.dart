@@ -16,7 +16,9 @@ class SavingsBudgetSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
-    final pots = state.savingsPots;
+    final pots = state.savingsPots
+        .where((p) => !DefaultPots.isLeftoverName(p.nameEn))
+        .toList(growable: false);
     if (pots.isEmpty) return const SizedBox.shrink();
 
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
