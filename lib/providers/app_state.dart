@@ -140,13 +140,6 @@ class AppState extends ChangeNotifier {
   List<Subcategory> get summableSavingsPots =>
       savingsPots.where((p) => p.includeInTotal).toList();
 
-  bool _includeSubcategoryInSavingsTotal(String subcategoryId) {
-    for (final s in _subcategories) {
-      if (s.id == subcategoryId) return s.includeInTotal;
-    }
-    return true;
-  }
-
   List<BudgetCategory> categoriesOfType(String type) =>
       _categories.where((c) => c.type == type).toList();
 
@@ -194,8 +187,7 @@ class AppState extends ChangeNotifier {
         .where(
           (e) =>
               liveSubIds.contains(e.subcategoryId) &&
-              (e.isDeposit || _isSavingsPot(e.subcategoryId)) &&
-              _includeSubcategoryInSavingsTotal(e.subcategoryId),
+              (e.isDeposit || _isSavingsPot(e.subcategoryId)),
         )
         .fold<double>(0, (s, e) => s + e.amount);
     return MonthTotals(

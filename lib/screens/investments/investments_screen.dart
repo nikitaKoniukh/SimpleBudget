@@ -42,9 +42,9 @@ class InvestmentsScreen extends StatelessWidget {
         ? 0.0
         : (totalSaved / totalTarget).clamp(0.0, 1.0);
     final monthSaved =
-        summable.fold<double>(0, (s, p) => s + state.spentFor(p.id));
+        pots.fold<double>(0, (s, p) => s + state.spentFor(p.id));
     final monthPlan =
-        summable.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
+        pots.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
 
     return SyncBackground(
       child: Scaffold(
