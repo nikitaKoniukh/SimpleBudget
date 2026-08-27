@@ -334,6 +334,7 @@ class BudgetRepository {
   Future<void> createEmptyMonth({
     required String householdId,
     required String monthId,
+    bool rolloverLeftover = false,
   }) async {
     final ref = _monthRef(householdId, monthId);
     final existing = await ref.get();
@@ -341,6 +342,15 @@ class BudgetRepository {
       throw StateError('Month already exists');
     }
     await ref.set(BudgetMonth(id: monthId).toMap());
+    if (rolloverLeftover) {
+      final cats = await _categories(householdId).get();
+      final subs = await _subcategories(householdId).get();
+      await _ensureLeftoverPot(
+        householdId: householdId,
+        categoryDocs: cats.docs,
+        subcategoryDocs: subs.docs,
+      );
+    }
     await applyRecurringBillsToMonth(
       householdId: householdId,
       monthId: monthId,

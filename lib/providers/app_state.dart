@@ -903,7 +903,11 @@ class AppState extends ChangeNotifier {
     final hid = _activeHid;
     if (hid == null) throw StateError('No household');
     if (empty) {
-      await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
+      await _repo.createEmptyMonth(
+        householdId: hid,
+        monthId: monthId,
+        rolloverLeftover: rolloverLeftover,
+      );
     } else {
       final copyFrom =
           copyFromMonthId ??
@@ -917,7 +921,11 @@ class AppState extends ChangeNotifier {
           categoryIds: categoryIdsToCopy,
         );
       } else {
-        await _repo.createEmptyMonth(householdId: hid, monthId: monthId);
+        await _repo.createEmptyMonth(
+          householdId: hid,
+          monthId: monthId,
+          rolloverLeftover: rolloverLeftover,
+        );
       }
     }
     await setMonth(monthId);

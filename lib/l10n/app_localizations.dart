@@ -244,6 +244,8 @@ class AppLocalizations {
   String get splitPart => _s('splitPart');
   String get rolloverLeftover => _s('rolloverLeftover');
   String get leftoverPotHint => _s('leftoverPotHint');
+  String get leftoverToggleOff => _s('leftoverToggleOff');
+  String get leftoverToggleOn => _s('leftoverToggleOn');
   String get leftoverNoPreviousMonth => _s('leftoverNoPreviousMonth');
   String get copyPlanOnly => _s('copyPlanOnly');
   String get reports => _s('reports');

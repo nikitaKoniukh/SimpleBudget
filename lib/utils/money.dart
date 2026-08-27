@@ -59,3 +59,24 @@ String? preferredMonthId(Iterable<String> monthIds) {
   ids.sort();
   return ids.first;
 }
+
+/// Month to pre-select when adding a new month: the slot after the latest
+/// existing month, or the earliest open slot from the current calendar month.
+DateTime suggestedNewMonthDate(Iterable<String> existingMonthIds) {
+  final existing = existingMonthIds.toSet();
+  if (existing.isNotEmpty) {
+    final sorted = existing.toList()..sort();
+    var cursor = dateFromMonthId(sorted.last);
+    cursor = DateTime(cursor.year, cursor.month + 1);
+    for (var i = 0; i < 36; i++) {
+      if (!existing.contains(monthIdFromDate(cursor))) return cursor;
+      cursor = DateTime(cursor.year, cursor.month + 1);
+    }
+  }
+  var cursor = DateTime(DateTime.now().year, DateTime.now().month);
+  for (var i = 0; i < 36; i++) {
+    if (!existing.contains(monthIdFromDate(cursor))) return cursor;
+    cursor = DateTime(cursor.year, cursor.month + 1);
+  }
+  return DateTime(DateTime.now().year, DateTime.now().month);
+}

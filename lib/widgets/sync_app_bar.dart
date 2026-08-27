@@ -12,7 +12,7 @@ import '../screens/settings/settings_screen.dart';
 import '../theme/sync_theme.dart';
 import '../utils/money.dart';
 
-enum SyncAppBarKind { home, tab, page, modal }
+enum SyncAppBarKind { home, tab, page, modal, flow }
 
 /// Modern transparent app bar — large titles, glass action buttons, light context links.
 class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -22,6 +22,7 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showBack = true,
     this.showSettings = true,
     this.onClose,
+    this.onBack,
   });
 
   /// Home tab — large month title, household link, glass actions.
@@ -43,11 +44,13 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
   factory SyncAppBar.page({
     required String title,
     bool showBack = true,
+    VoidCallback? onBack,
   }) =>
       SyncAppBar._(
         kind: SyncAppBarKind.page,
         title: title,
         showBack: showBack,
+        onBack: onBack,
       );
 
   /// Full-screen modal flows — close button and step title.
@@ -61,17 +64,26 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
         onClose: onClose,
       );
 
+  /// Multi-step flows — back only; titles live in the page hero.
+  factory SyncAppBar.flow({VoidCallback? onBack}) =>
+      SyncAppBar._(
+        kind: SyncAppBarKind.flow,
+        onBack: onBack,
+      );
+
   final SyncAppBarKind kind;
   final String? title;
   final bool showBack;
   final bool showSettings;
   final VoidCallback? onClose;
+  final VoidCallback? onBack;
 
   double get _contentHeight => switch (kind) {
         SyncAppBarKind.home => 92,
         SyncAppBarKind.tab => 80,
         SyncAppBarKind.page => 76,
         SyncAppBarKind.modal => 56,
+        SyncAppBarKind.flow => 48,
       };
 
   @override
@@ -132,12 +144,14 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
                   theme: theme,
                   title: title!,
                   showBack: showBack,
+                  onBack: onBack,
                 ),
               SyncAppBarKind.modal => _ModalContent(
                   theme: theme,
                   title: title!,
                   onClose: onClose ?? () => Navigator.pop(context),
                 ),
+              SyncAppBarKind.flow => _FlowContent(onBack: onBack),
             },
           ),
         ),
@@ -465,6 +479,7 @@ class _PageContent extends StatelessWidget {
     required this.theme,
     required this.title,
     required this.showBack,
+    this.onBack,
   });
 
   final AppLocalizations l10n;
@@ -472,6 +487,7 @@ class _PageContent extends StatelessWidget {
   final ThemeData theme;
   final String title;
   final bool showBack;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -485,7 +501,7 @@ class _PageContent extends StatelessWidget {
               _GlassIconAction(
                 icon: Icons.arrow_back_rounded,
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                onPressed: () => Navigator.maybePop(context),
+                onPressed: onBack ?? () => Navigator.maybePop(context),
               ),
               const SizedBox(width: 10),
             ],
@@ -512,6 +528,24 @@ class _PageContent extends StatelessWidget {
           _ContextSubtitle(l10n: l10n, state: state),
         ],
       ],
+    );
+  }
+}
+
+class _FlowContent extends StatelessWidget {
+  const _FlowContent({this.onBack});
+
+  final VoidCallback? onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: _GlassIconAction(
+        icon: Icons.arrow_back_rounded,
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+        onPressed: onBack ?? () => Navigator.maybePop(context),
+      ),
     );
   }
 }
