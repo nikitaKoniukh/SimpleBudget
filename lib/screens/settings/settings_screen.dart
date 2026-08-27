@@ -167,14 +167,22 @@ class SettingsScreen extends StatelessWidget {
             const Divider(),
             ListTile(
               title: Text(l10n.language),
-              subtitle: SegmentedButton<String>(
-                segments: [
-                  const ButtonSegment(value: 'en', label: Text('English')),
-                  const ButtonSegment(value: 'ru', label: Text('Русский')),
-                  ButtonSegment(value: 'he', label: Text(l10n.hebrew)),
+              subtitle: DropdownButton<String>(
+                value: state.localeCode,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: 'en', child: Text('English')),
+                  DropdownMenuItem(value: 'ru', child: Text('Русский')),
+                  DropdownMenuItem(value: 'he', child: Text('עברית')),
+                  DropdownMenuItem(value: 'es', child: Text('Español')),
+                  DropdownMenuItem(value: 'fr', child: Text('Français')),
+                  DropdownMenuItem(value: 'uk', child: Text('Українська')),
+                  DropdownMenuItem(value: 'ar', child: Text('العربية')),
+                  DropdownMenuItem(value: 'de', child: Text('Deutsch')),
                 ],
-                selected: {state.localeCode},
-                onSelectionChanged: (s) => state.setLocale(s.first),
+                onChanged: (code) {
+                  if (code != null) state.setLocale(code);
+                },
               ),
             ),
             ListTile(

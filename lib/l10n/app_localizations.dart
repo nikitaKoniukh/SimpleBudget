@@ -1,220 +1,131 @@
 import 'package:flutter/material.dart';
 
-/// Simple bilingual strings with EN/RU toggle (no gen-l10n codegen required).
+import 'app_strings.dart';
+import 'locale_lookup.dart';
+
 class AppLocalizations {
   AppLocalizations(this.localeCode);
 
   final String localeCode;
 
-  bool get isRu => localeCode == 'ru';
-  bool get isHe => localeCode == 'he';
-
-  String _t(String en, String ru, [String? he]) {
-    if (isRu) return ru;
-    if (isHe) return he ?? en;
-    return en;
-  }
+  String _s(String key) => AppStrings.get(key, localeCode);
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
   }
 
   String get appTitle => 'SyncMonth';
-  String get tagline =>
-      _t('Family monthly budget', 'Семейный месячный бюджет', 'תקציב משפחתי חודשי');
-
-  String get month => _t('Month', 'Месяц', 'חודש');
-  String get home => _t('Home', 'Домой', 'בית');
-  String get activity => _t('Activity', 'Активность', 'פעילות');
-  String get plan => _t('Plan', 'План', 'תוכנית');
-  String get income => _t('Income', 'Доход', 'הכנסה');
-  String get expense => _t('Expense', 'Расход', 'הוצאה');
-  String get overview => _t('Reports', 'Обзор', 'דוחות');
-  String get settings => _t('Settings', 'Настройки', 'הגדרות');
-  String get log => _t('Log', 'Записать', 'רישום');
-  String get remaining => _t('Remaining', 'Остаток', 'יתרה');
-  String get overspent => _t('Overspent', 'Перерасход', 'חריגה');
-  String get forgotPassword =>
-      _t('Forgot password?', 'Забыли пароль?', 'שכחתם סיסמה?');
-  String get resetEmailSent => _t(
-        'Check your email for a reset link.',
-        'Проверьте почту — отправили ссылку.',
-        'בדקו את האימייל לקישור לאיפוס.',
-      );
-  String get fieldRequired => _t('Required', 'Обязательно', 'שדה חובה');
-  String get invalidEmail => _t('Invalid email', 'Некорректный email', 'אימייל לא תקין');
-  String get minPassword => _t('Min 6 chars', 'Минимум 6 символов', 'לפחות 6 תווים');
-  String get editIncomeSource =>
-      _t('Edit income source', 'Изменить источник', 'עריכת מקור הכנסה');
-  String get deleteIncomeSource =>
-      _t('Delete income source', 'Удалить источник', 'מחיקת מקור הכנסה');
-  String get quickLog => isRu ? 'Быстрая запись' : 'Quick log';
-  String get recentExpenses => isRu ? 'Недавние траты' : 'Recent expenses';
-  String get incomeEntries => isRu ? 'Доходы' : 'Income entries';
-  String get addFirstIncome =>
-      isRu ? 'Добавьте первый доход' : 'Add first income';
-  String get editIncome => isRu ? 'Изменить доход' : 'Edit income';
-  String get deleteIncome => isRu ? 'Удалить доход' : 'Delete income';
-  String get createThisMonth =>
-      isRu ? 'Создать этот месяц' : 'Create this month';
-  String get howAreWeDoing => isRu
-      ? 'Как мы с бюджетом в этом месяце?'
-      : 'How are we doing this month?';
-  String get startNextMonth => isRu
-      ? 'Начать следующий месяц из этого плана'
-      : 'Start next month from this plan';
-  String get stepPickMonth => isRu ? 'Выберите месяц' : 'Pick a month';
-  String get stepCategoriesOrCopy =>
-      isRu ? 'Категории или копия' : 'Categories or copy';
-  String get continueLabel => isRu ? 'Далее' : 'Continue';
-  String get done => isRu ? 'Готово' : 'Done';
-  String get edit => isRu ? 'Редактировать' : 'Edit';
-  String get plannedLabel =>
-      _t('Monthly budget', 'Бюджет на месяц', 'תקציב לחודש');
-  String get spentLabel => _t('Spent', 'Потрачено', 'הוצא');
-
-  String get budget => isRu ? 'Бюджет' : 'Budget';
-  String get actual => isRu ? 'Фактически' : 'Actual';
-  String get difference => isRu ? 'Разница' : 'Difference';
-  String get totalIncome => isRu ? 'Итого дохода' : 'Total income';
-  String get groupTotal => isRu ? 'Сумма по группе' : 'Group total';
-
-  String get planExceedsIncome =>
-      isRu ? 'План больше дохода' : 'Plan exceeds income';
-  String get addExpense => isRu ? 'Добавить трату' : 'Add expense';
-  String get addIncomeSource =>
-      isRu ? 'Добавить источник' : 'Add income source';
-  String get addItem => isRu ? 'Добавить позицию' : 'Add item';
-  String get addEntry => isRu ? 'Добавить сумму' : 'Add amount';
-  String get save => isRu ? 'Сохранить' : 'Save';
-  String get delete => isRu ? 'Удалить' : 'Delete';
-  String get removeFromMonth =>
-      isRu ? 'Убрать из этого месяца' : 'Remove from this month';
-  String get removeFromMonthConfirm => isRu
-      ? 'Подкатегория исчезнет только в выбранном месяце. Другие месяцы не изменятся.'
-      : 'Removes this subcategory from the selected month only. Other months stay unchanged.';
-  String get cancel => isRu ? 'Отмена' : 'Cancel';
-  String get description => isRu ? 'Описание' : 'Description';
-  String get category => isRu ? 'Категория' : 'Category';
-  String get categories => isRu ? 'Категории' : 'Categories';
-  String get installment => isRu ? 'Рассрочка' : 'Installment';
-  String get installmentCurrent =>
-      _t('Current payment', 'Текущий платёж', 'תשלום נוכחי');
-  String get installmentTotal =>
-      _t('Total payments', 'Всего платежей', 'סה״כ תשלומים');
-  String get installmentHelper => _t(
-        'Which payment this month, and how many in total',
-        'Какой платёж в этом месяце и сколько всего',
-        'איזה תשלום החודש וכמה בסך הכול',
-      );
-  String get note => isRu ? 'Заметка' : 'Note';
-  String get amount =>
-      _t('How much', 'Сколько', 'כמה');
-  String get amountSpend =>
-      _t('How much spent', 'Сколько потратили', 'כמה הוצאתם');
-  String get amountSave =>
-      _t('How much to save', 'Сколько отложить', 'כמה לחסוך');
-  String get amountIncome =>
-      _t('How much earned', 'Сколько получили', 'כמה התקבלו');
-  String get amountMonthly =>
-      _t('Monthly payment', 'Ежемесячный платёж', 'תשלום חודשי');
-  String get amountDebt =>
-      _t('Payment amount', 'Сумма платежа', 'סכום תשלום');
-
-  String get signIn => isRu ? 'Войти' : 'Sign in';
-  String get signUp => isRu ? 'Регистрация' : 'Sign up';
-  String get signOut => isRu ? 'Выйти' : 'Sign out';
-  String get deleteHousehold => isRu ? 'Удалить семью' : 'Delete household';
-  String get deleteHouseholdConfirmTitle =>
-      isRu ? 'Удалить семью?' : 'Delete household?';
-  String get deleteHouseholdConfirmBody => isRu
-      ? 'Будут удалены все месяцы, категории и траты. Другие участники потеряют доступ. Это нельзя отменить.'
-      : 'This removes every month, category, and expense. Other members will lose access. This cannot be undone.';
-  String get deleteAccount => isRu ? 'Удалить аккаунт' : 'Delete account';
-  String get deleteAccountConfirmTitle =>
-      isRu ? 'Удалить аккаунт?' : 'Delete account?';
-  String get deleteAccountConfirmBody => isRu
-      ? 'Ваш вход и профиль будут удалены. Это нельзя отменить.'
-      : 'Your sign-in and profile will be removed. This cannot be undone.';
+  String get tagline => _s('tagline');
+  String get month => _s('month');
+  String get home => _s('home');
+  String get activity => _s('activity');
+  String get plan => _s('plan');
+  String get income => _s('income');
+  String get expense => _s('expense');
+  String get overview => _s('overview');
+  String get settings => _s('settings');
+  String get log => _s('log');
+  String get remaining => _s('remaining');
+  String get overspent => _s('overspent');
+  String get forgotPassword => _s('forgotPassword');
+  String get resetEmailSent => _s('resetEmailSent');
+  String get fieldRequired => _s('fieldRequired');
+  String get invalidEmail => _s('invalidEmail');
+  String get minPassword => _s('minPassword');
+  String get editIncomeSource => _s('editIncomeSource');
+  String get deleteIncomeSource => _s('deleteIncomeSource');
+  String get quickLog => _s('quickLog');
+  String get recentExpenses => _s('recentExpenses');
+  String get incomeEntries => _s('incomeEntries');
+  String get addFirstIncome => _s('addFirstIncome');
+  String get editIncome => _s('editIncome');
+  String get deleteIncome => _s('deleteIncome');
+  String get createThisMonth => _s('createThisMonth');
+  String get howAreWeDoing => _s('howAreWeDoing');
+  String get startNextMonth => _s('startNextMonth');
+  String get stepPickMonth => _s('stepPickMonth');
+  String get stepCategoriesOrCopy => _s('stepCategoriesOrCopy');
+  String get continueLabel => _s('continueLabel');
+  String get done => _s('done');
+  String get edit => _s('edit');
+  String get plannedLabel => _s('plannedLabel');
+  String get spentLabel => _s('spentLabel');
+  String get budget => _s('budget');
+  String get actual => _s('actual');
+  String get difference => _s('difference');
+  String get totalIncome => _s('totalIncome');
+  String get groupTotal => _s('groupTotal');
+  String get planExceedsIncome => _s('planExceedsIncome');
+  String get addExpense => _s('addExpense');
+  String get addIncomeSource => _s('addIncomeSource');
+  String get addItem => _s('addItem');
+  String get addEntry => _s('addEntry');
+  String get save => _s('save');
+  String get delete => _s('delete');
+  String get removeFromMonth => _s('removeFromMonth');
+  String get removeFromMonthConfirm => _s('removeFromMonthConfirm');
+  String get cancel => _s('cancel');
+  String get description => _s('description');
+  String get category => _s('category');
+  String get categories => _s('categories');
+  String get installment => _s('installment');
+  String get installmentCurrent => _s('installmentCurrent');
+  String get installmentTotal => _s('installmentTotal');
+  String get installmentHelper => _s('installmentHelper');
+  String get note => _s('note');
+  String get amount => _s('amount');
+  String get amountSpend => _s('amountSpend');
+  String get amountSave => _s('amountSave');
+  String get amountIncome => _s('amountIncome');
+  String get amountMonthly => _s('amountMonthly');
+  String get amountDebt => _s('amountDebt');
+  String get signIn => _s('signIn');
+  String get signUp => _s('signUp');
+  String get signOut => _s('signOut');
+  String get deleteHousehold => _s('deleteHousehold');
+  String get deleteHouseholdConfirmTitle => _s('deleteHouseholdConfirmTitle');
+  String get deleteHouseholdConfirmBody => _s('deleteHouseholdConfirmBody');
+  String get deleteAccount => _s('deleteAccount');
+  String get deleteAccountConfirmTitle => _s('deleteAccountConfirmTitle');
+  String get deleteAccountConfirmBody => _s('deleteAccountConfirmBody');
   String get deleteAccountOwnerBlockedTitle =>
-      isRu ? 'Сначала удалите семью' : 'Delete the household first';
-  String get deleteAccountOwnerBlockedBody => isRu
-      ? 'Вы владелец этой семьи. Удалите семью, прежде чем удалить аккаунт, чтобы не стереть данные других участников без отдельного подтверждения.'
-      : 'You own this household. Delete the household first so other members are not wiped without that separate confirmation.';
-  String get confirmDelete => isRu ? 'Удалить' : 'Delete';
-  String get reauthenticateTitle =>
-      isRu ? 'Подтвердите пароль' : 'Confirm your password';
-  String get reauthenticateBody => isRu
-      ? 'Чтобы удалить аккаунт, введите пароль ещё раз.'
-      : 'Enter your password again to delete your account.';
-  String get email => isRu ? 'Email' : 'Email';
-  String get password => isRu ? 'Пароль' : 'Password';
-  String get displayName => isRu ? 'Имя' : 'Display name';
-  String get orContinueWith => isRu ? 'или' : 'or';
-  String get continueWithGoogle =>
-      isRu ? 'Продолжить с Google' : 'Continue with Google';
-  String get continueWithApple =>
-      isRu ? 'Продолжить с Apple' : 'Continue with Apple';
-  String get authAccountExistsDifferentCredential => _t(
-        'An account already exists with this email using a different sign-in method. Sign in with email first.',
-        'Аккаунт с этим email уже создан другим способом. Сначала войдите через email.',
-        'כבר יש חשבון עם האימייל הזה בשיטה אחרת. התחילו בהתחברות באימייל.',
-      );
-  String get authGoogleSignInFailed => _t(
-        'Could not sign in with Google. Try again or use email.',
-        'Не удалось войти через Google. Попробуйте снова или используйте email.',
-        'לא ניתן להתחבר עם Google. נסו שוב או השתמשו באימייל.',
-      );
-  String get authAppleSignInFailed => _t(
-        'Could not sign in with Apple. Try again or use email.',
-        'Не удалось войти через Apple. Попробуйте снова или используйте email.',
-        'לא ניתן להתחבר עם Apple. נסו שוב או השתמשו באימייל.',
-      );
+      _s('deleteAccountOwnerBlockedTitle');
+  String get deleteAccountOwnerBlockedBody =>
+      _s('deleteAccountOwnerBlockedBody');
+  String get confirmDelete => _s('confirmDelete');
+  String get reauthenticateTitle => _s('reauthenticateTitle');
+  String get reauthenticateBody => _s('reauthenticateBody');
+  String get email => _s('email');
+  String get password => _s('password');
+  String get displayName => _s('displayName');
+  String get orContinueWith => _s('orContinueWith');
+  String get continueWithGoogle => _s('continueWithGoogle');
+  String get continueWithApple => _s('continueWithApple');
+  String get authAccountExistsDifferentCredential =>
+      _s('authAccountExistsDifferentCredential');
+  String get authGoogleSignInFailed => _s('authGoogleSignInFailed');
+  String get authAppleSignInFailed => _s('authAppleSignInFailed');
 
   String authErrorForCode(String code) {
     switch (code) {
       case 'wrong-password':
       case 'invalid-credential':
       case 'user-not-found':
-        return _t(
-          'Incorrect email or password.',
-          'Неверный email или пароль.',
-          'אימייל או סיסמה שגויים.',
-        );
+        return _s('authWrongPassword');
       case 'invalid-email':
         return invalidEmail;
       case 'user-disabled':
-        return _t(
-          'This account has been disabled.',
-          'Этот аккаунт отключён.',
-          'החשבון הזה הושבת.',
-        );
+        return _s('authUserDisabled');
       case 'email-already-in-use':
-        return _t(
-          'An account with this email already exists. Try signing in.',
-          'Аккаунт с этим email уже есть. Попробуйте войти.',
-          'כבר יש חשבון עם האימייל הזה. נסו להתחבר.',
-        );
+        return _s('authEmailAlreadyInUse');
       case 'weak-password':
         return minPassword;
       case 'too-many-requests':
-        return _t(
-          'Too many attempts. Wait a moment and try again.',
-          'Слишком много попыток. Подождите и попробуйте снова.',
-          'יותר מדי ניסיונות. המתינו רגע ונסו שוב.',
-        );
+        return _s('authTooManyRequests');
       case 'network-request-failed':
-        return _t(
-          'No internet connection. Check your network and try again.',
-          'Нет подключения к интернету. Проверьте сеть и попробуйте снова.',
-          'אין חיבור לאינטרנט. בדקו את הרשת ונסו שוב.',
-        );
+        return _s('authNetworkFailed');
       case 'operation-not-allowed':
-        return _t(
-          'This sign-in method is not enabled.',
-          'Этот способ входа не включён.',
-          'שיטת ההתחברות הזו לא מופעלת.',
-        );
+        return _s('authOperationNotAllowed');
       case 'account-exists-with-different-credential':
         return authAccountExistsDifferentCredential;
       default:
@@ -222,325 +133,175 @@ class AppLocalizations {
     }
   }
 
-  String get createHousehold => isRu ? 'Создать семью' : 'Create household';
-  String get joinHousehold => isRu ? 'Присоединиться' : 'Join household';
-  String get householdName => isRu ? 'Название семьи' : 'Household name';
-  String get editHouseholdName =>
-      isRu ? 'Изменить название семьи' : 'Edit household name';
-  String get myHouseholds => _t('My households', 'Мои семьи', 'המשפחות שלי');
-  String get activeHousehold => _t('Active', 'Активная', 'פעילה');
-  String get createAnotherHousehold =>
-      _t('Create another household', 'Создать ещё семью', 'יצירת משפחה נוספת');
-  String get joinAnotherHousehold => _t(
-        'Join another household',
-        'Присоединиться к другой семье',
-        'הצטרפות למשפחה נוספת',
-      );
-  String get switchHousehold =>
-      _t('Switch household', 'Сменить семью', 'החלפת משפחה');
-  String get noHouseholdsYet =>
-      _t('No households yet', 'Пока нет семей', 'אין עדיין משפחות');
-  String get inviteCode => isRu ? 'Код приглашения' : 'Invite code';
-  String get invitePartner => isRu ? 'Пригласить партнёра' : 'Invite partner';
-  String get shareInvite => isRu ? 'Поделиться приглашением' : 'Share invite';
-  String get inviteCopied => isRu ? 'Код скопирован' : 'Invite code copied';
-  String get exportCsv => isRu ? 'Экспорт CSV' : 'Export CSV';
-  String get exportDone => isRu ? 'CSV готов к отправке' : 'CSV ready to share';
-  String get typeSavings => isRu ? 'Накопления' : 'Savings';
-  String get typeExpense => isRu ? 'Траты' : 'Spend';
+  String get createHousehold => _s('createHousehold');
+  String get joinHousehold => _s('joinHousehold');
+  String get householdName => _s('householdName');
+  String get editHouseholdName => _s('editHouseholdName');
+  String get myHouseholds => _s('myHouseholds');
+  String get activeHousehold => _s('activeHousehold');
+  String get createAnotherHousehold => _s('createAnotherHousehold');
+  String get joinAnotherHousehold => _s('joinAnotherHousehold');
+  String get switchHousehold => _s('switchHousehold');
+  String get noHouseholdsYet => _s('noHouseholdsYet');
+  String get inviteCode => _s('inviteCode');
+  String get invitePartner => _s('invitePartner');
+  String get shareInvite => _s('shareInvite');
+  String get inviteCopied => _s('inviteCopied');
+  String get exportCsv => _s('exportCsv');
+  String get exportDone => _s('exportDone');
+  String get typeSavings => _s('typeSavings');
+  String get typeExpense => _s('typeExpense');
   String get typeSpend => typeExpense;
-  String get typeMonthly => isRu ? 'Ежемесячные' : 'Monthly';
-  String get typeDebt => isRu ? 'Долг / платёж' : 'Debt / payment';
-  String get emptyCategories => isRu
-      ? 'Категорий пока нет. Добавьте при записи траты или из списка.'
-      : 'No categories yet. Add one when you log a spend, or from the list.';
-  String get emptyIncome => isRu
-      ? 'Добавьте источник дохода и суммы.'
-      : 'Add an income source and amounts.';
-  String get emptyMonths => isRu
-      ? 'Месяцев пока нет. Создайте первый месяц, чтобы начать.'
-      : 'No months yet. Create your first month to get started.';
-  String get addMonth => isRu ? 'Добавить месяц' : 'Add month';
-  String get monthAlreadyAdded => isRu ? 'уже добавлен' : 'already added';
-  String get createMonth => isRu ? 'Создать месяц' : 'Create month';
-  String get addDefaultCategories =>
-      isRu ? 'Добавить категории по умолчанию' : 'Add default categories';
-  String get defaultsAdded =>
-      isRu ? 'Категории по умолчанию добавлены' : 'Default categories added';
-  String get defaultsAlreadyPresent => isRu
-      ? 'Все категории по умолчанию уже есть'
-      : 'Default categories already present';
-  String get createEmptyMonth =>
-      isRu ? 'Новый месяц без копирования' : 'New month (no copy)';
-  String get selectCategories =>
-      isRu ? 'Выберите категории' : 'Select categories';
-  String get selectAll => isRu ? 'Выбрать все' : 'Select all';
-  String get selectNone => isRu ? 'Снять все' : 'Select none';
-  String get copyFromPrevious =>
-      isRu ? 'Копировать из предыдущего' : 'Copy from previous month';
-  String get selectMonthToCopy =>
-      isRu ? 'Месяц для копирования' : 'Month to copy';
-  String get noMonthSelected => isRu
-      ? 'Сначала выберите или создайте месяц'
-      : 'Select or create a month first';
-  String get subcategory => isRu ? 'Подкатегория' : 'Subcategory';
-  String get addSubcategory =>
-      isRu ? 'Добавить подкатегорию' : 'Add subcategory';
-  String get subcategoryName =>
-      isRu ? 'Название подкатегории' : 'Subcategory name';
-  String get editPlan => isRu ? 'Изменить план' : 'Edit plan';
-  String get editSubcategory =>
-      isRu ? 'Изменить подкатегорию' : 'Edit subcategory';
-  String get date => isRu ? 'Дата' : 'Date';
-  String get noSubcategories => isRu
-      ? 'Подкатегорий пока нет. Добавьте, например, топливо или страховку.'
-      : 'No subcategories yet. Add one, for example fuel or insurance.';
-  String get addCategory => isRu ? 'Добавить категорию' : 'Add category';
-  String get chooseFromList => isRu ? 'Выбрать из списка' : 'Choose from list';
-  String get customCategory => isRu ? 'Своя категория' : 'Custom category';
-  String get categoryAlreadyAdded =>
-      isRu ? 'Эта категория уже есть' : 'Category already added';
-  String get noSuggestionsLeft => isRu
-      ? 'Все предложенные категории уже добавлены'
-      : 'All suggested categories are already added';
-  String get categoryName => isRu ? 'Название категории' : 'Category name';
-  String get categoryType => isRu ? 'Тип' : 'Type';
-  String get categoryColor => isRu ? 'Цвет' : 'Color';
-  String get categoryIcon => isRu ? 'Иконка' : 'Icon';
-  String get monthCreated => isRu ? 'Месяц создан' : 'Month created';
-  String get selectMonth => isRu ? 'Выбрать месяц' : 'Select month';
-  String get yearLabel => isRu ? 'Год' : 'Year';
-  String get monthLabel => isRu ? 'Месяц' : 'Month';
-  String get members => isRu ? 'Участники' : 'Members';
-  String get language => isRu ? 'Язык' : 'Language';
-  String get currency => isRu ? 'Валюта' : 'Currency';
-  String get duplicateMonth => isRu
-      ? 'Создать следующий месяц из этого плана'
-      : 'Create next month from this plan';
-  String get manageCategories => isRu ? 'Категории' : 'Manage categories';
-  String get household => isRu ? 'Семья' : 'Household';
-  String get synced => isRu ? 'Синхронизировано' : 'Synced';
-
-  String get savingsHighlight => isRu ? 'Отложено' : 'Set aside';
-  String get addPot => isRu ? 'Добавить цель' : 'Add pot';
-  String get logDeposit => isRu ? 'Отложить' : 'Log deposit';
-  String get deposit => isRu ? 'Отложение' : 'Deposit';
-  String get targetAmount => isRu ? 'Общая цель' : 'Savings goal';
-  String get targetOptional =>
-      isRu ? 'Общая цель (необязательно)' : 'Savings goal (optional)';
-  String get setTarget => isRu ? 'Задать общую цель' : 'Set savings goal';
-  String get clearTarget => isRu ? 'Убрать общую цель' : 'Clear savings goal';
-  String get savedLabel => isRu ? 'Накоплено' : 'Saved';
-  String get emptyPots => isRu
-      ? 'Пока нет целей. Добавьте накопления, резерв или инвестиции.'
-      : 'No pots yet. Add savings, an emergency fund, or investments.';
-  String get thisMonthDeposits => isRu ? 'В этом месяце' : 'This month';
-  String get noDepositsThisMonth =>
-      isRu ? 'В этом месяце ещё ничего не отложено' : 'No deposits this month';
-  String get editPot => isRu ? 'Изменить цель' : 'Edit pot';
-  String get includeInTotal =>
-      isRu ? 'Считать в «Накоплено»' : 'Count toward Saved';
-  String get includeInTotalHint => isRu
-      ? 'Если включено, сумма входит в общий итог сверху. Выключите для долгосрочных целей вроде пенсии — они показываются отдельно.'
-      : 'When on, this pot is included in the Saved total above. Turn off for long-term pots like pension — they are listed separately.';
-  String get sectionInTotal =>
-      isRu ? 'Считаются в «Накоплено»' : 'Count toward Saved';
-  String get sectionInTotalHint => isRu
-      ? 'Суммы этих целей складываются в итог сверху'
-      : 'These pots add up in the Saved total above';
-  String get sectionNotInTotal =>
-      isRu ? 'Ведутся отдельно' : 'Tracked separately';
-  String get sectionNotInTotalHint => isRu
-      ? 'Например пенсия — на экране есть, но не в общем итоге'
-      : 'e.g. pension — shown here, but not in the Saved total';
-  String potsTowardSaved(int count) => isRu
-      ? '$count в «Накоплено»'
-      : '$count toward Saved';
-  String potsTrackedSeparately(int count) => isRu
-      ? '$count отдельно'
-      : '$count tracked separately';
-  String get alreadySaved => isRu ? 'Уже накоплено' : 'Already saved';
-  String get alreadySavedHint => isRu
-      ? 'Сумма, которая уже была до этого месяца. Не входит в бюджет месяца.'
-      : 'Cash you already had before this month. Does not count toward this month’s budget.';
-  String get addPriorSavings =>
-      isRu ? 'Добавить прошлые накопления' : 'Add prior savings';
-  String get underspent => isRu ? 'Остаток по позициям' : 'Underspent items';
-  String get noData => isRu ? 'Пока нет данных' : 'No data yet';
-  String get loading => isRu ? 'Загрузка…' : 'Loading…';
-  String get errorGeneric =>
-      isRu ? 'Что-то пошло не так' : 'Something went wrong';
-  String get tryAgain => isRu ? 'Повторить' : 'Try again';
-
-  String get addFirstExpense => _t(
-        'Add first expense',
-        'Добавьте первую трату',
-        'הוסיפו הוצאה ראשונה',
-      );
-  String get searchActivity => _t('Search', 'Поиск', 'חיפוש');
-  String get filterAll => _t('All', 'Все', 'הכל');
-  String get loggedBy => _t('Logged by', 'Кто записал', 'נרשם על ידי');
-  String get leaveHousehold => _t('Leave household', 'Выйти из семьи', 'עזיבת המשפחה');
-  String get leaveHouseholdConfirmTitle =>
-      _t('Leave this household?', 'Выйти из семьи?', 'לעזוב את המשפחה?');
-  String get leaveHouseholdConfirmBody => _t(
-        'You will lose access to this shared budget. Your account stays.',
-        'Вы потеряете доступ к общему бюджету. Аккаунт останется.',
-        'תאבדו גישה לתקציב המשותף. החשבון יישאר.',
-      );
-  String get leaveHouseholdOwnerBlocked => _t(
-        'Owners must delete the household instead of leaving.',
-        'Владелец должен удалить семью, а не выйти.',
-        'בעלים צריכים למחוק את המשפחה במקום לעזוב.',
-      );
-  String get removeMember => _t('Remove', 'Удалить', 'הסרה');
-  String get roleEditor => _t('Editor', 'Редактор', 'עורך');
-  String get roleViewer => _t('Can log only', 'Только записи', 'רישום בלבד');
-  String get roleOwner => _t('Owner', 'Владелец', 'בעלים');
-  String get recurringBills => _t('Recurring bills', 'Регулярные счета', 'חשבונות קבועים');
-  String get addBill => _t('Add bill', 'Добавить счёт', 'הוספת חשבון');
-  String get billDay => _t('Day of month', 'День месяца', 'יום בחודש');
-  String get upcomingBills => _t('Upcoming bills', 'Ближайшие счета', 'חשבונות קרובים');
-  String get splitSpend => _t('Split spend', 'Разделить трату', 'פיצול הוצאה');
-  String get splitPart => _t('Part', 'Часть', 'חלק');
-  String get rolloverLeftover => _t(
-        'Track leftover from previous month',
-        'Отслеживать остаток прошлого месяца',
-        'מעקב אחרי יתרה מהחודש הקודם',
-      );
-  String get leftoverPotHint => _t(
-        'Sum of (income − spent) from all months before this one. Updates when any earlier month changes.',
-        'Сумма (доход − траты) по всем месяцам до текущего. Обновляется при изменениях в прошлых месяцах.',
-        'סכום (הכנסה − הוצאות) מכל החודשים שלפני הנוכחי. מתעדכן כשמשנים חודש קודם.',
-      );
-  String leftoverThroughPeriod(String monthTitle) => _t(
-        'Through $monthTitle',
-        'По $monthTitle включительно',
-        'עד $monthTitle כולל',
-      );
-  String get leftoverNoPreviousMonth => _t(
-        'No previous months yet',
-        'Пока нет предыдущих месяцев',
-        'אין עדיין חודשים קודמים',
-      );
-  String get copyPlanOnly => _t(
-        'Copy plan and expense amounts',
-        'Копировать план и траты',
-        'העתקת סכומי תכנון והוצאות',
-      );
-  String get reports => _t('Reports', 'Отчёты', 'דוחות');
-  String get targetDate => _t('Target date', 'Срок', 'תאריך יעד');
-  String get watchlist => _t('Watchlist', 'Контроль категорий', 'מעקב קטגוריות');
-  String get overspendAlert => _t(
-        'Near or over plan',
-        'Близко к лимиту или сверх плана',
-        'קרוב לתקציב או מעליו',
-      );
-  String get alerts => _t('Alerts', 'Уведомления', 'התראות');
-  String get seeAll => _t('See all', 'Показать все', 'הצג הכל');
-  String get noExpensesYet =>
-      _t('No expenses yet', 'Трат пока нет', 'אין הוצאות עדיין');
-  String moreExpenses(int count) => _t(
-        '+ $count more',
-        '+ ещё $count',
-        '+ עוד $count',
-      );
-  String get spendingByCategory =>
-      _t('Spending by category', 'Расход по категориям', 'הוצאות לפי קטגוריה');
-  String get manageCategoriesLink =>
-      _t('Manage categories', 'Управление категориями', 'ניהול קטגוריות');
-  String get sectionExpenses => _t('Spend', 'Траты', 'הוצאות');
+  String get typeMonthly => _s('typeMonthly');
+  String get typeDebt => _s('typeDebt');
+  String get emptyCategories => _s('emptyCategories');
+  String get emptyIncome => _s('emptyIncome');
+  String get emptyMonths => _s('emptyMonths');
+  String get addMonth => _s('addMonth');
+  String get monthAlreadyAdded => _s('monthAlreadyAdded');
+  String get createMonth => _s('createMonth');
+  String get addDefaultCategories => _s('addDefaultCategories');
+  String get defaultsAdded => _s('defaultsAdded');
+  String get defaultsAlreadyPresent => _s('defaultsAlreadyPresent');
+  String get createEmptyMonth => _s('createEmptyMonth');
+  String get selectCategories => _s('selectCategories');
+  String get selectAll => _s('selectAll');
+  String get selectNone => _s('selectNone');
+  String get copyFromPrevious => _s('copyFromPrevious');
+  String get selectMonthToCopy => _s('selectMonthToCopy');
+  String get noMonthSelected => _s('noMonthSelected');
+  String get subcategory => _s('subcategory');
+  String get addSubcategory => _s('addSubcategory');
+  String get subcategoryName => _s('subcategoryName');
+  String get editPlan => _s('editPlan');
+  String get editSubcategory => _s('editSubcategory');
+  String get date => _s('date');
+  String get noSubcategories => _s('noSubcategories');
+  String get addCategory => _s('addCategory');
+  String get chooseFromList => _s('chooseFromList');
+  String get customCategory => _s('customCategory');
+  String get categoryAlreadyAdded => _s('categoryAlreadyAdded');
+  String get noSuggestionsLeft => _s('noSuggestionsLeft');
+  String get categoryName => _s('categoryName');
+  String get categoryType => _s('categoryType');
+  String get categoryColor => _s('categoryColor');
+  String get categoryIcon => _s('categoryIcon');
+  String get monthCreated => _s('monthCreated');
+  String get selectMonth => _s('selectMonth');
+  String get yearLabel => _s('yearLabel');
+  String get monthLabel => _s('monthLabel');
+  String get members => _s('members');
+  String get language => _s('language');
+  String get currency => _s('currency');
+  String get duplicateMonth => _s('duplicateMonth');
+  String get manageCategories => _s('manageCategories');
+  String get household => _s('household');
+  String get synced => _s('synced');
+  String get savingsHighlight => _s('savingsHighlight');
+  String get addPot => _s('addPot');
+  String get logDeposit => _s('logDeposit');
+  String get deposit => _s('deposit');
+  String get targetAmount => _s('targetAmount');
+  String get targetOptional => _s('targetOptional');
+  String get setTarget => _s('setTarget');
+  String get clearTarget => _s('clearTarget');
+  String get savedLabel => _s('savedLabel');
+  String get emptyPots => _s('emptyPots');
+  String get thisMonthDeposits => _s('thisMonthDeposits');
+  String get noDepositsThisMonth => _s('noDepositsThisMonth');
+  String get editPot => _s('editPot');
+  String get includeInTotal => _s('includeInTotal');
+  String get includeInTotalHint => _s('includeInTotalHint');
+  String get sectionInTotal => _s('sectionInTotal');
+  String get sectionInTotalHint => _s('sectionInTotalHint');
+  String get sectionNotInTotal => _s('sectionNotInTotal');
+  String get sectionNotInTotalHint => _s('sectionNotInTotalHint');
+  String get alreadySaved => _s('alreadySaved');
+  String get alreadySavedHint => _s('alreadySavedHint');
+  String get addPriorSavings => _s('addPriorSavings');
+  String get underspent => _s('underspent');
+  String get noData => _s('noData');
+  String get loading => _s('loading');
+  String get errorGeneric => _s('errorGeneric');
+  String get tryAgain => _s('tryAgain');
+  String get addFirstExpense => _s('addFirstExpense');
+  String get searchActivity => _s('searchActivity');
+  String get filterAll => _s('filterAll');
+  String get loggedBy => _s('loggedBy');
+  String get leaveHousehold => _s('leaveHousehold');
+  String get leaveHouseholdConfirmTitle => _s('leaveHouseholdConfirmTitle');
+  String get leaveHouseholdConfirmBody => _s('leaveHouseholdConfirmBody');
+  String get leaveHouseholdOwnerBlocked => _s('leaveHouseholdOwnerBlocked');
+  String get removeMember => _s('removeMember');
+  String get roleEditor => _s('roleEditor');
+  String get roleViewer => _s('roleViewer');
+  String get roleOwner => _s('roleOwner');
+  String get recurringBills => _s('recurringBills');
+  String get addBill => _s('addBill');
+  String get billDay => _s('billDay');
+  String get upcomingBills => _s('upcomingBills');
+  String get splitSpend => _s('splitSpend');
+  String get splitPart => _s('splitPart');
+  String get rolloverLeftover => _s('rolloverLeftover');
+  String get leftoverPotHint => _s('leftoverPotHint');
+  String get leftoverNoPreviousMonth => _s('leftoverNoPreviousMonth');
+  String get copyPlanOnly => _s('copyPlanOnly');
+  String get reports => _s('reports');
+  String get targetDate => _s('targetDate');
+  String get watchlist => _s('watchlist');
+  String get overspendAlert => _s('overspendAlert');
+  String get alerts => _s('alerts');
+  String get seeAll => _s('seeAll');
+  String get noExpensesYet => _s('noExpensesYet');
+  String get spendingByCategory => _s('spendingByCategory');
+  String get manageCategoriesLink => _s('manageCategoriesLink');
+  String get sectionExpenses => _s('sectionExpenses');
   String get sectionSpend => sectionExpenses;
-  String get sectionMonthly => _t('Monthly', 'Ежемесячные', 'חודשי');
-  String get sectionSavings => _t('Savings', 'Накопления', 'חיסכון');
-  String get sectionDebt => _t('Debt / payment', 'Долг / платёж', 'חוב / תשלום');
-  String get statistics => _t('Statistics', 'Статистика', 'סטטיסטיקה');
-  String get compareMonths =>
-      _t('Compare months', 'Сравнение месяцев', 'השוואת חודשים');
-  String get last3Months => _t('Last 3 months', '3 месяца', '3 חודשים');
-  String get last6Months => _t('Last 6 months', '6 месяцев', '6 חודשים');
-  String get thisVsPrev =>
-      _t('This vs previous', 'Этот и прошлый', 'זה מול קודם');
-  String get byCategory => _t('By category', 'По категориям', 'לפי קטגוריה');
-  String get bySubcategory =>
-      _t('By subcategory', 'По подкатегориям', 'לפי תת־קטגוריה');
-  String get cashLeft => _t('Cash left', 'Остаток наличных', 'מזומן שנותר');
-  String get unallocated => _t('Unallocated', 'Не распределено', 'לא מוקצה');
-  String get logSpend => _t('Spend', 'Трата', 'הוצאה');
-  String get logSave => _t('Save', 'Отложить', 'חיסכון');
-  String get logDebt => _t('Debt', 'Долг', 'חוב');
-  String get logFixed => _t('Monthly', 'Ежемесячно', 'חודשי');
-  String get logFixedHint => _t(
-        'Sets this month’s plan and repeats every new month',
-        'Задаёт план на месяц и повторяется в каждом новом месяце',
-        'קובע את התוכנית לחודש וחוזר בכל חודש חדש',
-      );
-  String get logMoreOptions => _t('More', 'Ещё', 'עוד');
-  String get editLog => _t('Edit', 'Изменить', 'עריכה');
-  String get editCategory =>
-      _t('Edit category', 'Изменить категорию', 'עריכת קטגוריה');
-  String get viewerReadOnlyPlan => _t(
-        'You can log income and spends. Plan changes are for editors.',
-        'Можно записывать доходы и траты. План меняют редакторы.',
-        'אפשר לרשום הכנסות והוצאות. שינויי תוכנית לעורכים.',
-      );
-  String get hebrew => 'עברית';
+  String get sectionMonthly => _s('sectionMonthly');
+  String get sectionSavings => _s('sectionSavings');
+  String get sectionDebt => _s('sectionDebt');
+  String get statistics => _s('statistics');
+  String get compareMonths => _s('compareMonths');
+  String get last3Months => _s('last3Months');
+  String get last6Months => _s('last6Months');
+  String get thisVsPrev => _s('thisVsPrev');
+  String get byCategory => _s('byCategory');
+  String get bySubcategory => _s('bySubcategory');
+  String get cashLeft => _s('cashLeft');
+  String get unallocated => _s('unallocated');
+  String get logSpend => _s('logSpend');
+  String get logSave => _s('logSave');
+  String get logDebt => _s('logDebt');
+  String get logFixed => _s('logFixed');
+  String get logFixedHint => _s('logFixedHint');
+  String get logMoreOptions => _s('logMoreOptions');
+  String get editLog => _s('editLog');
+  String get editCategory => _s('editCategory');
+  String get viewerReadOnlyPlan => _s('viewerReadOnlyPlan');
+  String get hebrew => _s('hebrew');
 
-  String inviteShareMessage(String code, String householdName) => isRu
-      ? 'Присоединяйся к бюджету «$householdName» в SyncMonth. Код: $code'
-      : isHe
-          ? 'הצטרפו לתקציב "$householdName" ב-SyncMonth. קוד: $code'
-          : 'Join "$householdName" on SyncMonth. Invite code: $code';
+  String potsTowardSaved(int count) =>
+      _s('potsTowardSaved').replaceAll('{count}', '$count');
+
+  String potsTrackedSeparately(int count) =>
+      _s('potsTrackedSeparately').replaceAll('{count}', '$count');
+
+  String leftoverThroughPeriod(String monthTitle) =>
+      _s('leftoverThroughPeriod').replaceAll('{monthTitle}', monthTitle);
+
+  String moreExpenses(int count) =>
+      _s('moreExpenses').replaceAll('{count}', '$count');
+
+  String inviteShareMessage(String code, String householdName) => _s(
+        'inviteShareMessage',
+      )
+          .replaceAll('{householdName}', householdName)
+          .replaceAll('{code}', code);
 
   String monthTitle(DateTime date) {
-    final monthsEn = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    final monthsHe = [
-      'ינואר',
-      'פברואר',
-      'מרץ',
-      'אפריל',
-      'מאי',
-      'יוני',
-      'יולי',
-      'אוגוסט',
-      'ספטמבר',
-      'אוקטובר',
-      'נובמבר',
-      'דצמבר',
-    ];
-    final monthsRu = [
-      'Январь',
-      'Февраль',
-      'Март',
-      'Апрель',
-      'Май',
-      'Июнь',
-      'Июль',
-      'Август',
-      'Сентябрь',
-      'Октябрь',
-      'Ноябрь',
-      'Декабрь',
-    ];
-    final name = isRu
-        ? monthsRu[date.month - 1]
-        : isHe
-            ? monthsHe[date.month - 1]
-            : monthsEn[date.month - 1];
-    return '$name ${date.year}';
+    final names =
+        AppStrings.monthNames[localeCode] ?? AppStrings.monthNames['en']!;
+    return '${names[date.month - 1]} ${date.year}';
   }
 }
 
@@ -549,9 +310,7 @@ class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
 
   @override
   bool isSupported(Locale locale) =>
-      locale.languageCode == 'en' ||
-      locale.languageCode == 'ru' ||
-      locale.languageCode == 'he';
+      supportedLocaleCodes.contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) async {
