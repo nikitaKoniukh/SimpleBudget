@@ -8,7 +8,6 @@ import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/budget/spending_donut_chart.dart';
-import '../../widgets/summary_card.dart';
 import '../../widgets/sync_app_bar.dart';
 
 enum _StatsRange { vsPrev, last3, last6 }
@@ -85,6 +84,11 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     }
   }
 
+  void _onRangeChanged(_StatsRange range) {
+    setState(() => _range = range);
+    _reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -114,6 +118,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final totals = state.totals;
     final compareIds = _monthIdsForRange(state);
     final envelopeCats = state.categories.toList();
+    final monthLabel = l10n.monthTitle(dateFromMonthId(state.monthId!));
 
     return SyncBackground(
       child: Scaffold(
@@ -125,221 +130,542 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             children: [
-              Text(
-                l10n.monthTitle(dateFromMonthId(state.monthId!)),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1.7,
-                children: [
-                  SummaryCard(label: l10n.income, amount: totals.income),
-                  SummaryCard(label: l10n.actual, amount: totals.actual),
-                  SummaryCard(label: l10n.budget, amount: totals.planned),
-                  SummaryCard(
-                    label: l10n.savingsHighlight,
-                    amount: totals.savedThisMonth,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.spendingByCategory,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              const SpendingDonutChart(),
-              const SizedBox(height: 20),
-              Text(
-                l10n.compareMonths,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: Text(l10n.thisVsPrev),
-                    selected: _range == _StatsRange.vsPrev,
-                    onSelected: (_) {
-                      setState(() => _range = _StatsRange.vsPrev);
-                      _reload();
-                    },
-                  ),
-                  ChoiceChip(
-                    label: Text(l10n.last3Months),
-                    selected: _range == _StatsRange.last3,
-                    onSelected: (_) {
-                      setState(() => _range = _StatsRange.last3);
-                      _reload();
-                    },
-                  ),
-                  ChoiceChip(
-                    label: Text(l10n.last6Months),
-                    selected: _range == _StatsRange.last6,
-                    onSelected: (_) {
-                      setState(() => _range = _StatsRange.last6);
-                      _reload();
-                    },
-                  ),
-                ],
-              ),
+              _MonthHeader(label: monthLabel),
               const SizedBox(height: 12),
-              if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_error != null)
-                Text('${l10n.errorGeneric}: $_error')
-              else if (compareIds.isEmpty)
-                Text(l10n.noData)
-              else ...[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+              _StatsSummaryPanel(totals: totals, l10n: l10n),
+              const SizedBox(height: 12),
+              const SpendingDonutChart(),
+              const SizedBox(height: 12),
+              Material(
+                color: SyncColors.frostedSurface,
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          l10n.byCategory,
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
+                      Text(
+                        l10n.compareMonths,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
-                      for (final id in compareIds)
-                        SizedBox(
-                          width: 88,
-                          child: Text(
-                            id,
-                            textAlign: TextAlign.end,
-                            style: Theme.of(context).textTheme.labelMedium,
+                      const SizedBox(height: 12),
+                      SegmentedButton<_StatsRange>(
+                        segments: [
+                          ButtonSegment(
+                            value: _StatsRange.vsPrev,
+                            label: Text(l10n.thisVsPrev),
                           ),
+                          ButtonSegment(
+                            value: _StatsRange.last3,
+                            label: Text(l10n.last3Months),
+                          ),
+                          ButtonSegment(
+                            value: _StatsRange.last6,
+                            label: Text(l10n.last6Months),
+                          ),
+                        ],
+                        selected: {_range},
+                        onSelectionChanged: (selection) =>
+                            _onRangeChanged(selection.first),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_loading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Text(
+                            '${l10n.errorGeneric}: $_error',
+                            style: TextStyle(color: Theme.of(context).colorScheme.error),
+                          ),
+                        )
+                      else if (compareIds.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.bar_chart_outlined,
+                                size: 36,
+                                color: SyncColors.textMuted.withValues(alpha: 0.7),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                l10n.noData,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(color: SyncColors.textMuted),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        _CompareTable(
+                          compareIds: compareIds,
+                          categories: envelopeCats,
+                          snapshots: _snapshots,
+                          state: state,
+                          l10n: l10n,
+                          expandedCategoryId: _expandedCategoryId,
+                          onCategoryTap: (catId) {
+                            setState(() {
+                              _expandedCategoryId =
+                                  _expandedCategoryId == catId ? null : catId;
+                            });
+                          },
                         ),
                     ],
                   ),
                 ),
-                const Divider(),
-                for (final cat in envelopeCats) ...[
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _expandedCategoryId =
-                            _expandedCategoryId == cat.id ? null : cat.id;
-                      });
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          CategoryColorIcon(
-                            colorValue: cat.colorValue,
-                            iconKey: cat.iconKey,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 104,
-                            child: Text(
-                              cat.localizedName(state.localeCode),
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          for (final id in compareIds)
-                            SizedBox(
-                              width: 88,
-                              child: Text(
-                                formatIls(
-                                  _snapshots[id]?.spentForCategory(
-                                        cat.id,
-                                        state.subcategories,
-                                      ) ??
-                                      0,
-                                ),
-                                textAlign: TextAlign.end,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (_expandedCategoryId == cat.id)
-                    ...state.subcategoriesFor(cat.id).where((sub) {
-                      for (final id in compareIds) {
-                        final snap = _snapshots[id];
-                        if (snap == null) continue;
-                        if (snap.plans.any((p) => p.subcategoryId == sub.id)) {
-                          return true;
-                        }
-                        if (snap.spentForSub(sub.id) > 0) return true;
-                      }
-                      return false;
-                    }).map((sub) {
-                      final labelPlan = () {
-                        for (final id in compareIds) {
-                          final snap = _snapshots[id];
-                          if (snap == null) continue;
-                          for (final plan in snap.plans) {
-                            if (plan.subcategoryId == sub.id) return plan;
-                          }
-                        }
-                        return null;
-                      }();
-                      final label = labelPlan?.localizedName(
-                            state.localeCode,
-                            sub,
-                          ) ??
-                          sub.localizedName(state.localeCode);
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16,
-                          top: 4,
-                          bottom: 4,
-                        ),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 112,
-                              child: Text(
-                                label,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: SyncColors.textMuted),
-                              ),
-                            ),
-                            for (final id in compareIds)
-                              SizedBox(
-                                width: 88,
-                                child: Text(
-                                  formatIls(
-                                    _snapshots[id]?.spentForSub(sub.id) ?? 0,
-                                  ),
-                                  textAlign: TextAlign.end,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    }),
-                ],
-              ],
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: SyncColors.frostedSurface,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.calendar_month_outlined,
+              size: 20,
+              color: SyncColors.primary.withValues(alpha: 0.85),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatsSummaryPanel extends StatelessWidget {
+  const _StatsSummaryPanel({
+    required this.totals,
+    required this.l10n,
+  });
+
+  final MonthTotals totals;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final overBudget =
+        totals.planned > 0 && totals.actual > totals.planned;
+    final progress = totals.planned > 0
+        ? (totals.actual / totals.planned).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Material(
+      color: SyncColors.frostedSurface,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCell(
+                    label: l10n.income,
+                    amount: totals.income,
+                    color: SyncColors.primary,
+                  ),
+                ),
+                _StatDivider(),
+                Expanded(
+                  child: _StatCell(
+                    label: l10n.spentLabel,
+                    amount: totals.actual,
+                    color: overBudget ? SyncColors.overspend : SyncColors.accent,
+                    alignEnd: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCell(
+                    label: l10n.budget,
+                    amount: totals.planned,
+                    color: SyncColors.text,
+                  ),
+                ),
+                _StatDivider(),
+                Expanded(
+                  child: _StatCell(
+                    label: l10n.savingsHighlight,
+                    amount: totals.savedThisMonth,
+                    color: SyncColors.primary,
+                    alignEnd: true,
+                  ),
+                ),
+              ],
+            ),
+            if (totals.planned > 0) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: SyncColors.surfaceMint,
+                  color: overBudget ? SyncColors.overspend : SyncColors.accent,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${l10n.actual}: ${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: SyncColors.textMuted,
+                    ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 36,
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      color: SyncColors.textMuted.withValues(alpha: 0.2),
+    );
+  }
+}
+
+class _StatCell extends StatelessWidget {
+  const _StatCell({
+    required this.label,
+    required this.amount,
+    required this.color,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final double amount;
+  final Color color;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: SyncColors.textMuted,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          formatIls(amount),
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompareTable extends StatelessWidget {
+  const _CompareTable({
+    required this.compareIds,
+    required this.categories,
+    required this.snapshots,
+    required this.state,
+    required this.l10n,
+    required this.expandedCategoryId,
+    required this.onCategoryTap,
+  });
+
+  final List<String> compareIds;
+  final List<BudgetCategory> categories;
+  final Map<String, MonthStatsSnapshot> snapshots;
+  final AppState state;
+  final AppLocalizations l10n;
+  final String? expandedCategoryId;
+  final ValueChanged<String> onCategoryTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final monthColumnWidth = compareIds.length <= 2 ? 96.0 : 80.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SizedBox(
+                width: 132,
+                child: Text(
+                  l10n.byCategory,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: SyncColors.textMuted,
+                      ),
+                ),
+              ),
+              for (final id in compareIds)
+                SizedBox(
+                  width: monthColumnWidth,
+                  child: Text(
+                    l10n.monthTitle(dateFromMonthId(id)),
+                    textAlign: TextAlign.end,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Divider(height: 1),
+        const SizedBox(height: 4),
+        for (final cat in categories) ...[
+          _CompareCategoryRow(
+            category: cat,
+            compareIds: compareIds,
+            monthColumnWidth: monthColumnWidth,
+            snapshots: snapshots,
+            state: state,
+            expanded: expandedCategoryId == cat.id,
+            onTap: () => onCategoryTap(cat.id),
+          ),
+          if (expandedCategoryId == cat.id)
+            ...state.subcategoriesFor(cat.id).where((sub) {
+              for (final id in compareIds) {
+                final snap = snapshots[id];
+                if (snap == null) continue;
+                if (snap.plans.any((p) => p.subcategoryId == sub.id)) {
+                  return true;
+                }
+                if (snap.spentForSub(sub.id) > 0) return true;
+              }
+              return false;
+            }).map(
+              (sub) => _CompareSubcategoryRow(
+                sub: sub,
+                compareIds: compareIds,
+                monthColumnWidth: monthColumnWidth,
+                snapshots: snapshots,
+                state: state,
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CompareCategoryRow extends StatelessWidget {
+  const _CompareCategoryRow({
+    required this.category,
+    required this.compareIds,
+    required this.monthColumnWidth,
+    required this.snapshots,
+    required this.state,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  final BudgetCategory category;
+  final List<String> compareIds;
+  final double monthColumnWidth;
+  final Map<String, MonthStatsSnapshot> snapshots;
+  final AppState state;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSubcategories = state.subcategoriesFor(category.id).any((sub) {
+      for (final id in compareIds) {
+        final snap = snapshots[id];
+        if (snap == null) continue;
+        if (snap.plans.any((p) => p.subcategoryId == sub.id)) return true;
+        if (snap.spentForSub(sub.id) > 0) return true;
+      }
+      return false;
+    });
+
+    return Material(
+      color: expanded
+          ? SyncColors.surfaceMint.withValues(alpha: 0.45)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: hasSubcategories ? onTap : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 132,
+                  child: Row(
+                    children: [
+                      CategoryColorIcon(
+                        colorValue: category.colorValue,
+                        iconKey: category.iconKey,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          category.localizedName(state.localeCode),
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                      ),
+                      if (hasSubcategories)
+                        Icon(
+                          expanded
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                          size: 18,
+                          color: SyncColors.textMuted,
+                        ),
+                    ],
+                  ),
+                ),
+                for (final id in compareIds)
+                  SizedBox(
+                    width: monthColumnWidth,
+                    child: Text(
+                      formatIls(
+                        snapshots[id]?.spentForCategory(
+                              category.id,
+                              state.subcategories,
+                            ) ??
+                            0,
+                      ),
+                      textAlign: TextAlign.end,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompareSubcategoryRow extends StatelessWidget {
+  const _CompareSubcategoryRow({
+    required this.sub,
+    required this.compareIds,
+    required this.monthColumnWidth,
+    required this.snapshots,
+    required this.state,
+  });
+
+  final Subcategory sub;
+  final List<String> compareIds;
+  final double monthColumnWidth;
+  final Map<String, MonthStatsSnapshot> snapshots;
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelPlan = () {
+      for (final id in compareIds) {
+        final snap = snapshots[id];
+        if (snap == null) continue;
+        for (final plan in snap.plans) {
+          if (plan.subcategoryId == sub.id) return plan;
+        }
+      }
+      return null;
+    }();
+    final label = labelPlan?.localizedName(state.localeCode, sub) ??
+        sub.localizedName(state.localeCode);
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, bottom: 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            SizedBox(
+              width: 120,
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: SyncColors.textMuted,
+                    ),
+              ),
+            ),
+            for (final id in compareIds)
+              SizedBox(
+                width: monthColumnWidth,
+                child: Text(
+                  formatIls(snapshots[id]?.spentForSub(sub.id) ?? 0),
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: SyncColors.textMuted,
+                      ),
+                ),
+              ),
+          ],
         ),
       ),
     );

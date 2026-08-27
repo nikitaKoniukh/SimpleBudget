@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
 class SpendingDonutChart extends StatelessWidget {
@@ -45,8 +46,8 @@ class SpendingDonutChart extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(18),
+        color: SyncColors.frostedSurface,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
