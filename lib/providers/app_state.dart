@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../l10n/locale_lookup.dart';
 import '../models/models.dart';
 import '../services/auth_service.dart';
 import '../services/budget_repository.dart';
@@ -28,7 +29,7 @@ class AppState extends ChangeNotifier {
   Household? _household;
   List<Household> _myHouseholds = [];
   String? _monthId;
-  String _localeCode = 'en';
+  String _localeCode = deviceLocaleCode();
   bool _loading = true;
   /// False until the first months (and selected month) snapshots arrive.
   bool _budgetDataReady = false;

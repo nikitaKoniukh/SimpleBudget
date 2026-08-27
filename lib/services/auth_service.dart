@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../config/oauth_config.dart';
+import '../l10n/locale_lookup.dart';
 import '../models/models.dart';
 
 class AuthService {
@@ -47,6 +48,7 @@ class AuthService {
       id: cred.user!.uid,
       email: email.trim(),
       displayName: displayName.trim(),
+      localeCode: deviceLocaleCode(),
     );
     await _db.collection('users').doc(user.id).set(user.toMap());
     return user;
@@ -295,6 +297,7 @@ class AuthService {
         id: firebaseUser.uid,
         email: firebaseUser.email ?? '',
         displayName: firebaseUser.displayName,
+        localeCode: deviceLocaleCode(),
       );
       await ref.set(user.toMap());
       return user;
