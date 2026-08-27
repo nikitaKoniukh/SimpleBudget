@@ -9,6 +9,7 @@ import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
+import '../../widgets/language_picker_sheet.dart';
 import '../household/household_sheets.dart';
 import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
@@ -165,25 +166,9 @@ class SettingsScreen extends StatelessWidget {
                   : () => exportAndShareMonthCsv(context),
             ),
             const Divider(),
-            ListTile(
-              title: Text(l10n.language),
-              subtitle: DropdownButton<String>(
-                value: state.localeCode,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'ru', child: Text('Русский')),
-                  DropdownMenuItem(value: 'he', child: Text('עברית')),
-                  DropdownMenuItem(value: 'es', child: Text('Español')),
-                  DropdownMenuItem(value: 'fr', child: Text('Français')),
-                  DropdownMenuItem(value: 'uk', child: Text('Українська')),
-                  DropdownMenuItem(value: 'ar', child: Text('العربية')),
-                  DropdownMenuItem(value: 'de', child: Text('Deutsch')),
-                ],
-                onChanged: (code) {
-                  if (code != null) state.setLocale(code);
-                },
-              ),
+            LanguagePickerTile(
+              localeCode: state.localeCode,
+              onLocaleSelected: state.setLocale,
             ),
             ListTile(
               title: Text(l10n.reports),
