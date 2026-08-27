@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../navigation/adaptive_page_route.dart';
 import '../providers/app_state.dart';
 import '../screens/home/create_month_flow.dart';
 import '../screens/household/household_sheets.dart';
@@ -81,9 +82,7 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   void _openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    pushAdaptivePage(context, const SettingsScreen());
   }
 
   @override

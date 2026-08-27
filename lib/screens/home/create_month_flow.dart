@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../navigation/adaptive_page_route.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
@@ -13,12 +14,7 @@ import '../../widgets/sync_app_bar.dart';
 /// Full-screen create-month flow. Catalog lives on the household, so this
 /// only picks a month and copies the previous plan when one exists.
 Future<void> openCreateMonthFlow(BuildContext context) async {
-  await Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (_) => const CreateMonthFlowScreen(),
-    ),
-  );
+  await pushAdaptivePage<void>(context, const CreateMonthFlowScreen());
 }
 
 class CreateMonthFlowScreen extends StatefulWidget {
@@ -133,10 +129,7 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: SyncAppBar.modal(
-          title: l10n.stepPickMonth,
-          onClose: () => Navigator.pop(context),
-        ),
+        appBar: SyncAppBar.page(title: l10n.stepPickMonth),
         body: ListView(
           padding: const EdgeInsets.all(24),
           children: [

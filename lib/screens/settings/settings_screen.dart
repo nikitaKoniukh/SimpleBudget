@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../navigation/adaptive_page_route.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
@@ -178,11 +179,7 @@ class SettingsScreen extends StatelessWidget {
               onTap: !state.hasMonthSelected
                   ? null
                   : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const OverviewScreen(),
-                        ),
-                      );
+                      pushAdaptivePage(context, const OverviewScreen());
                     },
             ),
             ListTile(
@@ -190,11 +187,7 @@ class SettingsScreen extends StatelessWidget {
               leading: const Icon(Icons.event_repeat_outlined),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const RecurringBillsScreen(),
-                  ),
-                );
+                pushAdaptivePage(context, const RecurringBillsScreen());
               },
             ),
             ListTile(
