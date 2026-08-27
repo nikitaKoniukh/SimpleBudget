@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import '../../utils/auth_errors.dart';
 import '../../utils/text_format.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -33,13 +34,8 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  String _friendlyError(Object e) {
-    final text = e.toString();
-    if (text.contains('cancelled')) return '';
-    return text.replaceFirst('Exception: ', '').replaceFirst('StateError: ', '');
-  }
-
   Future<void> _run(Future<void> Function() action) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -47,8 +43,8 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       await action();
     } catch (e) {
-      final msg = _friendlyError(e);
-      if (msg.isNotEmpty && mounted) {
+      final msg = friendlyAuthError(e, l10n);
+      if (msg != null && mounted) {
         setState(() => _error = msg);
       }
     } finally {

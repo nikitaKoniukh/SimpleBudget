@@ -155,6 +155,72 @@ class AppLocalizations {
       isRu ? 'Продолжить с Google' : 'Continue with Google';
   String get continueWithApple =>
       isRu ? 'Продолжить с Apple' : 'Continue with Apple';
+  String get authAccountExistsDifferentCredential => _t(
+        'An account already exists with this email using a different sign-in method. Sign in with email first.',
+        'Аккаунт с этим email уже создан другим способом. Сначала войдите через email.',
+        'כבר יש חשבון עם האימייל הזה בשיטה אחרת. התחילו בהתחברות באימייל.',
+      );
+  String get authGoogleSignInFailed => _t(
+        'Could not sign in with Google. Try again or use email.',
+        'Не удалось войти через Google. Попробуйте снова или используйте email.',
+        'לא ניתן להתחבר עם Google. נסו שוב או השתמשו באימייל.',
+      );
+  String get authAppleSignInFailed => _t(
+        'Could not sign in with Apple. Try again or use email.',
+        'Не удалось войти через Apple. Попробуйте снова или используйте email.',
+        'לא ניתן להתחבר עם Apple. נסו שוב או השתמשו באימייל.',
+      );
+
+  String authErrorForCode(String code) {
+    switch (code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+      case 'user-not-found':
+        return _t(
+          'Incorrect email or password.',
+          'Неверный email или пароль.',
+          'אימייל או סיסמה שגויים.',
+        );
+      case 'invalid-email':
+        return invalidEmail;
+      case 'user-disabled':
+        return _t(
+          'This account has been disabled.',
+          'Этот аккаунт отключён.',
+          'החשבון הזה הושבת.',
+        );
+      case 'email-already-in-use':
+        return _t(
+          'An account with this email already exists. Try signing in.',
+          'Аккаунт с этим email уже есть. Попробуйте войти.',
+          'כבר יש חשבון עם האימייל הזה. נסו להתחבר.',
+        );
+      case 'weak-password':
+        return minPassword;
+      case 'too-many-requests':
+        return _t(
+          'Too many attempts. Wait a moment and try again.',
+          'Слишком много попыток. Подождите и попробуйте снова.',
+          'יותר מדי ניסיונות. המתינו רגע ונסו שוב.',
+        );
+      case 'network-request-failed':
+        return _t(
+          'No internet connection. Check your network and try again.',
+          'Нет подключения к интернету. Проверьте сеть и попробуйте снова.',
+          'אין חיבור לאינטרנט. בדקו את הרשת ונסו שוב.',
+        );
+      case 'operation-not-allowed':
+        return _t(
+          'This sign-in method is not enabled.',
+          'Этот способ входа не включён.',
+          'שיטת ההתחברות הזו לא מופעלת.',
+        );
+      case 'account-exists-with-different-credential':
+        return authAccountExistsDifferentCredential;
+      default:
+        return errorGeneric;
+    }
+  }
 
   String get createHousehold => isRu ? 'Создать семью' : 'Create household';
   String get joinHousehold => isRu ? 'Присоединиться' : 'Join household';
