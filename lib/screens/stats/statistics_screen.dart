@@ -9,6 +9,7 @@ import '../../utils/money.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/budget/spending_donut_chart.dart';
 import '../../widgets/summary_card.dart';
+import '../../widgets/sync_app_bar.dart';
 
 enum _StatsRange { vsPrev, last3, last6 }
 
@@ -93,7 +94,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
       return SyncBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(title: Text(l10n.statistics)),
+          appBar: SyncAppBar.tab(title: l10n.statistics),
           body: RefreshIndicator(
             onRefresh: _reload,
             child: ListView(
@@ -117,7 +118,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(l10n.statistics)),
+        appBar: SyncAppBar.tab(title: l10n.statistics),
         body: RefreshIndicator(
           onRefresh: _reload,
           child: ListView(

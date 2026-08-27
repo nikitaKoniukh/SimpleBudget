@@ -9,6 +9,7 @@ import '../../utils/share_helpers.dart';
 import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/spending_donut_chart.dart';
 import '../../widgets/summary_card.dart';
+import '../../widgets/sync_app_bar.dart';
 
 class OverviewScreen extends StatelessWidget {
   const OverviewScreen({super.key});
@@ -20,7 +21,7 @@ class OverviewScreen extends StatelessWidget {
 
     if (!state.hasMonthSelected) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.overview)),
+        appBar: SyncAppBar.page(title: l10n.overview),
         body: Center(child: Text(l10n.noMonthSelected)),
       );
     }
@@ -57,7 +58,7 @@ class OverviewScreen extends StatelessWidget {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(l10n.overview)),
+        appBar: SyncAppBar.page(title: l10n.overview),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

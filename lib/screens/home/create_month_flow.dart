@@ -8,6 +8,7 @@ import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/form_sheet.dart';
+import '../../widgets/sync_app_bar.dart';
 
 /// Full-screen create-month flow. Catalog lives on the household, so this
 /// only picks a month and copies the previous plan when one exists.
@@ -132,12 +133,9 @@ class _CreateMonthFlowScreenState extends State<CreateMonthFlowScreen> {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Text(l10n.stepPickMonth),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
+        appBar: SyncAppBar.modal(
+          title: l10n.stepPickMonth,
+          onClose: () => Navigator.pop(context),
         ),
         body: ListView(
           padding: const EdgeInsets.all(24),

@@ -5,13 +5,11 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
-import '../../utils/money.dart';
 import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
 import '../../widgets/budget/savings_budget_section.dart';
+import '../../widgets/sync_app_bar.dart';
 import '../category/category_sheets.dart';
-import '../household/household_sheets.dart';
-import '../settings/settings_screen.dart';
 import 'create_month_flow.dart';
 import 'quick_log_sheet.dart';
 
@@ -32,46 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return SyncBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.appTitle),
-                if (state.household != null)
-                  InkWell(
-                    onTap: () => showHouseholdSwitcher(context),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          state.household!.name,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelMedium
-                              ?.copyWith(color: SyncColors.textMuted),
-                        ),
-                        Icon(
-                          Icons.expand_more,
-                          size: 16,
-                          color: SyncColors.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                tooltip: l10n.settings,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
+          appBar: SyncAppBar.home(),
           body: RefreshIndicator(
             onRefresh: () => context.read<AppState>().refreshBudget(),
             child: ListView(
@@ -112,9 +71,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final monthId = state.monthId!;
-    final monthDate = dateFromMonthId(monthId);
-
     final spendCats = state.categoriesOfType('spend');
     final monthlyCats = state.categoriesOfType('monthly');
     final debtCats = state.categoriesOfType('debt');
@@ -127,65 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 280),
-                child: Text(
-                  l10n.monthTitle(monthDate),
-                  key: ValueKey(monthId),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              if (state.household != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: InkWell(
-                    onTap: () => showHouseholdSwitcher(context),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            state.household!.name,
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(color: SyncColors.textMuted),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(
-                          Icons.expand_more,
-                          size: 16,
-                          color: SyncColors.textMuted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              tooltip: l10n.selectMonth,
-              onPressed: () => showSelectMonthSheet(context),
-              icon: const Icon(Icons.swap_horiz_rounded),
-            ),
-            IconButton(
-              tooltip: l10n.settings,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-              icon: const Icon(Icons.settings_outlined),
-            ),
-          ],
-        ),
+        appBar: SyncAppBar.home(),
         floatingActionButton: FloatingActionButton.extended(
           heroTag: 'home-log-fab',
           onPressed: () => showQuickLogSheet(context),

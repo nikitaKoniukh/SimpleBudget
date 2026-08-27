@@ -13,6 +13,15 @@ abstract final class SyncColors {
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color warning = Color(0xFFC97B3A);
   static const Color overspend = Color(0xFFE07A5F);
+
+  /// Frosted topbar surface — matches card panels (BudgetOverviewBar, etc.).
+  static Color get frostedSurface => Colors.white.withValues(alpha: 0.88);
+
+  /// Glass action button fill — blur applied in widget, this is the tint.
+  static Color get glassButton => Colors.white.withValues(alpha: 0.62);
+
+  /// Backdrop blur sigma for glass action buttons.
+  static const double frostedBlur = 12;
 }
 
 ThemeData buildSyncTheme() {
@@ -91,6 +100,7 @@ ThemeData buildSyncTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: SyncColors.surface,
     textTheme: textTheme,
+    // SyncAppBar owns frosted visuals; keep AppBarTheme transparent for fallback.
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
       elevation: 0,

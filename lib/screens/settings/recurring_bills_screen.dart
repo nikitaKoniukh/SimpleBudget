@@ -6,6 +6,7 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../widgets/form_sheet.dart';
+import '../../widgets/sync_app_bar.dart';
 
 class RecurringBillsScreen extends StatelessWidget {
   const RecurringBillsScreen({super.key});
@@ -20,7 +21,7 @@ class RecurringBillsScreen extends StatelessWidget {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(l10n.recurringBills)),
+        appBar: SyncAppBar.page(title: l10n.recurringBills),
         floatingActionButton: state.canEditPlan
             ? FloatingActionButton.extended(
                 onPressed: () => _showAddBill(context),

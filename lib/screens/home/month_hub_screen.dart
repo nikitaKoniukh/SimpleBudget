@@ -6,6 +6,7 @@ import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/summary_card.dart';
+import '../../widgets/sync_app_bar.dart';
 import '../home/log_entry_sheet.dart';
 import '../category/category_sheets.dart';
 import 'month_actions.dart';
@@ -33,16 +34,7 @@ class MonthHubScreen extends StatelessWidget {
 
     if (!state.hasMonthSelected) {
       return Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.month),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: l10n.addMonth,
-              onPressed: () => showCreateMonthDialog(context),
-            ),
-          ],
-        ),
+        appBar: SyncAppBar.home(),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -69,41 +61,10 @@ class MonthHubScreen extends StatelessWidget {
       );
     }
 
-    final monthId = state.monthId!;
-    final monthDate = dateFromMonthId(monthId);
     final totals = state.totals;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.monthTitle(monthDate)),
-            if (state.household != null)
-              Text(
-                '${state.household!.name} · ${l10n.synced}',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: l10n.selectMonth,
-            onPressed: () => showSelectMonthSheet(context),
-            icon: const Icon(Icons.list),
-          ),
-          IconButton(
-            tooltip: l10n.addMonth,
-            onPressed: () => showCreateMonthDialog(context),
-            icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            tooltip: l10n.addCategory,
-            onPressed: () => showAddCategoryFlow(context),
-            icon: const Icon(Icons.category_outlined),
-          ),
-        ],
-      ),
+      appBar: SyncAppBar.home(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: state.categories.isEmpty
             ? () => showAddCategoryFlow(context)

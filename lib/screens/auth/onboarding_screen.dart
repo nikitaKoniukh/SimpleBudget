@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/text_format.dart';
+import '../../widgets/sync_app_bar.dart';
 import '../settings/account_actions.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -50,7 +51,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.household)),
+      appBar: SyncAppBar.page(title: l10n.household, showBack: false),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

@@ -10,6 +10,7 @@ import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/language_picker_sheet.dart';
+import '../../widgets/sync_app_bar.dart';
 import '../household/household_sheets.dart';
 import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
@@ -81,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(l10n.settings)),
+        appBar: SyncAppBar.page(title: l10n.settings),
         body: ListView(
           children: [
             ListTile(

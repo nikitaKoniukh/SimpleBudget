@@ -10,6 +10,7 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
+import '../../widgets/sync_app_bar.dart';
 import 'investments_sheets.dart';
 
 class InvestmentsScreen extends StatefulWidget {
@@ -41,7 +42,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
       return SyncBackground(
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(title: Text(l10n.savingsHighlight)),
+          appBar: SyncAppBar.tab(title: l10n.savingsHighlight),
           body: RefreshIndicator(
             onRefresh: () => context.read<AppState>().refreshBudget(),
             child: ListView(
@@ -85,7 +86,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(l10n.savingsHighlight)),
+        appBar: SyncAppBar.tab(title: l10n.savingsHighlight),
         floatingActionButton: FloatingActionButton.extended(
           heroTag: 'investments-fab',
           onPressed: () => showSetAsideActionsSheet(context),

@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
 import '../../utils/money.dart';
 import '../../utils/text_format.dart';
+import '../../widgets/sync_app_bar.dart';
 
 class IncomeScreen extends StatelessWidget {
   const IncomeScreen({super.key});
@@ -16,13 +17,13 @@ class IncomeScreen extends StatelessWidget {
 
     if (!state.hasMonthSelected) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.income)),
+        appBar: SyncAppBar.page(title: l10n.income),
         body: Center(child: Text(l10n.noMonthSelected)),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.income)),
+      appBar: SyncAppBar.page(title: l10n.income),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addSource(context),
         icon: const Icon(Icons.add),
