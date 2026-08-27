@@ -51,7 +51,7 @@ Future<void> showPlanEditor(
           spacing: 12,
           children: [
             Text(l10n.editPlan, style: Theme.of(ctx).textTheme.titleLarge),
-            Text(subcategory.localizedName(state.localeCode)),
+            Text(state.localizedSubcategoryName(subcategory)),
             TextField(
               controller: plannedCtrl,
               keyboardType:

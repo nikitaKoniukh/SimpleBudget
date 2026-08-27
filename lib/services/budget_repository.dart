@@ -279,6 +279,7 @@ class BudgetRepository {
   Future<void> applyRecurringBillsToMonth({
     required String householdId,
     required String monthId,
+    Set<String> excludeSubcategoryIds = const {},
   }) async {
     final bills = await _householdRef(
       householdId,
@@ -294,6 +295,7 @@ class BudgetRepository {
       final bill = RecurringBill.fromMap(doc.id, doc.data());
       final subId = bill.subcategoryId;
       if (subId == null || subId.isEmpty || bill.amount <= 0) continue;
+      if (excludeSubcategoryIds.contains(subId)) continue;
       final existing = planned[subId] ?? 0;
       if (existing > 0) continue;
       ops.add(
@@ -352,9 +354,10 @@ class BudgetRepository {
   /// pot's lifetime [Subcategory.savedTotal]. Expense dates keep the same
   /// day-of-month in [toMonthId].
   ///
-  /// Debt installment `current` ticks up on the new month plan. If after the
-  /// bump `current > total`, that debt is omitted from the new month (no plan,
-  /// no expenses).
+  /// Debt installment `current` ticks up on the new month plan. If the loan is
+  /// already finished (`current >= total`) or would pass the last payment
+  /// (`current + 1 > total`), that debt is omitted from the new month (no plan,
+  /// no expenses, no recurring bill).
   ///
   /// When [rolloverLeftover] is true, ensures the Leftover savings pot exists.
   /// The leftover amount is computed live from prior months (not stored as a
@@ -469,6 +472,10 @@ class BudgetRepository {
         final total = subTotals[doc.id];
         final current = (data['installmentCurrent'] as num?)?.toInt();
         if (total != null && current != null) {
+          if (current >= total) {
+            completedDebtIds.add(doc.id);
+            continue;
+          }
           final next = current + 1;
           if (next > total) {
             completedDebtIds.add(doc.id);
@@ -529,6 +536,7 @@ class BudgetRepository {
     await applyRecurringBillsToMonth(
       householdId: householdId,
       monthId: toMonthId,
+      excludeSubcategoryIds: completedDebtIds,
     );
   }
 
@@ -917,11 +925,24 @@ class BudgetRepository {
     required String householdId,
     required String monthId,
     required MonthPlan plan,
+    bool clearNameEn = false,
+    bool clearNameRu = false,
   }) async {
+    final data = plan.toMap();
+    if (clearNameEn) {
+      data['nameEn'] = FieldValue.delete();
+    } else if (plan.nameEn != null) {
+      data['nameEn'] = plan.nameEn;
+    }
+    if (clearNameRu) {
+      data['nameRu'] = FieldValue.delete();
+    } else if (plan.nameRu != null) {
+      data['nameRu'] = plan.nameRu;
+    }
     await _monthRef(householdId, monthId)
         .collection('plans')
         .doc(plan.subcategoryId)
-        .set(plan.toMap(), SetOptions(merge: true));
+        .set(data, SetOptions(merge: true));
   }
 
   Future<void> deletePlan({

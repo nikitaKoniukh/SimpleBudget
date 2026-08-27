@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/default_categories.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
@@ -16,9 +17,13 @@ class SavingsBudgetSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
-    final pots = state.savingsPots
-        .where((p) => !DefaultPots.isLeftoverName(p.nameEn))
-        .toList(growable: false);
+    final savingsCat = state.savingsCategory;
+    final pots = savingsCat == null
+        ? const <Subcategory>[]
+        : state
+            .subcategoriesForMonth(savingsCat.id)
+            .where((p) => !DefaultPots.isLeftoverName(p.nameEn))
+            .toList(growable: false);
     if (pots.isEmpty) return const SizedBox.shrink();
 
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);

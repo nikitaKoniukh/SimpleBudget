@@ -33,7 +33,7 @@ class CategoryBudgetSection extends StatelessWidget {
     final actual = state.categoryActual(cat.id);
     final overPlan = actual > planned && planned > 0;
     final overColor = SyncColors.overspend;
-    final subs = state.subcategoriesFor(cat.id);
+    final subs = state.subcategoriesForMonth(cat.id);
     final canEdit = state.canEditPlan;
     final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
 

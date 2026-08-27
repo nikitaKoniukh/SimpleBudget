@@ -26,7 +26,7 @@ Future<void> showSubcategoryRegisterSheet(
   final plan = state.planFor(subcategory.id);
 
   final nameCtrl = TextEditingController(
-    text: subcategory.localizedName(state.localeCode),
+    text: state.localizedSubcategoryName(subcategory),
   );
   final plannedCtrl = TextEditingController(
     text: plan != null && plan.planned > 0
@@ -333,8 +333,8 @@ Future<void> showSubcategoryRegisterSheet(
                       final ok = await showDialog<bool>(
                         context: ctx,
                         builder: (dCtx) => AlertDialog(
-                          title: Text(l10n.delete),
-                          content: Text(sub.localizedName(live.localeCode)),
+                          title: Text(l10n.removeFromMonth),
+                          content: Text(l10n.removeFromMonthConfirm),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(dCtx, false),
@@ -342,7 +342,7 @@ Future<void> showSubcategoryRegisterSheet(
                             ),
                             FilledButton(
                               onPressed: () => Navigator.pop(dCtx, true),
-                              child: Text(l10n.delete),
+                              child: Text(l10n.removeFromMonth),
                             ),
                           ],
                         ),
@@ -351,7 +351,7 @@ Future<void> showSubcategoryRegisterSheet(
                         Navigator.pop(ctx, 'delete');
                       }
                     },
-                    child: Text(l10n.delete),
+                    child: Text(l10n.removeFromMonth),
                   ),
                 ],
               ],
@@ -367,7 +367,7 @@ Future<void> showSubcategoryRegisterSheet(
 
   final live = context.read<AppState>();
   if (result == 'delete') {
-    await live.deleteSubcategory(subcategory.id);
+    await live.removeSubcategoryFromMonth(subcategory.id);
     return;
   }
   if (!live.canEditPlan) {
@@ -412,29 +412,31 @@ Future<void> showSubcategoryRegisterSheet(
     target = parsed != null && parsed > 0 ? parsed : null;
     await live.updateSubcategory(
       currentSub.copyWith(
-        nameEn: name,
-        nameRu: name,
         targetAmount: target,
         clearTargetAmount: target == null,
         targetDate: targetDate,
         clearTargetDate: targetDate == null,
       ),
     );
-  } else {
+  } else if (isDebt) {
     await live.updateSubcategory(
       currentSub.copyWith(
-        nameEn: name,
-        nameRu: name,
-        installmentTotal: isDebt ? instTot : null,
-        clearInstallmentTotal: !isDebt || totText.isEmpty,
+        installmentTotal: instTot,
+        clearInstallmentTotal: totText.isEmpty,
       ),
     );
   }
 
+  final nameEnOverride = name == currentSub.nameEn ? null : name;
+  final nameRuOverride = name == currentSub.nameRu ? null : name;
   await live.upsertPlan(
     subcategoryId: currentSub.id,
     planned: planned,
     installmentCurrent: isDebt ? instCur : null,
     clearInstallmentCurrent: !isDebt || curText.isEmpty,
+    nameEn: nameEnOverride,
+    nameRu: nameRuOverride,
+    clearNameEn: nameEnOverride == null,
+    clearNameRu: nameRuOverride == null,
   );
 }

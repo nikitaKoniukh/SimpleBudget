@@ -504,16 +504,34 @@ class MonthPlan {
     required this.subcategoryId,
     required this.planned,
     this.installmentCurrent,
+    this.nameEn,
+    this.nameRu,
   });
 
   final String subcategoryId;
   final double planned;
   final int? installmentCurrent;
 
+  /// Optional display name for this month only. Falls back to [Subcategory] name.
+  final String? nameEn;
+  final String? nameRu;
+
+  String localizedName(String localeCode, Subcategory fallback) {
+    final override = localeCode == 'ru'
+        ? (nameRu ?? nameEn)
+        : (nameEn ?? nameRu);
+    if (override != null && override.trim().isNotEmpty) return override;
+    return fallback.localizedName(localeCode);
+  }
+
   MonthPlan copyWith({
     double? planned,
     int? installmentCurrent,
     bool clearInstallmentCurrent = false,
+    String? nameEn,
+    String? nameRu,
+    bool clearNameEn = false,
+    bool clearNameRu = false,
   }) {
     return MonthPlan(
       subcategoryId: subcategoryId,
@@ -521,12 +539,16 @@ class MonthPlan {
       installmentCurrent: clearInstallmentCurrent
           ? null
           : (installmentCurrent ?? this.installmentCurrent),
+      nameEn: clearNameEn ? null : (nameEn ?? this.nameEn),
+      nameRu: clearNameRu ? null : (nameRu ?? this.nameRu),
     );
   }
 
   Map<String, dynamic> toMap() => {
     'planned': planned,
     'installmentCurrent': installmentCurrent,
+    if (nameEn != null) 'nameEn': nameEn,
+    if (nameRu != null) 'nameRu': nameRu,
   };
 
   factory MonthPlan.fromMap(String subcategoryId, Map<String, dynamic> map) {
@@ -534,6 +556,8 @@ class MonthPlan {
       subcategoryId: subcategoryId,
       planned: (map['planned'] as num?)?.toDouble() ?? 0,
       installmentCurrent: (map['installmentCurrent'] as num?)?.toInt(),
+      nameEn: map['nameEn'] as String?,
+      nameRu: map['nameRu'] as String?,
     );
   }
 }

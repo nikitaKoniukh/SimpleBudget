@@ -88,6 +88,11 @@ class AppLocalizations {
   String get addEntry => isRu ? 'Добавить сумму' : 'Add amount';
   String get save => isRu ? 'Сохранить' : 'Save';
   String get delete => isRu ? 'Удалить' : 'Delete';
+  String get removeFromMonth =>
+      isRu ? 'Убрать из этого месяца' : 'Remove from this month';
+  String get removeFromMonthConfirm => isRu
+      ? 'Подкатегория исчезнет только в выбранном месяце. Другие месяцы не изменятся.'
+      : 'Removes this subcategory from the selected month only. Other months stay unchanged.';
   String get cancel => isRu ? 'Отмена' : 'Cancel';
   String get description => isRu ? 'Описание' : 'Description';
   String get category => isRu ? 'Категория' : 'Category';

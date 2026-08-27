@@ -275,7 +275,32 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     ),
                   ),
                   if (_expandedCategoryId == cat.id)
-                    ...state.subcategoriesFor(cat.id).map((sub) {
+                    ...state.subcategoriesFor(cat.id).where((sub) {
+                      for (final id in compareIds) {
+                        final snap = _snapshots[id];
+                        if (snap == null) continue;
+                        if (snap.plans.any((p) => p.subcategoryId == sub.id)) {
+                          return true;
+                        }
+                        if (snap.spentForSub(sub.id) > 0) return true;
+                      }
+                      return false;
+                    }).map((sub) {
+                      final labelPlan = () {
+                        for (final id in compareIds) {
+                          final snap = _snapshots[id];
+                          if (snap == null) continue;
+                          for (final plan in snap.plans) {
+                            if (plan.subcategoryId == sub.id) return plan;
+                          }
+                        }
+                        return null;
+                      }();
+                      final label = labelPlan?.localizedName(
+                            state.localeCode,
+                            sub,
+                          ) ??
+                          sub.localizedName(state.localeCode);
                       return Padding(
                         padding: const EdgeInsets.only(
                           left: 16,
@@ -287,7 +312,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                             SizedBox(
                               width: 112,
                               child: Text(
-                                sub.localizedName(state.localeCode),
+                                label,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context)
                                     .textTheme

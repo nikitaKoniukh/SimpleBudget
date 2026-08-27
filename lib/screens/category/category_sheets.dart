@@ -372,7 +372,7 @@ Future<void> showCategoryRegisterSheet(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
             final cat = live.categoryById(category.id) ?? category;
-            final subs = live.subcategoriesFor(cat.id);
+            final subs = live.subcategoriesForMonth(cat.id);
             final canEdit = live.canEditPlan;
 
             return Column(
@@ -471,7 +471,7 @@ Future<void> showCategoryRegisterSheet(
                   ...subs.map(
                     (sub) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: Text(sub.localizedName(live.localeCode)),
+                      title: Text(live.localizedSubcategoryName(sub)),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
                         Navigator.pop(ctx, 'open_sub');

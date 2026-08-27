@@ -88,7 +88,17 @@ Future<void> showLogEntrySheet(
           builder: (ctx, setModal) {
             final live = ctx.watch<AppState>();
             final kindCats = _catsForKind(live, selectedKind);
-            final pots = live.savingsPots;
+            final savingsCat = live.savingsCategory;
+            final monthPots = savingsCat == null
+                ? const <Subcategory>[]
+                : live.subcategoriesForMonth(savingsCat.id);
+            var pots = monthPots;
+            if (editing &&
+                selectedSubId != null &&
+                !pots.any((s) => s.id == selectedSubId)) {
+              final pinned = live.subcategoryById(selectedSubId!);
+              if (pinned != null) pots = [...pots, pinned];
+            }
             final sources = live.incomeSources;
 
             if (selectedKind == LogKind.save) {
@@ -113,7 +123,7 @@ Future<void> showLogEntrySheet(
                 selectedCategoryId ??= kindCats.firstOrNull?.id;
                 final catSubs = selectedCategoryId == null
                     ? const <Subcategory>[]
-                    : live.subcategoriesFor(selectedCategoryId!);
+                    : live.subcategoriesForMonth(selectedCategoryId!);
                 if (selectedSubId != null &&
                     !catSubs.any((s) => s.id == selectedSubId)) {
                   selectedSubId = catSubs.firstOrNull?.id;
@@ -129,9 +139,17 @@ Future<void> showLogEntrySheet(
               selectedSourceId ??= sources.firstOrNull?.id;
             }
 
-            final catSubs = selectedCategoryId == null
+            var catSubs = selectedCategoryId == null
                 ? const <Subcategory>[]
-                : live.subcategoriesFor(selectedCategoryId!);
+                : live.subcategoriesForMonth(selectedCategoryId!);
+            if (editing && selectedSubId != null) {
+              final sub = live.subcategoryById(selectedSubId!);
+              if (sub != null &&
+                  sub.categoryId == selectedCategoryId &&
+                  !catSubs.any((s) => s.id == sub.id)) {
+                catSubs = [...catSubs, sub];
+              }
+            }
 
             final canSave = switch (selectedKind) {
               LogKind.spend ||
@@ -259,7 +277,7 @@ Future<void> showLogEntrySheet(
                         setModal(() {
                           selectedCategoryId = v;
                           selectedSubId =
-                              live.subcategoriesFor(v).firstOrNull?.id;
+                              live.subcategoriesForMonth(v).firstOrNull?.id;
                         });
                       },
                     ),
@@ -297,7 +315,7 @@ Future<void> showLogEntrySheet(
                               (sub) => DropdownMenuItem(
                                 value: sub.id,
                                 child: Text(
-                                  sub.localizedName(live.localeCode),
+                                  live.localizedSubcategoryName(sub),
                                 ),
                               ),
                             )
@@ -354,7 +372,7 @@ Future<void> showLogEntrySheet(
                             (sub) => DropdownMenuItem(
                               value: sub.id,
                               child: Text(
-                                sub.localizedName(live.localeCode),
+                                live.localizedSubcategoryName(sub),
                               ),
                             ),
                           )
@@ -611,7 +629,9 @@ Future<void> showLogEntrySheet(
       }
       final sub = live.subcategoryById(subId);
       final billName = noteOrNull ??
-          sub?.localizedName(live.localeCode) ??
+          (sub != null
+              ? live.localizedSubcategoryName(sub)
+              : null) ??
           l10n.logFixed;
       await live.addRecurringBill(
         name: billName,

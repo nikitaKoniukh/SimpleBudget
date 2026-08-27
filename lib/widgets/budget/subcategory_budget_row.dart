@@ -42,7 +42,7 @@ class SubcategoryBudgetRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    sub.localizedName(state.localeCode),
+                    state.localizedSubcategoryName(sub),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: overPlan ? overColor : null,
                         ),

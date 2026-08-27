@@ -81,7 +81,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
       final cat = sub == null ? null : state.categoryById(sub.categoryId);
       final who = expense.createdByName ?? state.memberLabel(expense.createdBy);
       final hay =
-          '${expense.note ?? ''} ${sub?.localizedName(state.localeCode) ?? ''} ${cat?.localizedName(state.localeCode) ?? ''} $who';
+          '${expense.note ?? ''} ${sub != null ? state.localizedSubcategoryName(sub) : ''} ${cat?.localizedName(state.localeCode) ?? ''} $who';
       return _matchesQuery(hay);
     }).toList();
 
@@ -253,8 +253,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         final isDeposit = state.isDepositExpense(expense);
                         final title = expense.note?.trim().isNotEmpty == true
                             ? expense.note!
-                            : (sub?.localizedName(state.localeCode) ??
-                                l10n.expense);
+                            : (sub != null
+                                ? state.localizedSubcategoryName(sub)
+                                : l10n.expense);
                         final who = expense.createdByName ??
                             state.memberLabel(expense.createdBy);
                         final subtitleParts = <String>[
@@ -262,7 +263,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           if (cat != null) cat.localizedName(state.localeCode),
                           if (sub != null &&
                               expense.note?.trim().isNotEmpty == true)
-                            sub.localizedName(state.localeCode),
+                            state.localizedSubcategoryName(sub),
                           DateFormat.MMMd().format(expense.date),
                           if (who.isNotEmpty) '${l10n.loggedBy} $who',
                         ];

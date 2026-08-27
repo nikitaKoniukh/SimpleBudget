@@ -257,6 +257,19 @@ class AppState extends ChangeNotifier {
   List<Subcategory> subcategoriesFor(String categoryId) =>
       subcategories.where((s) => s.categoryId == categoryId).toList();
 
+  /// Subcategories active in the selected month: has a plan and/or expenses.
+  List<Subcategory> subcategoriesForMonth(String categoryId) =>
+      subcategoriesFor(categoryId).where(isSubcategoryActiveThisMonth).toList();
+
+  bool isSubcategoryActiveThisMonth(Subcategory sub) =>
+      planFor(sub.id) != null || spentFor(sub.id) > 0;
+
+  String localizedSubcategoryName(Subcategory sub) {
+    final plan = planFor(sub.id);
+    if (plan != null) return plan.localizedName(localeCode, sub);
+    return sub.localizedName(localeCode);
+  }
+
   MonthPlan? planFor(String subcategoryId) {
     for (final plan in _plans) {
       if (plan.subcategoryId == subcategoryId) return plan;
@@ -279,14 +292,14 @@ class AppState extends ChangeNotifier {
     return list;
   }
 
-  double categoryPlanned(String categoryId) =>
-      subcategoriesFor(categoryId).fold(0, (s, sub) => s + plannedFor(sub.id));
+  double categoryPlanned(String categoryId) => subcategoriesForMonth(categoryId)
+      .fold(0, (s, sub) => s + plannedFor(sub.id));
 
-  double categoryActual(String categoryId) =>
-      subcategoriesFor(categoryId).fold(0, (s, sub) => s + spentFor(sub.id));
+  double categoryActual(String categoryId) => subcategoriesForMonth(categoryId)
+      .fold(0, (s, sub) => s + spentFor(sub.id));
 
   List<Expense> expensesForCategory(String categoryId) {
-    final subIds = subcategoriesFor(categoryId).map((s) => s.id).toSet();
+    final subIds = subcategoriesForMonth(categoryId).map((s) => s.id).toSet();
     final list = _expenses
         .where((e) => subIds.contains(e.subcategoryId))
         .toList();
@@ -1361,6 +1374,19 @@ class AppState extends ChangeNotifier {
     await _repo.updateSubcategory(householdId: hid, subcategory: subcategory);
   }
 
+  Future<void> removeSubcategoryFromMonth(String subcategoryId) async {
+    final hid = _activeHid;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    await _repo.deletePlan(
+      householdId: hid,
+      monthId: mid,
+      subcategoryId: subcategoryId,
+    );
+    _plans = _plans.where((p) => p.subcategoryId != subcategoryId).toList();
+    notifyListeners();
+  }
+
   Future<void> deleteSubcategory(String subcategoryId) async {
     final hid = _activeHid;
     if (hid == null) throw StateError('No household');
@@ -1375,19 +1401,40 @@ class AppState extends ChangeNotifier {
     required double planned,
     int? installmentCurrent,
     bool clearInstallmentCurrent = false,
+    String? nameEn,
+    String? nameRu,
+    bool clearNameEn = false,
+    bool clearNameRu = false,
   }) async {
     final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
+    final existing = planFor(subcategoryId);
+    final plan = MonthPlan(
+      subcategoryId: subcategoryId,
+      planned: planned,
+      installmentCurrent: clearInstallmentCurrent ? null : installmentCurrent,
+      nameEn: clearNameEn ? null : (nameEn ?? existing?.nameEn),
+      nameRu: clearNameRu ? null : (nameRu ?? existing?.nameRu),
+    );
     await _repo.upsertPlan(
       householdId: hid,
       monthId: mid,
-      plan: MonthPlan(
-        subcategoryId: subcategoryId,
-        planned: planned,
-        installmentCurrent: clearInstallmentCurrent ? null : installmentCurrent,
-      ),
+      plan: plan,
+      clearNameEn: clearNameEn,
+      clearNameRu: clearNameRu,
     );
+    final planIdx = _plans.indexWhere((p) => p.subcategoryId == subcategoryId);
+    if (planIdx < 0) {
+      _plans = [..._plans, plan];
+    } else {
+      _plans = [
+        ..._plans.sublist(0, planIdx),
+        plan,
+        ..._plans.sublist(planIdx + 1),
+      ];
+    }
+    notifyListeners();
   }
 
   Future<void> addExpense({

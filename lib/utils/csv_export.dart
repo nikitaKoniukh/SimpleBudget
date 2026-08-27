@@ -39,18 +39,20 @@ String buildMonthCsv({
   for (final cat in categories) {
     final subs = subcategories.where((s) => s.categoryId == cat.id);
     for (final sub in subs) {
-      final planned = planBySub[sub.id]?.planned ?? 0;
+      final plan = planBySub[sub.id];
       final spent = expenses
           .where((e) => e.subcategoryId == sub.id)
           .fold<double>(0, (s, e) => s + e.amount);
-      final current = planBySub[sub.id]?.installmentCurrent;
+      if (plan == null && spent <= 0) continue;
+      final planned = plan?.planned ?? 0;
+      final current = plan?.installmentCurrent;
       final installment = current != null && sub.installmentTotal != null
           ? '$current/${sub.installmentTotal}'
           : '';
       buf.writeln(
         [
           _csv(cat.localizedName(localeCode)),
-          _csv(sub.localizedName(localeCode)),
+          _csv(_subDisplayName(sub, plan, localeCode)),
           planned,
           spent,
           installment,
@@ -68,10 +70,11 @@ String buildMonthCsv({
     final cat = sub == null
         ? null
         : categories.where((c) => c.id == sub.categoryId).firstOrNull;
+    final plan = planBySub[expense.subcategoryId];
     buf.writeln(
       [
         _csv(cat?.localizedName(localeCode) ?? ''),
-        _csv(sub?.localizedName(localeCode) ?? ''),
+        _csv(sub == null ? '' : _subDisplayName(sub, plan, localeCode)),
         expense.date.toIso8601String().split('T').first,
         expense.amount,
         _csv(expense.note ?? ''),
@@ -88,6 +91,15 @@ String buildMonthCsv({
   buf.writeln('Actual,$actual');
   buf.writeln('Difference,${planned - actual}');
   return buf.toString();
+}
+
+String _subDisplayName(
+  Subcategory sub,
+  MonthPlan? plan,
+  String localeCode,
+) {
+  if (plan != null) return plan.localizedName(localeCode, sub);
+  return sub.localizedName(localeCode);
 }
 
 String _csv(String value) {
