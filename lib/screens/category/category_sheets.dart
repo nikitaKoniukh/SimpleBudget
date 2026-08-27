@@ -133,7 +133,7 @@ Future<CategorySourceChoice?> showCategorySourceSheet(
             expand: false,
             initialChildSize: 0.65,
             minChildSize: 0.4,
-            maxChildSize: 0.9,
+            maxChildSize: 1,
             builder: (context, scrollController) {
             return ListView(
               controller: scrollController,

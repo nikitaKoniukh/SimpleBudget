@@ -498,7 +498,7 @@ Future<void> showPotDetailSheet(
             expand: false,
             initialChildSize: 0.55,
             minChildSize: 0.35,
-            maxChildSize: 0.9,
+            maxChildSize: 1,
             builder: (ctx, scrollController) {
             final live = ctx.watch<AppState>();
             final pot = live.subcategoryById(subcategory.id) ?? subcategory;

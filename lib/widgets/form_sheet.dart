@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// Max popup height: 90% of screen, reduced by the keyboard so the sheet
-/// never grows past that fraction even when `viewInsets` pad the bottom.
+/// Max fraction of screen height for bottom sheets and form popups.
+const sheetMaxHeightFraction = 0.8;
+
+/// Max popup height: [sheetMaxHeightFraction] of screen, reduced by the keyboard
+/// so the sheet never grows past that fraction even when `viewInsets` pad the bottom.
 double sheetMaxHeight(BuildContext context) {
   final media = MediaQuery.of(context);
-  return (media.size.height * 0.9 - media.viewInsets.bottom)
+  return (media.size.height * sheetMaxHeightFraction - media.viewInsets.bottom)
       .clamp(120.0, double.infinity);
 }
 
