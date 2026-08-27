@@ -67,7 +67,9 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
 
   List<_LogFlowStep> _stepsFor(AppState state) {
     final steps = <_LogFlowStep>[];
-    if (!_editing) steps.add(_LogFlowStep.type);
+    if (!_editing && !_skipWhereStepFor(state)) {
+      steps.add(_LogFlowStep.type);
+    }
     if (!_skipWhereStepFor(state)) {
       if (_needsCategoryStep(_selectedKind)) {
         steps.add(_LogFlowStep.category);
@@ -398,8 +400,10 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  FlowStepProgress(current: _step, total: steps.length),
-                  const SizedBox(height: 20),
+                  if (steps.length > 1) ...[
+                    FlowStepProgress(current: _step, total: steps.length),
+                    const SizedBox(height: 20),
+                  ],
                   Expanded(
                     child: SingleChildScrollView(
                       child: switch (currentStepKind) {
