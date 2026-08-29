@@ -360,9 +360,9 @@ class BudgetRepository {
   /// Copies income sources, plans, and selected expenses into [toMonthId].
   ///
   /// Expenses are copied only for **monthly**, **savings**, and **debt**
-  /// subcategories (not regular spend). Lifetime [Subcategory.savedTotal] is
-  /// not changed — those deposits were already counted when first logged.
-  /// Expense dates keep the same day-of-month in [toMonthId].
+  /// subcategories (not regular spend). Copied savings deposits also bump each
+  /// pot's lifetime [Subcategory.savedTotal]. Expense dates keep the same
+  /// day-of-month in [toMonthId].
   ///
   /// Debt installment `current` ticks up on the new month plan. If the loan is
   /// already finished (`current >= total`) or would pass the last payment
@@ -499,6 +499,7 @@ class BudgetRepository {
       );
     }
 
+    final savingsSavedDeltas = <String, double>{};
     for (final doc in expenses.docs) {
       final data = Map<String, dynamic>.from(doc.data());
       final subId = data['subcategoryId'] as String? ?? '';
@@ -518,10 +519,25 @@ class BudgetRepository {
           data['date'] = dateFixedToMonth(parsed, toMonthId).toIso8601String();
         }
       }
+      if (savingsIds.contains(subId)) {
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0;
+        if (amount != 0) {
+          savingsSavedDeltas[subId] =
+              (savingsSavedDeltas[subId] ?? 0) + amount;
+        }
+      }
       ops.add(
         (batch) => batch.set(
           toRef.collection('expenses').doc(_uuid.v4()),
           data,
+        ),
+      );
+    }
+    for (final entry in savingsSavedDeltas.entries) {
+      ops.add(
+        (batch) => batch.update(
+          _subcategories(householdId).doc(entry.key),
+          {'savedTotal': FieldValue.increment(entry.value)},
         ),
       );
     }
