@@ -165,20 +165,94 @@ class Household {
 }
 
 class BudgetMonth {
-  const BudgetMonth({required this.id, this.notes, this.status = 'active'});
+  const BudgetMonth({
+    required this.id,
+    this.notes,
+    this.status = 'active',
+    this.incomeTotal = 0,
+    this.spentTotal = 0,
+    this.plannedTotal = 0,
+    this.depositTotal = 0,
+    this.leftoverFromPrior = 0,
+    this.cashLeft = 0,
+    this.savingsBeforeMonth = 0,
+    this.savingsThroughMonth = 0,
+    this.debtPaidTotal = 0,
+  });
 
   /// Format: yyyy-MM
   final String id;
   final String? notes;
   final String status;
 
-  Map<String, dynamic> toMap() => {'notes': notes, 'status': status};
+  final double incomeTotal;
+  final double spentTotal;
+  final double plannedTotal;
+  final double depositTotal;
+  final double leftoverFromPrior;
+  final double cashLeft;
+  final double savingsBeforeMonth;
+  final double savingsThroughMonth;
+  final double debtPaidTotal;
+
+  BudgetMonth copyWith({
+    String? notes,
+    String? status,
+    double? incomeTotal,
+    double? spentTotal,
+    double? plannedTotal,
+    double? depositTotal,
+    double? leftoverFromPrior,
+    double? cashLeft,
+    double? savingsBeforeMonth,
+    double? savingsThroughMonth,
+    double? debtPaidTotal,
+  }) {
+    return BudgetMonth(
+      id: id,
+      notes: notes ?? this.notes,
+      status: status ?? this.status,
+      incomeTotal: incomeTotal ?? this.incomeTotal,
+      spentTotal: spentTotal ?? this.spentTotal,
+      plannedTotal: plannedTotal ?? this.plannedTotal,
+      depositTotal: depositTotal ?? this.depositTotal,
+      leftoverFromPrior: leftoverFromPrior ?? this.leftoverFromPrior,
+      cashLeft: cashLeft ?? this.cashLeft,
+      savingsBeforeMonth: savingsBeforeMonth ?? this.savingsBeforeMonth,
+      savingsThroughMonth: savingsThroughMonth ?? this.savingsThroughMonth,
+      debtPaidTotal: debtPaidTotal ?? this.debtPaidTotal,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'notes': notes,
+    'status': status,
+    'incomeTotal': incomeTotal,
+    'spentTotal': spentTotal,
+    'plannedTotal': plannedTotal,
+    'depositTotal': depositTotal,
+    'leftoverFromPrior': leftoverFromPrior,
+    'cashLeft': cashLeft,
+    'savingsBeforeMonth': savingsBeforeMonth,
+    'savingsThroughMonth': savingsThroughMonth,
+    'debtPaidTotal': debtPaidTotal,
+  };
 
   factory BudgetMonth.fromMap(String id, Map<String, dynamic> map) {
     return BudgetMonth(
       id: id,
       notes: map['notes'] as String?,
       status: map['status'] as String? ?? 'active',
+      incomeTotal: (map['incomeTotal'] as num?)?.toDouble() ?? 0,
+      spentTotal: (map['spentTotal'] as num?)?.toDouble() ?? 0,
+      plannedTotal: (map['plannedTotal'] as num?)?.toDouble() ?? 0,
+      depositTotal: (map['depositTotal'] as num?)?.toDouble() ?? 0,
+      leftoverFromPrior: (map['leftoverFromPrior'] as num?)?.toDouble() ?? 0,
+      cashLeft: (map['cashLeft'] as num?)?.toDouble() ?? 0,
+      savingsBeforeMonth: (map['savingsBeforeMonth'] as num?)?.toDouble() ?? 0,
+      savingsThroughMonth:
+          (map['savingsThroughMonth'] as num?)?.toDouble() ?? 0,
+      debtPaidTotal: (map['debtPaidTotal'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -280,7 +354,6 @@ class BudgetCategory {
     required this.type,
     required this.sortOrder,
     this.targetAmount,
-    this.savedTotal = 0,
   });
 
   final String id;
@@ -288,22 +361,19 @@ class BudgetCategory {
   final String nameRu;
   final int colorValue;
   final String iconKey;
-  /// spend | monthly | debt | savings
+
+  /// spend | monthly | savings
   final String type;
   final int sortOrder;
 
   /// Optional lifetime goal for savings pots. Null means no target.
   final double? targetAmount;
 
-  /// Cumulative deposits. Written via increment, not [toMap].
-  final double savedTotal;
-
   bool get isSpend => type == 'spend';
   bool get isMonthly => type == 'monthly';
-  bool get isDebt => type == 'debt';
   bool get isSavings => type == 'savings';
 
-  /// Non-savings categories (spend, monthly, debt). Month totals include savings too.
+  /// Non-savings categories (spend, monthly).
   bool get isBudgetEnvelope => !isSavings;
 
   String localizedName(String localeCode) =>
@@ -318,7 +388,6 @@ class BudgetCategory {
     int? sortOrder,
     double? targetAmount,
     bool clearTargetAmount = false,
-    double? savedTotal,
   }) {
     return BudgetCategory(
       id: id,
@@ -331,11 +400,9 @@ class BudgetCategory {
       targetAmount: clearTargetAmount
           ? null
           : (targetAmount ?? this.targetAmount),
-      savedTotal: savedTotal ?? this.savedTotal,
     );
   }
 
-  /// Does not include [savedTotal] so merge-updates cannot clobber increments.
   Map<String, dynamic> toMap() => {
     'nameEn': nameEn,
     'nameRu': nameRu,
@@ -357,7 +424,6 @@ class BudgetCategory {
       type: map['type'] as String? ?? 'spend',
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       targetAmount: (map['targetAmount'] as num?)?.toDouble(),
-      savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -368,11 +434,9 @@ class Subcategory {
     required this.categoryId,
     required this.nameEn,
     required this.nameRu,
-    this.installmentTotal,
     this.sortOrder = 0,
     this.archived = false,
     this.targetAmount,
-    this.savedTotal = 0,
     this.targetDate,
     this.includeInTotal = true,
   });
@@ -381,15 +445,11 @@ class Subcategory {
   final String categoryId;
   final String nameEn;
   final String nameRu;
-  final int? installmentTotal;
   final int sortOrder;
   final bool archived;
 
   /// Optional lifetime goal for a savings pot. Null means no target.
   final double? targetAmount;
-
-  /// Cumulative deposits. Written via increment, not [toMap].
-  final double savedTotal;
 
   /// Optional deadline for a savings pot.
   final DateTime? targetDate;
@@ -404,13 +464,10 @@ class Subcategory {
     String? categoryId,
     String? nameEn,
     String? nameRu,
-    int? installmentTotal,
-    bool clearInstallmentTotal = false,
     int? sortOrder,
     bool? archived,
     double? targetAmount,
     bool clearTargetAmount = false,
-    double? savedTotal,
     DateTime? targetDate,
     bool clearTargetDate = false,
     bool? includeInTotal,
@@ -420,26 +477,20 @@ class Subcategory {
       categoryId: categoryId ?? this.categoryId,
       nameEn: nameEn ?? this.nameEn,
       nameRu: nameRu ?? this.nameRu,
-      installmentTotal: clearInstallmentTotal
-          ? null
-          : (installmentTotal ?? this.installmentTotal),
       sortOrder: sortOrder ?? this.sortOrder,
       archived: archived ?? this.archived,
       targetAmount: clearTargetAmount
           ? null
           : (targetAmount ?? this.targetAmount),
-      savedTotal: savedTotal ?? this.savedTotal,
       targetDate: clearTargetDate ? null : (targetDate ?? this.targetDate),
       includeInTotal: includeInTotal ?? this.includeInTotal,
     );
   }
 
-  /// Does not include [savedTotal] so merge-updates cannot clobber increments.
   Map<String, dynamic> toMap() => {
     'categoryId': categoryId,
     'nameEn': nameEn,
     'nameRu': nameRu,
-    'installmentTotal': installmentTotal,
     'sortOrder': sortOrder,
     'archived': archived,
     'targetAmount': targetAmount,
@@ -453,11 +504,9 @@ class Subcategory {
       categoryId: map['categoryId'] as String? ?? '',
       nameEn: map['nameEn'] as String? ?? '',
       nameRu: map['nameRu'] as String? ?? '',
-      installmentTotal: (map['installmentTotal'] as num?)?.toInt(),
       sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
       archived: map['archived'] as bool? ?? false,
       targetAmount: (map['targetAmount'] as num?)?.toDouble(),
-      savedTotal: (map['savedTotal'] as num?)?.toDouble() ?? 0,
       targetDate: map['targetDate'] != null
           ? DateTime.tryParse(map['targetDate'] as String)
           : null,
@@ -503,14 +552,12 @@ class MonthPlan {
   const MonthPlan({
     required this.subcategoryId,
     required this.planned,
-    this.installmentCurrent,
     this.nameEn,
     this.nameRu,
   });
 
   final String subcategoryId;
   final double planned;
-  final int? installmentCurrent;
 
   /// Optional display name for this month only. Falls back to [Subcategory] name.
   final String? nameEn;
@@ -526,8 +573,6 @@ class MonthPlan {
 
   MonthPlan copyWith({
     double? planned,
-    int? installmentCurrent,
-    bool clearInstallmentCurrent = false,
     String? nameEn,
     String? nameRu,
     bool clearNameEn = false,
@@ -536,9 +581,6 @@ class MonthPlan {
     return MonthPlan(
       subcategoryId: subcategoryId,
       planned: planned ?? this.planned,
-      installmentCurrent: clearInstallmentCurrent
-          ? null
-          : (installmentCurrent ?? this.installmentCurrent),
       nameEn: clearNameEn ? null : (nameEn ?? this.nameEn),
       nameRu: clearNameRu ? null : (nameRu ?? this.nameRu),
     );
@@ -546,7 +588,6 @@ class MonthPlan {
 
   Map<String, dynamic> toMap() => {
     'planned': planned,
-    'installmentCurrent': installmentCurrent,
     if (nameEn != null) 'nameEn': nameEn,
     if (nameRu != null) 'nameRu': nameRu,
   };
@@ -555,7 +596,6 @@ class MonthPlan {
     return MonthPlan(
       subcategoryId: subcategoryId,
       planned: (map['planned'] as num?)?.toDouble() ?? 0,
-      installmentCurrent: (map['installmentCurrent'] as num?)?.toInt(),
       nameEn: map['nameEn'] as String?,
       nameRu: map['nameRu'] as String?,
     );
@@ -572,7 +612,6 @@ class Expense {
     this.createdAt,
     this.createdBy,
     this.createdByName,
-    this.isDeposit = false,
   });
 
   final String id;
@@ -583,7 +622,6 @@ class Expense {
   final DateTime? createdAt;
   final String? createdBy;
   final String? createdByName;
-  final bool isDeposit;
 
   Expense copyWith({
     String? subcategoryId,
@@ -600,7 +638,6 @@ class Expense {
       createdAt: createdAt,
       createdBy: createdBy,
       createdByName: createdByName,
-      isDeposit: isDeposit,
     );
   }
 
@@ -612,7 +649,6 @@ class Expense {
     'createdAt': createdAt?.toIso8601String(),
     'createdBy': createdBy,
     'createdByName': createdByName,
-    'isDeposit': isDeposit,
   };
 
   factory Expense.fromMap(String id, Map<String, dynamic> map) {
@@ -629,7 +665,367 @@ class Expense {
           : null,
       createdBy: map['createdBy'] as String?,
       createdByName: map['createdByName'] as String?,
-      isDeposit: map['isDeposit'] as bool? ?? false,
+    );
+  }
+}
+
+class Deposit {
+  const Deposit({
+    required this.id,
+    required this.subcategoryId,
+    required this.amount,
+    required this.date,
+    this.note,
+    this.createdAt,
+    this.createdBy,
+    this.createdByName,
+  });
+
+  final String id;
+  final String subcategoryId;
+  final double amount;
+  final DateTime date;
+  final String? note;
+  final DateTime? createdAt;
+  final String? createdBy;
+  final String? createdByName;
+
+  Deposit copyWith({
+    String? subcategoryId,
+    double? amount,
+    DateTime? date,
+    String? note,
+  }) {
+    return Deposit(
+      id: id,
+      subcategoryId: subcategoryId ?? this.subcategoryId,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      createdAt: createdAt,
+      createdBy: createdBy,
+      createdByName: createdByName,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'subcategoryId': subcategoryId,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'note': note,
+    'createdAt': createdAt?.toIso8601String(),
+    'createdBy': createdBy,
+    'createdByName': createdByName,
+  };
+
+  factory Deposit.fromMap(String id, Map<String, dynamic> map) {
+    return Deposit(
+      id: id,
+      subcategoryId: map['subcategoryId'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      date: map['date'] != null
+          ? DateTime.tryParse(map['date'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      note: map['note'] as String?,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String)
+          : null,
+      createdBy: map['createdBy'] as String?,
+      createdByName: map['createdByName'] as String?,
+    );
+  }
+}
+
+class PotBalance {
+  const PotBalance({
+    required this.subcategoryId,
+    this.openingBalance = 0,
+    this.deposited = 0,
+    this.withdrawn = 0,
+    this.balance = 0,
+  });
+
+  final String subcategoryId;
+  final double openingBalance;
+  final double deposited;
+  final double withdrawn;
+  final double balance;
+
+  static double computeBalance({
+    required double openingBalance,
+    required double deposited,
+    required double withdrawn,
+  }) =>
+      openingBalance + deposited - withdrawn;
+
+  PotBalance copyWith({
+    double? openingBalance,
+    double? deposited,
+    double? withdrawn,
+    double? balance,
+  }) {
+    final nextOpening = openingBalance ?? this.openingBalance;
+    final nextDeposited = deposited ?? this.deposited;
+    final nextWithdrawn = withdrawn ?? this.withdrawn;
+    return PotBalance(
+      subcategoryId: subcategoryId,
+      openingBalance: nextOpening,
+      deposited: nextDeposited,
+      withdrawn: nextWithdrawn,
+      balance: balance ??
+          computeBalance(
+            openingBalance: nextOpening,
+            deposited: nextDeposited,
+            withdrawn: nextWithdrawn,
+          ),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'openingBalance': openingBalance,
+    'deposited': deposited,
+    'withdrawn': withdrawn,
+    'balance': balance,
+  };
+
+  factory PotBalance.fromMap(String subcategoryId, Map<String, dynamic> map) {
+    final opening = (map['openingBalance'] as num?)?.toDouble() ?? 0;
+    final deposited = (map['deposited'] as num?)?.toDouble() ?? 0;
+    final withdrawn = (map['withdrawn'] as num?)?.toDouble() ?? 0;
+    final stored = (map['balance'] as num?)?.toDouble();
+    return PotBalance(
+      subcategoryId: subcategoryId,
+      openingBalance: opening,
+      deposited: deposited,
+      withdrawn: withdrawn,
+      balance: stored ??
+          computeBalance(
+            openingBalance: opening,
+            deposited: deposited,
+            withdrawn: withdrawn,
+          ),
+    );
+  }
+}
+
+class Loan {
+  const Loan({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.originalAmount,
+    required this.remainingBalance,
+    this.monthlyPayment,
+    this.totalInstallments,
+    this.paidInstallments,
+    this.dueDayOfMonth,
+    this.interestRate,
+    this.note,
+    this.status = 'active',
+    this.sortOrder = 0,
+    this.createdAt,
+  });
+
+  final String id;
+  final String name;
+
+  /// installment | balance
+  final String type;
+  final double originalAmount;
+  final double remainingBalance;
+  final double? monthlyPayment;
+  final int? totalInstallments;
+  final int? paidInstallments;
+  final int? dueDayOfMonth;
+  final double? interestRate;
+  final String? note;
+
+  /// active | paidOff | archived
+  final String status;
+  final int sortOrder;
+  final DateTime? createdAt;
+
+  bool get isInstallment => type == 'installment';
+  bool get isBalance => type == 'balance';
+  bool get isActive => status == 'active';
+  bool get isPaidOff =>
+      status == 'paidOff' ||
+      remainingBalance <= 0 ||
+      (isInstallment &&
+          totalInstallments != null &&
+          totalInstallments! > 0 &&
+          paidCount >= totalInstallments!);
+  bool get isArchived => status == 'archived';
+
+  int get paidCount => paidInstallments ?? 0;
+
+  /// Payments still owed for installment loans (`total − paid`).
+  int? get remainingInstallmentCount {
+    final total = totalInstallments;
+    if (total == null || total <= 0) return null;
+    final left = total - paidCount;
+    return left < 0 ? 0 : left;
+  }
+
+  double? get installmentProgress {
+    final total = totalInstallments;
+    if (total == null || total <= 0) return null;
+    return (paidCount / total).clamp(0.0, 1.0);
+  }
+
+  Loan copyWith({
+    String? name,
+    String? type,
+    double? originalAmount,
+    double? remainingBalance,
+    double? monthlyPayment,
+    bool clearMonthlyPayment = false,
+    int? totalInstallments,
+    bool clearTotalInstallments = false,
+    int? paidInstallments,
+    bool clearPaidInstallments = false,
+    int? dueDayOfMonth,
+    bool clearDueDayOfMonth = false,
+    double? interestRate,
+    bool clearInterestRate = false,
+    String? note,
+    bool clearNote = false,
+    String? status,
+    int? sortOrder,
+  }) {
+    return Loan(
+      id: id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      originalAmount: originalAmount ?? this.originalAmount,
+      remainingBalance: remainingBalance ?? this.remainingBalance,
+      monthlyPayment: clearMonthlyPayment
+          ? null
+          : (monthlyPayment ?? this.monthlyPayment),
+      totalInstallments: clearTotalInstallments
+          ? null
+          : (totalInstallments ?? this.totalInstallments),
+      paidInstallments: clearPaidInstallments
+          ? null
+          : (paidInstallments ?? this.paidInstallments),
+      dueDayOfMonth: clearDueDayOfMonth
+          ? null
+          : (dueDayOfMonth ?? this.dueDayOfMonth),
+      interestRate:
+          clearInterestRate ? null : (interestRate ?? this.interestRate),
+      note: clearNote ? null : (note ?? this.note),
+      status: status ?? this.status,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'type': type,
+    'originalAmount': originalAmount,
+    'remainingBalance': remainingBalance,
+    'monthlyPayment': monthlyPayment,
+    'totalInstallments': totalInstallments,
+    'paidInstallments': paidInstallments,
+    'dueDayOfMonth': dueDayOfMonth,
+    'interestRate': interestRate,
+    'note': note,
+    'status': status,
+    'sortOrder': sortOrder,
+    'createdAt': createdAt?.toIso8601String(),
+  };
+
+  factory Loan.fromMap(String id, Map<String, dynamic> map) {
+    return Loan(
+      id: id,
+      name: map['name'] as String? ?? '',
+      type: map['type'] as String? ?? 'balance',
+      originalAmount: (map['originalAmount'] as num?)?.toDouble() ?? 0,
+      remainingBalance: (map['remainingBalance'] as num?)?.toDouble() ?? 0,
+      monthlyPayment: (map['monthlyPayment'] as num?)?.toDouble(),
+      totalInstallments: (map['totalInstallments'] as num?)?.toInt(),
+      paidInstallments: (map['paidInstallments'] as num?)?.toInt(),
+      dueDayOfMonth: (map['dueDayOfMonth'] as num?)?.toInt(),
+      interestRate: (map['interestRate'] as num?)?.toDouble(),
+      note: map['note'] as String?,
+      status: map['status'] as String? ?? 'active',
+      sortOrder: (map['sortOrder'] as num?)?.toInt() ?? 0,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String)
+          : null,
+    );
+  }
+}
+
+class LoanPayment {
+  const LoanPayment({
+    required this.id,
+    required this.loanId,
+    required this.amount,
+    required this.date,
+    this.note,
+    this.reducesBalance = true,
+    this.createdAt,
+    this.createdBy,
+    this.createdByName,
+  });
+
+  final String id;
+  final String loanId;
+  final double amount;
+  final DateTime date;
+  final String? note;
+  final bool reducesBalance;
+  final DateTime? createdAt;
+  final String? createdBy;
+  final String? createdByName;
+
+  LoanPayment copyWith({
+    double? amount,
+    DateTime? date,
+    String? note,
+    bool? reducesBalance,
+  }) {
+    return LoanPayment(
+      id: id,
+      loanId: loanId,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      reducesBalance: reducesBalance ?? this.reducesBalance,
+      createdAt: createdAt,
+      createdBy: createdBy,
+      createdByName: createdByName,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'loanId': loanId,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'note': note,
+    'reducesBalance': reducesBalance,
+    'createdAt': createdAt?.toIso8601String(),
+    'createdBy': createdBy,
+    'createdByName': createdByName,
+  };
+
+  factory LoanPayment.fromMap(String id, Map<String, dynamic> map) {
+    return LoanPayment(
+      id: id,
+      loanId: map['loanId'] as String? ?? '',
+      amount: (map['amount'] as num?)?.toDouble() ?? 0,
+      date: map['date'] != null
+          ? DateTime.tryParse(map['date'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      note: map['note'] as String?,
+      reducesBalance: map['reducesBalance'] as bool? ?? true,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String)
+          : null,
+      createdBy: map['createdBy'] as String?,
+      createdByName: map['createdByName'] as String?,
     );
   }
 }
@@ -640,12 +1036,16 @@ class MonthTotals {
     required this.planned,
     required this.actual,
     this.savedThisMonth = 0,
+    this.debtPaidThisMonth = 0,
+    this.leftoverFromPrior = 0,
   });
 
   final double income;
   final double planned;
   final double actual;
   final double savedThisMonth;
+  final double debtPaidThisMonth;
+  final double leftoverFromPrior;
 
   double get remaining => planned - actual;
   double get cashLeft => income - actual;
@@ -658,14 +1058,18 @@ class MonthStatsSnapshot {
   const MonthStatsSnapshot({
     required this.monthId,
     required this.expenses,
+    required this.deposits,
     required this.plans,
     required this.income,
+    this.debtPaid = 0,
   });
 
   final String monthId;
   final List<Expense> expenses;
+  final List<Deposit> deposits;
   final List<MonthPlan> plans;
   final double income;
+  final double debtPaid;
 
   double spentForSub(String subcategoryId) => expenses
       .where((e) => e.subcategoryId == subcategoryId)
@@ -680,15 +1084,13 @@ class MonthStatsSnapshot {
     return ids.fold<double>(0, (s, id) => s + spentForSub(id));
   }
 
-  double get totalSpent =>
-      expenses.fold(0, (s, e) => s + e.amount);
+  double get totalSpent => expenses.fold(0, (s, e) => s + e.amount);
 
   /// Deposits this month. When [includeSubcategoryIds] is set, only those pots.
-  double savedThisMonth([Set<String>? includeSubcategoryIds]) => expenses
-      .where((e) {
-        if (!e.isDeposit) return false;
+  double savedThisMonth([Set<String>? includeSubcategoryIds]) => deposits
+      .where((d) {
         if (includeSubcategoryIds == null) return true;
-        return includeSubcategoryIds.contains(e.subcategoryId);
+        return includeSubcategoryIds.contains(d.subcategoryId);
       })
-      .fold(0, (s, e) => s + e.amount);
+      .fold(0, (s, d) => s + d.amount);
 }

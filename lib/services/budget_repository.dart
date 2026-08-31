@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/default_categories.dart';
 import '../models/models.dart';
+import '../utils/leftover.dart';
 import '../utils/money.dart';
 
 class BudgetRepository {
@@ -32,6 +33,9 @@ class BudgetRepository {
     String householdId,
   ) => _householdRef(householdId).collection('subcategories');
 
+  CollectionReference<Map<String, dynamic>> _loans(String householdId) =>
+      _householdRef(householdId).collection('loans');
+
   String _generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final rand = Random.secure();
@@ -50,6 +54,107 @@ class BudgetRepository {
       }
       await batch.commit();
     }
+  }
+
+  Map<String, dynamic> _emptyMonthSummary({
+    required String monthId,
+    double leftoverFromPrior = 0,
+    double savingsBeforeMonth = 0,
+    double savingsThroughMonth = 0,
+  }) {
+    final cashLeft = computeMonthCashLeft(
+      leftoverFromPrior: leftoverFromPrior,
+      incomeTotal: 0,
+      spentTotal: 0,
+      depositTotal: 0,
+    );
+    return BudgetMonth(
+      id: monthId,
+      leftoverFromPrior: leftoverFromPrior,
+      cashLeft: cashLeft,
+      savingsBeforeMonth: savingsBeforeMonth,
+      savingsThroughMonth: savingsThroughMonth,
+    ).toMap();
+  }
+
+  Future<double> _resolveLeftoverFromPrior(
+    String householdId,
+    String monthId,
+  ) async {
+    final priorId = previousMonthId(monthId);
+    final priorSnap = await _monthRef(householdId, priorId).get();
+    if (!priorSnap.exists || priorSnap.data() == null) return 0;
+    final prior = BudgetMonth.fromMap(priorSnap.id, priorSnap.data()!);
+    return leftoverFromPriorCashLeft(prior.cashLeft);
+  }
+
+  Future<Map<String, PotBalance>> _fetchPriorPotBalances(
+    String householdId,
+    String monthId,
+  ) async {
+    final priorId = previousMonthId(monthId);
+    final priorSnap = await _monthRef(householdId, priorId).get();
+    if (!priorSnap.exists) return {};
+    final pots = await priorSnap.reference.collection('potBalances').get();
+    return {
+      for (final d in pots.docs) d.id: PotBalance.fromMap(d.id, d.data()),
+    };
+  }
+
+  Future<List<Subcategory>> _liveSavingsPots(String householdId) async {
+    final cats = await _categories(householdId).get();
+    final savingsCatIds = {
+      for (final c in cats.docs)
+        if (c.data()['type'] == 'savings') c.id,
+    };
+    if (savingsCatIds.isEmpty) return const [];
+    final subs = await _subcategories(householdId).get();
+    return subs.docs
+        .map((d) => Subcategory.fromMap(d.id, d.data()))
+        .where(
+          (s) =>
+              !s.archived &&
+              savingsCatIds.contains(s.categoryId) &&
+              !DefaultPots.isLeftoverName(s.nameEn),
+        )
+        .toList();
+  }
+
+  void _bootstrapPotBalances({
+    required WriteBatch batch,
+    required DocumentReference<Map<String, dynamic>> monthRef,
+    required List<Subcategory> pots,
+    required Map<String, PotBalance> priorBalances,
+  }) {
+    for (final pot in pots) {
+      final opening = priorBalances[pot.id]?.balance ?? 0;
+      final balance = PotBalance(
+        subcategoryId: pot.id,
+        openingBalance: opening,
+        deposited: 0,
+        withdrawn: 0,
+        balance: opening,
+      );
+      batch.set(
+        monthRef.collection('potBalances').doc(pot.id),
+        balance.toMap(),
+      );
+    }
+  }
+
+  double _sumIncludedBalances(
+    List<Subcategory> pots,
+    Map<String, PotBalance> balances, {
+    required bool opening,
+  }) {
+    var sum = 0.0;
+    for (final pot in pots) {
+      if (!pot.includeInTotal) continue;
+      final b = balances[pot.id];
+      if (b == null) continue;
+      sum += opening ? b.openingBalance : b.balance;
+    }
+    return sum;
   }
 
   Future<Household> createHousehold({
@@ -75,7 +180,7 @@ class BudgetRepository {
         ),
       },
     );
-    await ref.set({...household.toMap(), 'catalogVersion': 1});
+    await ref.set(household.toMap());
     await _addUserMembership(creatorUid, household.id);
     return household;
   }
@@ -137,14 +242,14 @@ class BudgetRepository {
   }
 
   Future<List<Household>> fetchHouseholdsByIds(List<String> ids) async {
-    final result = <Household>[];
-    for (final id in ids) {
-      if (id.isEmpty) continue;
-      final snap = await _householdRef(id).get();
-      if (!snap.exists || snap.data() == null) continue;
-      result.add(Household.fromMap(snap.id, snap.data()!));
-    }
-    return result;
+    final result = await Future.wait(
+      ids.where((id) => id.isNotEmpty).map((id) async {
+        final snap = await _householdRef(id).get();
+        if (!snap.exists || snap.data() == null) return null;
+        return Household.fromMap(snap.id, snap.data()!);
+      }),
+    );
+    return result.whereType<Household>().toList();
   }
 
   Future<void> updateHouseholdName({
@@ -183,8 +288,9 @@ class BudgetRepository {
       'incomeEntries',
       'plans',
       'expenses',
-      'categories',
-      'lineItems',
+      'deposits',
+      'potBalances',
+      'loanPayments',
     ];
     final months = await _months(householdId).get();
     for (final month in months.docs) {
@@ -195,7 +301,10 @@ class BudgetRepository {
     await _deleteQueryDocs(_months(householdId));
     await _deleteQueryDocs(_categories(householdId));
     await _deleteQueryDocs(_subcategories(householdId));
-    await _deleteQueryDocs(_householdRef(householdId).collection('recurringBills'));
+    await _deleteQueryDocs(_loans(householdId));
+    await _deleteQueryDocs(
+      _householdRef(householdId).collection('recurringBills'),
+    );
     await _householdRef(householdId).delete();
 
     for (final uid in memberIds) {
@@ -285,12 +394,16 @@ class BudgetRepository {
       householdId,
     ).collection('recurringBills').get();
     if (bills.docs.isEmpty) return;
-    final plans = await _monthRef(householdId, monthId).collection('plans').get();
+    final plans = await _monthRef(
+      householdId,
+      monthId,
+    ).collection('plans').get();
     final planned = {
       for (final d in plans.docs)
         d.id: (d.data()['planned'] as num?)?.toDouble() ?? 0,
     };
     final ops = <void Function(WriteBatch)>[];
+    var plannedDelta = 0.0;
     for (final doc in bills.docs) {
       final bill = RecurringBill.fromMap(doc.id, doc.data());
       final subId = bill.subcategoryId;
@@ -298,6 +411,7 @@ class BudgetRepository {
       if (excludeSubcategoryIds.contains(subId)) continue;
       final existing = planned[subId] ?? 0;
       if (existing > 0) continue;
+      plannedDelta += bill.amount;
       ops.add(
         (batch) => batch.set(
           _monthRef(householdId, monthId).collection('plans').doc(subId),
@@ -306,7 +420,102 @@ class BudgetRepository {
         ),
       );
     }
+    if (plannedDelta != 0) {
+      ops.add(
+        (batch) => batch.update(_monthRef(householdId, monthId), {
+          'plannedTotal': FieldValue.increment(plannedDelta),
+        }),
+      );
+    }
     if (ops.isNotEmpty) await _commitInChunks(ops);
+  }
+
+  /// For monthly plans, posts an expense equal to planned; for savings plans,
+  /// posts a deposit equal to planned. Skips spend envelopes and leftover.
+  /// Idempotent: skips a subcategory that already has activity this month.
+  Future<void> applyFixedPlanActualsToMonth({
+    required String householdId,
+    required String monthId,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final plansSnap = await monthRef.collection('plans').get();
+    if (plansSnap.docs.isEmpty) return;
+
+    final cats = await _categories(householdId).get();
+    final catType = {
+      for (final d in cats.docs) d.id: d.data()['type'] as String? ?? 'spend',
+    };
+    final subs = await _subcategories(householdId).get();
+    final subMeta = <String, ({String categoryId, bool includeInTotal, String nameEn})>{};
+    for (final d in subs.docs) {
+      final data = d.data();
+      subMeta[d.id] = (
+        categoryId: data['categoryId'] as String? ?? '',
+        includeInTotal: data['includeInTotal'] as bool? ?? true,
+        nameEn: data['nameEn'] as String? ?? '',
+      );
+    }
+
+    final billDayBySub = <String, int>{};
+    final bills = await _householdRef(
+      householdId,
+    ).collection('recurringBills').get();
+    for (final d in bills.docs) {
+      final bill = RecurringBill.fromMap(d.id, d.data());
+      final subId = bill.subcategoryId;
+      if (subId != null && subId.isNotEmpty) {
+        billDayBySub[subId] = bill.dayOfMonth;
+      }
+    }
+
+    final expensesSnap = await monthRef.collection('expenses').get();
+    final spentSubs = {
+      for (final d in expensesSnap.docs)
+        d.data()['subcategoryId'] as String? ?? '',
+    };
+    final depositsSnap = await monthRef.collection('deposits').get();
+    final depositedSubs = {
+      for (final d in depositsSnap.docs)
+        d.data()['subcategoryId'] as String? ?? '',
+    };
+
+    final monthStart = dateFromMonthId(monthId);
+    final lastDay = DateTime(monthStart.year, monthStart.month + 1, 0).day;
+
+    for (final doc in plansSnap.docs) {
+      final planned = (doc.data()['planned'] as num?)?.toDouble() ?? 0;
+      if (planned <= 0) continue;
+      final subId = doc.id;
+      final meta = subMeta[subId];
+      if (meta == null) continue;
+      if (DefaultPots.isLeftoverName(meta.nameEn)) continue;
+      final type = catType[meta.categoryId];
+      final day = (billDayBySub[subId] ?? 1).clamp(1, lastDay);
+      final date = DateTime(monthStart.year, monthStart.month, day);
+
+      if (type == 'monthly') {
+        if (spentSubs.contains(subId)) continue;
+        await addExpense(
+          householdId: householdId,
+          monthId: monthId,
+          subcategoryId: subId,
+          amount: planned,
+          date: date,
+        );
+        spentSubs.add(subId);
+      } else if (type == 'savings') {
+        if (depositedSubs.contains(subId)) continue;
+        await addDeposit(
+          householdId: householdId,
+          monthId: monthId,
+          subcategoryId: subId,
+          amount: planned,
+          date: date,
+          includeInTotal: meta.includeInTotal,
+        );
+        depositedSubs.add(subId);
+      }
+    }
   }
 
   Stream<Household?> watchHousehold(String householdId) {
@@ -326,6 +535,13 @@ class BudgetRepository {
     });
   }
 
+  Stream<BudgetMonth?> watchMonth(String householdId, String monthId) {
+    return _monthRef(householdId, monthId).snapshots().map((s) {
+      if (!s.exists || s.data() == null) return null;
+      return BudgetMonth.fromMap(s.id, s.data()!);
+    });
+  }
+
   Future<bool> monthExists(String householdId, String monthId) async {
     final snap = await _monthRef(householdId, monthId).get();
     return snap.exists;
@@ -341,7 +557,7 @@ class BudgetRepository {
     if (existing.exists) {
       throw StateError('Month already exists');
     }
-    await ref.set(BudgetMonth(id: monthId).toMap());
+
     if (rolloverLeftover) {
       final cats = await _categories(householdId).get();
       final subs = await _subcategories(householdId).get();
@@ -351,23 +567,56 @@ class BudgetRepository {
         subcategoryDocs: subs.docs,
       );
     }
+
+    final leftover = await _resolveLeftoverFromPrior(householdId, monthId);
+    final pots = await _liveSavingsPots(householdId);
+    final priorBalances = await _fetchPriorPotBalances(householdId, monthId);
+    final savingsBefore = _sumIncludedBalances(
+      pots,
+      {
+        for (final p in pots)
+          p.id: PotBalance(
+            subcategoryId: p.id,
+            openingBalance: priorBalances[p.id]?.balance ?? 0,
+            balance: priorBalances[p.id]?.balance ?? 0,
+          ),
+      },
+      opening: true,
+    );
+
+    final batch = _db.batch();
+    batch.set(
+      ref,
+      _emptyMonthSummary(
+        monthId: monthId,
+        leftoverFromPrior: leftover,
+        savingsBeforeMonth: savingsBefore,
+        savingsThroughMonth: savingsBefore,
+      ),
+    );
+    _bootstrapPotBalances(
+      batch: batch,
+      monthRef: ref,
+      pots: pots,
+      priorBalances: priorBalances,
+    );
+    await batch.commit();
+
     await applyRecurringBillsToMonth(
+      householdId: householdId,
+      monthId: monthId,
+    );
+    await applyFixedPlanActualsToMonth(
       householdId: householdId,
       monthId: monthId,
     );
   }
 
-  /// Copies income sources, plans, and spend expenses.
-  /// Expense dates keep the same day-of-month in [toMonthId].
-  /// Deposits / savings pot entries are not copied (lifetime savedTotal).
-  /// Installment current ticks up when it is below the subcategory total.
-  ///
-  /// When [rolloverLeftover] is true, ensures the Leftover savings pot exists.
-  /// The leftover amount is computed live from the previous month (not stored
-  /// as a plan on the new month).
-  ///
-  /// When [categoryIds] is non-null, only plans and expenses for subcategories
-  /// under those categories are copied. Income sources are always copied.
+  /// Copies income sources and plans. Does not copy prior expenses, deposits, or
+  /// loan payments. After copy, posts planned amounts as spent (monthly) and
+  /// deposits (savings). Bootstraps potBalances from the prior month end
+  /// balances and stores leftoverFromPrior from the source month's cashLeft when
+  /// [fromMonthId] is the calendar previous month (otherwise from prior doc).
   Future<void> createMonthFromCopy({
     required String householdId,
     required String fromMonthId,
@@ -392,37 +641,26 @@ class BudgetRepository {
 
     final sources = await fromRef.collection('incomeSources').get();
     final plans = await fromRef.collection('plans').get();
-    final expenses = await fromRef.collection('expenses').get();
     final cats = await _categories(householdId).get();
     final savingsCatIds = {
       for (final c in cats.docs)
         if (c.data()['type'] == 'savings') c.id,
     };
     final subs = await _subcategories(householdId).get();
-    final savingsIds = <String>{};
-    final subTotals = <String, int?>{};
     final subCategoryIds = <String, String>{};
+    String? leftoverPotId;
+    final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
     for (final doc in subs.docs) {
       final data = doc.data();
       final catId = data['categoryId'] as String? ?? '';
       subCategoryIds[doc.id] = catId;
-      subTotals[doc.id] = (data['installmentTotal'] as num?)?.toInt();
-      if (savingsCatIds.contains(catId)) {
-        savingsIds.add(doc.id);
+      if (savingsCatIds.contains(catId) &&
+          (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
+        leftoverPotId = doc.id;
       }
     }
 
-    String? leftoverPotId;
     if (rolloverLeftover) {
-      final leftoverName = DefaultPots.leftoverNameEn.toLowerCase();
-      for (final doc in subs.docs) {
-        final data = doc.data();
-        if (savingsIds.contains(doc.id) &&
-            (data['nameEn'] as String? ?? '').toLowerCase() == leftoverName) {
-          leftoverPotId = doc.id;
-          break;
-        }
-      }
       leftoverPotId ??= await _ensureLeftoverPot(
         householdId: householdId,
         categoryDocs: cats.docs,
@@ -430,8 +668,41 @@ class BudgetRepository {
       );
     }
 
+    final leftover = await _resolveLeftoverFromPrior(householdId, toMonthId);
+    final pots = await _liveSavingsPots(householdId);
+    final priorBalances = await _fetchPriorPotBalances(householdId, toMonthId);
+    final openingMap = {
+      for (final p in pots)
+        p.id: PotBalance(
+          subcategoryId: p.id,
+          openingBalance: priorBalances[p.id]?.balance ?? 0,
+          balance: priorBalances[p.id]?.balance ?? 0,
+        ),
+    };
+    final savingsBefore = _sumIncludedBalances(
+      pots,
+      openingMap,
+      opening: true,
+    );
+
     final ops = <void Function(WriteBatch)>[
-      (batch) => batch.set(toRef, BudgetMonth(id: toMonthId).toMap()),
+      (batch) {
+        batch.set(
+          toRef,
+          _emptyMonthSummary(
+            monthId: toMonthId,
+            leftoverFromPrior: leftover,
+            savingsBeforeMonth: savingsBefore,
+            savingsThroughMonth: savingsBefore,
+          ),
+        );
+        _bootstrapPotBalances(
+          batch: batch,
+          monthRef: toRef,
+          pots: pots,
+          priorBalances: priorBalances,
+        );
+      },
     ];
 
     for (final doc in sources.docs) {
@@ -443,50 +714,33 @@ class BudgetRepository {
       );
     }
 
+    var plannedTotal = 0.0;
     for (final doc in plans.docs) {
-      // Leftover is derived live from the previous month — do not copy its plan.
+      // Leftover is month cash, not a recurring savings target.
       if (leftoverPotId != null && doc.id == leftoverPotId) continue;
       if (categoryIds != null) {
         final catId = subCategoryIds[doc.id] ?? '';
         if (!categoryIds.contains(catId)) continue;
       }
       final data = Map<String, dynamic>.from(doc.data());
-      final total = subTotals[doc.id];
-      final current = (data['installmentCurrent'] as num?)?.toInt();
-      if (total != null && current != null && current < total) {
-        data['installmentCurrent'] = current + 1;
-      }
+      data.remove('installmentCurrent');
+      plannedTotal += (data['planned'] as num?)?.toDouble() ?? 0;
       ops.add(
         (batch) => batch.set(toRef.collection('plans').doc(doc.id), data),
       );
     }
-
-    for (final doc in expenses.docs) {
-      final data = Map<String, dynamic>.from(doc.data());
-      final subId = data['subcategoryId'] as String? ?? '';
-      if (subId.isEmpty) continue;
-      if (data['isDeposit'] == true || savingsIds.contains(subId)) continue;
-      if (categoryIds != null) {
-        final catId = subCategoryIds[subId] ?? '';
-        if (!categoryIds.contains(catId)) continue;
-      }
-      final rawDate = data['date'] as String?;
-      if (rawDate != null) {
-        final parsed = DateTime.tryParse(rawDate);
-        if (parsed != null) {
-          data['date'] = dateFixedToMonth(parsed, toMonthId).toIso8601String();
-        }
-      }
+    if (plannedTotal != 0) {
       ops.add(
-        (batch) => batch.set(
-          toRef.collection('expenses').doc(_uuid.v4()),
-          data,
-        ),
+        (batch) => batch.update(toRef, {'plannedTotal': plannedTotal}),
       );
     }
 
     await _commitInChunks(ops);
     await applyRecurringBillsToMonth(
+      householdId: householdId,
+      monthId: toMonthId,
+    );
+    await applyFixedPlanActualsToMonth(
       householdId: householdId,
       monthId: toMonthId,
     );
@@ -544,6 +798,17 @@ class BudgetRepository {
       nameEn: DefaultPots.leftoverNameEn,
       nameRu: DefaultPots.leftoverNameRu,
       sortOrder: potSort,
+      includeInTotal: false,
+    );
+  }
+
+  Future<String> ensureLeftoverPot(String householdId) async {
+    final cats = await _categories(householdId).get();
+    final subs = await _subcategories(householdId).get();
+    return _ensureLeftoverPot(
+      householdId: householdId,
+      categoryDocs: cats.docs,
+      subcategoryDocs: subs.docs,
     );
   }
 
@@ -599,6 +864,72 @@ class BudgetRepository {
         );
   }
 
+  Stream<List<Deposit>> watchDeposits(String householdId, String monthId) {
+    return _monthRef(householdId, monthId)
+        .collection('deposits')
+        .snapshots()
+        .map(
+          (s) => s.docs.map((d) => Deposit.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  Stream<List<PotBalance>> watchPotBalances(
+    String householdId,
+    String monthId,
+  ) {
+    return _monthRef(householdId, monthId)
+        .collection('potBalances')
+        .snapshots()
+        .map(
+          (s) =>
+              s.docs.map((d) => PotBalance.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  Stream<List<Loan>> watchLoans(String householdId) {
+    return _loans(householdId)
+        .orderBy('sortOrder')
+        .snapshots()
+        .map(
+          (s) => s.docs.map((d) => Loan.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  Stream<List<LoanPayment>> watchLoanPayments(
+    String householdId,
+    String monthId,
+  ) {
+    return _monthRef(householdId, monthId)
+        .collection('loanPayments')
+        .snapshots()
+        .map(
+          (s) =>
+              s.docs.map((d) => LoanPayment.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  Stream<List<LoanPayment>> watchLoanPaymentsForLoan({
+    required String householdId,
+    required String loanId,
+  }) {
+    return _db
+        .collectionGroup('loanPayments')
+        .where('loanId', isEqualTo: loanId)
+        .snapshots()
+        .map((s) {
+          final list = s.docs
+              .where((d) {
+                // Scope to this household's months path.
+                final path = d.reference.path;
+                return path.startsWith('households/$householdId/months/');
+              })
+              .map((d) => LoanPayment.fromMap(d.id, d.data()))
+              .toList();
+          list.sort((a, b) => b.date.compareTo(a.date));
+          return list;
+        });
+  }
+
   Future<List<MonthPlan>> fetchPlans(String householdId, String monthId) async {
     final snap =
         await _monthRef(householdId, monthId).collection('plans').get();
@@ -614,6 +945,15 @@ class BudgetRepository {
     return snap.docs.map((d) => Expense.fromMap(d.id, d.data())).toList();
   }
 
+  Future<List<Deposit>> fetchDeposits(
+    String householdId,
+    String monthId,
+  ) async {
+    final snap =
+        await _monthRef(householdId, monthId).collection('deposits').get();
+    return snap.docs.map((d) => Deposit.fromMap(d.id, d.data())).toList();
+  }
+
   Future<List<IncomeEntry>> fetchIncomeEntries(
     String householdId,
     String monthId,
@@ -623,6 +963,12 @@ class BudgetRepository {
       monthId,
     ).collection('incomeEntries').get();
     return snap.docs.map((d) => IncomeEntry.fromMap(d.id, d.data())).toList();
+  }
+
+  Future<BudgetMonth?> fetchMonth(String householdId, String monthId) async {
+    final snap = await _monthRef(householdId, monthId).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return BudgetMonth.fromMap(snap.id, snap.data()!);
   }
 
   Stream<List<IncomeSource>> watchIncomeSources(
@@ -670,20 +1016,8 @@ class BudgetRepository {
       'type': type,
       'sortOrder': sortOrder,
       'targetAmount': targetAmount,
-      'savedTotal': 0,
     });
     return doc.id;
-  }
-
-  Future<void> incrementSavedTotal({
-    required String householdId,
-    required String subcategoryId,
-    required double delta,
-  }) async {
-    if (delta == 0) return;
-    await _subcategories(
-      householdId,
-    ).doc(subcategoryId).update({'savedTotal': FieldValue.increment(delta)});
   }
 
   Future<void> updateCategory({
@@ -745,7 +1079,6 @@ class BudgetRepository {
           'iconKey': cat.iconKey,
           'type': cat.type,
           'sortOrder': sortOrder,
-          'savedTotal': 0,
         }),
       );
       if (cat.type == 'savings') {
@@ -774,7 +1107,6 @@ class BudgetRepository {
               'iconKey': DefaultCategories.savingsIconKey,
               'type': 'savings',
               'sortOrder': sortBase + added,
-              'savedTotal': 0,
             }),
           );
           added++;
@@ -789,6 +1121,7 @@ class BudgetRepository {
       for (final pot in DefaultPots.all) {
         if (existingPotNames.contains(pot.nameEn.toLowerCase())) continue;
         final sort = potSort;
+        final isLeftover = DefaultPots.isLeftoverName(pot.nameEn);
         ops.add(
           (batch) => batch.set(_subcategories(householdId).doc(_uuid.v4()), {
             'categoryId': savingsCatId,
@@ -796,7 +1129,7 @@ class BudgetRepository {
             'nameRu': pot.nameRu,
             'sortOrder': sort,
             'archived': false,
-            'savedTotal': 0,
+            'includeInTotal': !isLeftover,
           }),
         );
         existingPotNames.add(pot.nameEn.toLowerCase());
@@ -836,24 +1169,37 @@ class BudgetRepository {
     required String nameEn,
     required String nameRu,
     required int sortOrder,
-    int? installmentTotal,
     double? targetAmount,
     DateTime? targetDate,
     bool includeInTotal = true,
-    double savedTotal = 0,
+    String? monthId,
   }) async {
     final doc = await _subcategories(householdId).add({
       'categoryId': categoryId,
       'nameEn': nameEn,
       'nameRu': nameRu,
       'sortOrder': sortOrder,
-      'installmentTotal': installmentTotal,
       'archived': false,
       'targetAmount': targetAmount,
       'targetDate': targetDate?.toIso8601String(),
       'includeInTotal': includeInTotal,
-      'savedTotal': savedTotal,
     });
+
+    // If this is a savings pot and a month is selected, seed potBalances.
+    if (monthId != null && monthId.isNotEmpty) {
+      final cat = await _categories(householdId).doc(categoryId).get();
+      if (cat.data()?['type'] == 'savings' &&
+          !DefaultPots.isLeftoverName(nameEn)) {
+        final monthRef = _monthRef(householdId, monthId);
+        final balance = PotBalance(subcategoryId: doc.id);
+        await monthRef.collection('potBalances').doc(doc.id).set(
+          balance.toMap(),
+        );
+        if (includeInTotal) {
+          // opening/balance are 0 — no summary change needed
+        }
+      }
+    }
     return doc.id;
   }
 
@@ -880,21 +1226,33 @@ class BudgetRepository {
     bool clearNameEn = false,
     bool clearNameRu = false,
   }) async {
-    final data = plan.toMap();
-    if (clearNameEn) {
-      data['nameEn'] = FieldValue.delete();
-    } else if (plan.nameEn != null) {
-      data['nameEn'] = plan.nameEn;
-    }
-    if (clearNameRu) {
-      data['nameRu'] = FieldValue.delete();
-    } else if (plan.nameRu != null) {
-      data['nameRu'] = plan.nameRu;
-    }
-    await _monthRef(householdId, monthId)
-        .collection('plans')
-        .doc(plan.subcategoryId)
-        .set(data, SetOptions(merge: true));
+    final monthRef = _monthRef(householdId, monthId);
+    final planRef = monthRef.collection('plans').doc(plan.subcategoryId);
+
+    await _db.runTransaction((tx) async {
+      final existing = await tx.get(planRef);
+      final oldPlanned = existing.exists
+          ? ((existing.data()?['planned'] as num?)?.toDouble() ?? 0)
+          : 0.0;
+      final data = plan.toMap();
+      if (clearNameEn) {
+        data['nameEn'] = FieldValue.delete();
+      } else if (plan.nameEn != null) {
+        data['nameEn'] = plan.nameEn;
+      }
+      if (clearNameRu) {
+        data['nameRu'] = FieldValue.delete();
+      } else if (plan.nameRu != null) {
+        data['nameRu'] = plan.nameRu;
+      }
+      tx.set(planRef, data, SetOptions(merge: true));
+      final delta = plan.planned - oldPlanned;
+      if (delta != 0) {
+        tx.update(monthRef, {
+          'plannedTotal': FieldValue.increment(delta),
+        });
+      }
+    });
   }
 
   Future<void> deletePlan({
@@ -902,10 +1260,64 @@ class BudgetRepository {
     required String monthId,
     required String subcategoryId,
   }) async {
-    await _monthRef(
-      householdId,
-      monthId,
-    ).collection('plans').doc(subcategoryId).delete();
+    final monthRef = _monthRef(householdId, monthId);
+    final planRef = monthRef.collection('plans').doc(subcategoryId);
+    await _db.runTransaction((tx) async {
+      final existing = await tx.get(planRef);
+      if (!existing.exists) return;
+      final oldPlanned =
+          (existing.data()?['planned'] as num?)?.toDouble() ?? 0;
+      tx.delete(planRef);
+      if (oldPlanned != 0) {
+        tx.update(monthRef, {
+          'plannedTotal': FieldValue.increment(-oldPlanned),
+        });
+      }
+    });
+  }
+
+  Future<void> _refreshCashLeftInTx(
+    Transaction tx,
+    DocumentReference<Map<String, dynamic>> monthRef,
+    Map<String, dynamic> monthData, {
+    double? incomeDelta,
+    double? spentDelta,
+    double? depositDelta,
+    double? debtPaidDelta,
+    double? savingsBeforeDelta,
+    double? savingsThroughDelta,
+  }) {
+    final income =
+        (monthData['incomeTotal'] as num?)?.toDouble() ?? 0;
+    final spent = (monthData['spentTotal'] as num?)?.toDouble() ?? 0;
+    final deposit = (monthData['depositTotal'] as num?)?.toDouble() ?? 0;
+    final leftover =
+        (monthData['leftoverFromPrior'] as num?)?.toDouble() ?? 0;
+    final nextIncome = income + (incomeDelta ?? 0);
+    final nextSpent = spent + (spentDelta ?? 0);
+    final nextDeposit = deposit + (depositDelta ?? 0);
+    final updates = <String, dynamic>{
+      if (incomeDelta != null && incomeDelta != 0)
+        'incomeTotal': FieldValue.increment(incomeDelta),
+      if (spentDelta != null && spentDelta != 0)
+        'spentTotal': FieldValue.increment(spentDelta),
+      if (depositDelta != null && depositDelta != 0)
+        'depositTotal': FieldValue.increment(depositDelta),
+      if (debtPaidDelta != null && debtPaidDelta != 0)
+        'debtPaidTotal': FieldValue.increment(debtPaidDelta),
+      if (savingsBeforeDelta != null && savingsBeforeDelta != 0)
+        'savingsBeforeMonth': FieldValue.increment(savingsBeforeDelta),
+      if (savingsThroughDelta != null && savingsThroughDelta != 0)
+        'savingsThroughMonth': FieldValue.increment(savingsThroughDelta),
+      'cashLeft': computeMonthCashLeft(
+        leftoverFromPrior: leftover,
+        incomeTotal: nextIncome,
+        spentTotal: nextSpent,
+        depositTotal: nextDeposit,
+      ),
+    };
+    tx.update(monthRef, updates);
+    return Future.value();
   }
 
   Future<String> addExpense({
@@ -917,43 +1329,311 @@ class BudgetRepository {
     String? note,
     String? createdBy,
     String? createdByName,
-    bool isDeposit = false,
   }) async {
-    final doc = await _monthRef(householdId, monthId)
-        .collection('expenses')
-        .add({
-          'subcategoryId': subcategoryId,
-          'amount': amount,
-          'date': date.toIso8601String(),
-          'note': note,
-          'createdAt': DateTime.now().toIso8601String(),
-          'createdBy': createdBy,
-          'createdByName': createdByName,
-          'isDeposit': isDeposit,
-        });
-    return doc.id;
+    final monthRef = _monthRef(householdId, monthId);
+    final expenseRef = monthRef.collection('expenses').doc();
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.set(expenseRef, {
+        'subcategoryId': subcategoryId,
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'note': note,
+        'createdAt': DateTime.now().toIso8601String(),
+        'createdBy': createdBy,
+        'createdByName': createdByName,
+      });
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        spentDelta: amount,
+      );
+    });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    return expenseRef.id;
   }
 
   Future<void> updateExpense({
     required String householdId,
     required String monthId,
     required Expense expense,
+    required Expense previous,
   }) async {
-    await _monthRef(householdId, monthId)
-        .collection('expenses')
-        .doc(expense.id)
-        .set(expense.toMap(), SetOptions(merge: true));
+    final monthRef = _monthRef(householdId, monthId);
+    final expenseRef = monthRef.collection('expenses').doc(expense.id);
+    final amountDelta = expense.amount - previous.amount;
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.set(expenseRef, expense.toMap(), SetOptions(merge: true));
+      if (amountDelta != 0) {
+        await _refreshCashLeftInTx(
+          tx,
+          monthRef,
+          monthSnap.data()!,
+          spentDelta: amountDelta,
+        );
+      }
+    });
+    if (amountDelta != 0) {
+      await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    }
   }
 
   Future<void> deleteExpense({
     required String householdId,
     required String monthId,
-    required String expenseId,
+    required Expense expense,
   }) async {
-    await _monthRef(
+    final monthRef = _monthRef(householdId, monthId);
+    final expenseRef = monthRef.collection('expenses').doc(expense.id);
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.delete(expenseRef);
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        spentDelta: -expense.amount,
+      );
+    });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+  }
+
+  Future<String> addDeposit({
+    required String householdId,
+    required String monthId,
+    required String subcategoryId,
+    required double amount,
+    required DateTime date,
+    String? note,
+    String? createdBy,
+    String? createdByName,
+    bool includeInTotal = true,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final depositRef = monthRef.collection('deposits').doc();
+    final potRef = monthRef.collection('potBalances').doc(subcategoryId);
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final potSnap = await tx.get(potRef);
+      final pot = potSnap.exists
+          ? PotBalance.fromMap(subcategoryId, potSnap.data()!)
+          : PotBalance(subcategoryId: subcategoryId);
+      final next = pot.copyWith(
+        deposited: pot.deposited + amount,
+        balance: pot.balance + amount,
+      );
+      tx.set(depositRef, {
+        'subcategoryId': subcategoryId,
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'note': note,
+        'createdAt': DateTime.now().toIso8601String(),
+        'createdBy': createdBy,
+        'createdByName': createdByName,
+      });
+      tx.set(potRef, next.toMap());
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        depositDelta: amount,
+        savingsThroughDelta: includeInTotal ? amount : 0,
+      );
+    });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    await _cascadePotBalancesToFollowingMonths(
       householdId,
       monthId,
-    ).collection('expenses').doc(expenseId).delete();
+      subcategoryId,
+    );
+    return depositRef.id;
+  }
+
+  Future<void> updateDeposit({
+    required String householdId,
+    required String monthId,
+    required Deposit deposit,
+    required Deposit previous,
+    bool includeInTotal = true,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final depositRef = monthRef.collection('deposits').doc(deposit.id);
+    final potRef = monthRef.collection('potBalances').doc(deposit.subcategoryId);
+    final amountDelta = deposit.amount - previous.amount;
+    final potChanged = deposit.subcategoryId != previous.subcategoryId;
+
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+
+      if (potChanged) {
+        final oldPotRef =
+            monthRef.collection('potBalances').doc(previous.subcategoryId);
+        final oldPotSnap = await tx.get(oldPotRef);
+        final newPotSnap = await tx.get(potRef);
+        if (oldPotSnap.exists) {
+          final oldPot =
+              PotBalance.fromMap(previous.subcategoryId, oldPotSnap.data()!);
+          tx.set(
+            oldPotRef,
+            oldPot
+                .copyWith(
+                  deposited: oldPot.deposited - previous.amount,
+                  balance: oldPot.balance - previous.amount,
+                )
+                .toMap(),
+          );
+        }
+        final newPot = newPotSnap.exists
+            ? PotBalance.fromMap(deposit.subcategoryId, newPotSnap.data()!)
+            : PotBalance(subcategoryId: deposit.subcategoryId);
+        tx.set(
+          potRef,
+          newPot
+              .copyWith(
+                deposited: newPot.deposited + deposit.amount,
+                balance: newPot.balance + deposit.amount,
+              )
+              .toMap(),
+        );
+      } else if (amountDelta != 0) {
+        final potSnap = await tx.get(potRef);
+        if (potSnap.exists) {
+          final pot =
+              PotBalance.fromMap(deposit.subcategoryId, potSnap.data()!);
+          tx.set(
+            potRef,
+            pot
+                .copyWith(
+                  deposited: pot.deposited + amountDelta,
+                  balance: pot.balance + amountDelta,
+                )
+                .toMap(),
+          );
+        }
+      }
+
+      tx.set(depositRef, deposit.toMap(), SetOptions(merge: true));
+      if (amountDelta != 0) {
+        await _refreshCashLeftInTx(
+          tx,
+          monthRef,
+          monthSnap.data()!,
+          depositDelta: amountDelta,
+          savingsThroughDelta: includeInTotal ? amountDelta : 0,
+        );
+      }
+    });
+    if (amountDelta != 0 || potChanged) {
+      await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+      await _cascadePotBalancesToFollowingMonths(
+        householdId,
+        monthId,
+        deposit.subcategoryId,
+      );
+      if (potChanged) {
+        await _cascadePotBalancesToFollowingMonths(
+          householdId,
+          monthId,
+          previous.subcategoryId,
+        );
+      }
+    }
+  }
+
+  Future<void> deleteDeposit({
+    required String householdId,
+    required String monthId,
+    required Deposit deposit,
+    bool includeInTotal = true,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final depositRef = monthRef.collection('deposits').doc(deposit.id);
+    final potRef =
+        monthRef.collection('potBalances').doc(deposit.subcategoryId);
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final potSnap = await tx.get(potRef);
+      if (potSnap.exists) {
+        final pot =
+            PotBalance.fromMap(deposit.subcategoryId, potSnap.data()!);
+        tx.set(
+          potRef,
+          pot
+              .copyWith(
+                deposited: pot.deposited - deposit.amount,
+                balance: pot.balance - deposit.amount,
+              )
+              .toMap(),
+        );
+      }
+      tx.delete(depositRef);
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        depositDelta: -deposit.amount,
+        savingsThroughDelta: includeInTotal ? -deposit.amount : 0,
+      );
+    });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    await _cascadePotBalancesToFollowingMonths(
+      householdId,
+      monthId,
+      deposit.subcategoryId,
+    );
+  }
+
+  /// Sets the opening (prior) balance for a pot in [monthId].
+  Future<void> setPotOpeningBalance({
+    required String householdId,
+    required String monthId,
+    required String subcategoryId,
+    required double openingBalance,
+    bool includeInTotal = true,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final potRef = monthRef.collection('potBalances').doc(subcategoryId);
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final potSnap = await tx.get(potRef);
+      final pot = potSnap.exists
+          ? PotBalance.fromMap(subcategoryId, potSnap.data()!)
+          : PotBalance(subcategoryId: subcategoryId);
+      final next = pot.copyWith(
+        openingBalance: openingBalance,
+        balance: PotBalance.computeBalance(
+          openingBalance: openingBalance,
+          deposited: pot.deposited,
+          withdrawn: pot.withdrawn,
+        ),
+      );
+      final openingDelta = next.openingBalance - pot.openingBalance;
+      final balanceDelta = next.balance - pot.balance;
+      tx.set(potRef, next.toMap());
+      if (includeInTotal && (openingDelta != 0 || balanceDelta != 0)) {
+        await _refreshCashLeftInTx(
+          tx,
+          monthRef,
+          monthSnap.data()!,
+          savingsBeforeDelta: openingDelta,
+          savingsThroughDelta: balanceDelta,
+        );
+      }
+    });
+    await _cascadePotBalancesToFollowingMonths(
+      householdId,
+      monthId,
+      subcategoryId,
+    );
   }
 
   Future<void> addIncomeEntry({
@@ -965,36 +1645,75 @@ class BudgetRepository {
     String? createdBy,
     String? createdByName,
   }) async {
-    await _monthRef(householdId, monthId).collection('incomeEntries').add({
-      'sourceId': sourceId,
-      'amount': amount,
-      'note': note,
-      'createdAt': DateTime.now().toIso8601String(),
-      'createdBy': createdBy,
-      'createdByName': createdByName,
+    final monthRef = _monthRef(householdId, monthId);
+    final entryRef = monthRef.collection('incomeEntries').doc();
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.set(entryRef, {
+        'sourceId': sourceId,
+        'amount': amount,
+        'note': note,
+        'createdAt': DateTime.now().toIso8601String(),
+        'createdBy': createdBy,
+        'createdByName': createdByName,
+      });
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        incomeDelta: amount,
+      );
     });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
   }
 
   Future<void> updateIncomeEntry({
     required String householdId,
     required String monthId,
     required IncomeEntry entry,
+    required IncomeEntry previous,
   }) async {
-    await _monthRef(householdId, monthId)
-        .collection('incomeEntries')
-        .doc(entry.id)
-        .set(entry.toMap(), SetOptions(merge: true));
+    final monthRef = _monthRef(householdId, monthId);
+    final entryRef = monthRef.collection('incomeEntries').doc(entry.id);
+    final amountDelta = entry.amount - previous.amount;
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.set(entryRef, entry.toMap(), SetOptions(merge: true));
+      if (amountDelta != 0) {
+        await _refreshCashLeftInTx(
+          tx,
+          monthRef,
+          monthSnap.data()!,
+          incomeDelta: amountDelta,
+        );
+      }
+    });
+    if (amountDelta != 0) {
+      await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    }
   }
 
   Future<void> deleteIncomeEntry({
     required String householdId,
     required String monthId,
-    required String entryId,
+    required IncomeEntry entry,
   }) async {
-    await _monthRef(
-      householdId,
-      monthId,
-    ).collection('incomeEntries').doc(entryId).delete();
+    final monthRef = _monthRef(householdId, monthId);
+    final entryRef = monthRef.collection('incomeEntries').doc(entry.id);
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      tx.delete(entryRef);
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        incomeDelta: -entry.amount,
+      );
+    });
+    await _cascadeLeftoverToFollowingMonths(householdId, monthId);
   }
 
   Future<String> addIncomeSource({
@@ -1030,5 +1749,267 @@ class BudgetRepository {
       householdId,
       monthId,
     ).collection('incomeSources').doc(sourceId).delete();
+  }
+
+  // —— Loans ——
+
+  Future<String> addLoan({
+    required String householdId,
+    required Loan loan,
+  }) async {
+    final ref = _loans(householdId).doc();
+    await ref.set({
+      ...loan.toMap(),
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+    return ref.id;
+  }
+
+  Future<void> updateLoan({
+    required String householdId,
+    required Loan loan,
+  }) async {
+    await _loans(householdId).doc(loan.id).set(loan.toMap(), SetOptions(merge: true));
+  }
+
+  Future<void> deleteLoan({
+    required String householdId,
+    required String loanId,
+  }) async {
+    await _loans(householdId).doc(loanId).delete();
+  }
+
+  Future<String> addLoanPayment({
+    required String householdId,
+    required String monthId,
+    required String loanId,
+    required double amount,
+    required DateTime date,
+    String? note,
+    bool reducesBalance = true,
+    String? createdBy,
+    String? createdByName,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final paymentRef = monthRef.collection('loanPayments').doc();
+    final loanRef = _loans(householdId).doc(loanId);
+
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final loanSnap = await tx.get(loanRef);
+      if (!loanSnap.exists) throw StateError('Loan not found');
+      final loan = Loan.fromMap(loanSnap.id, loanSnap.data()!);
+
+      tx.set(paymentRef, {
+        'loanId': loanId,
+        'amount': amount,
+        'date': date.toIso8601String(),
+        'note': note,
+        'reducesBalance': reducesBalance,
+        'createdAt': DateTime.now().toIso8601String(),
+        'createdBy': createdBy,
+        'createdByName': createdByName,
+      });
+
+      if (reducesBalance) {
+        final nextRemaining =
+            (loan.remainingBalance - amount).clamp(0.0, double.infinity);
+        final updates = <String, dynamic>{
+          'remainingBalance': nextRemaining,
+        };
+        if (loan.isInstallment) {
+          updates['paidInstallments'] = (loan.paidInstallments ?? 0) + 1;
+        }
+        if (nextRemaining <= 0) {
+          updates['status'] = 'paidOff';
+        }
+        tx.update(loanRef, updates);
+      }
+
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        debtPaidDelta: amount,
+      );
+    });
+    return paymentRef.id;
+  }
+
+  Future<void> deleteLoanPayment({
+    required String householdId,
+    required String monthId,
+    required LoanPayment payment,
+  }) async {
+    final monthRef = _monthRef(householdId, monthId);
+    final paymentRef = monthRef.collection('loanPayments').doc(payment.id);
+    final loanRef = _loans(householdId).doc(payment.loanId);
+
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final loanSnap = await tx.get(loanRef);
+
+      tx.delete(paymentRef);
+
+      if (payment.reducesBalance && loanSnap.exists) {
+        final loan = Loan.fromMap(loanSnap.id, loanSnap.data()!);
+        final nextRemaining = loan.remainingBalance + payment.amount;
+        final updates = <String, dynamic>{
+          'remainingBalance': nextRemaining,
+          if (loan.status == 'paidOff' && nextRemaining > 0) 'status': 'active',
+        };
+        if (loan.isInstallment && (loan.paidInstallments ?? 0) > 0) {
+          updates['paidInstallments'] = (loan.paidInstallments ?? 1) - 1;
+        }
+        tx.update(loanRef, updates);
+      }
+
+      await _refreshCashLeftInTx(
+        tx,
+        monthRef,
+        monthSnap.data()!,
+        debtPaidDelta: -payment.amount,
+      );
+    });
+  }
+
+  /// Propagate cashLeft → leftoverFromPrior for months after [monthId].
+  Future<void> _cascadeLeftoverToFollowingMonths(
+    String householdId,
+    String monthId,
+  ) async {
+    final months = await _months(householdId).get();
+    final sorted = months.docs.map((d) => d.id).toList()..sort();
+    final start = sorted.indexOf(monthId);
+    if (start < 0) return;
+
+    for (var i = start; i < sorted.length; i++) {
+      final id = sorted[i];
+      final ref = _monthRef(householdId, id);
+      final snap = await ref.get();
+      if (!snap.exists || snap.data() == null) continue;
+      final month = BudgetMonth.fromMap(snap.id, snap.data()!);
+      final cashLeft = computeMonthCashLeft(
+        leftoverFromPrior: month.leftoverFromPrior,
+        incomeTotal: month.incomeTotal,
+        spentTotal: month.spentTotal,
+        depositTotal: month.depositTotal,
+      );
+      if ((cashLeft - month.cashLeft).abs() > 0.0001) {
+        await ref.update({'cashLeft': cashLeft});
+      }
+
+      if (i + 1 >= sorted.length) break;
+      final nextId = sorted[i + 1];
+      // Only cascade into the calendar-next month when it exists in the list;
+      // also update any later months that claim this as prior via previousMonthId.
+      final nextRef = _monthRef(householdId, nextId);
+      final expectedPrior = previousMonthId(nextId);
+      if (expectedPrior != id) {
+        // Still update leftover for the immediate next calendar month if present.
+        final calendarNext = nextMonthId(id);
+        if (!sorted.contains(calendarNext)) continue;
+        final calRef = _monthRef(householdId, calendarNext);
+        final calSnap = await calRef.get();
+        if (!calSnap.exists || calSnap.data() == null) continue;
+        final cal = BudgetMonth.fromMap(calSnap.id, calSnap.data()!);
+        final nextLeftover = leftoverFromPriorCashLeft(cashLeft);
+        if ((cal.leftoverFromPrior - nextLeftover).abs() > 0.0001) {
+          final newCash = computeMonthCashLeft(
+            leftoverFromPrior: nextLeftover,
+            incomeTotal: cal.incomeTotal,
+            spentTotal: cal.spentTotal,
+            depositTotal: cal.depositTotal,
+          );
+          await calRef.update({
+            'leftoverFromPrior': nextLeftover,
+            'cashLeft': newCash,
+          });
+        }
+        continue;
+      }
+
+      final nextSnap = await nextRef.get();
+      if (!nextSnap.exists || nextSnap.data() == null) continue;
+      final next = BudgetMonth.fromMap(nextSnap.id, nextSnap.data()!);
+      final nextLeftover = leftoverFromPriorCashLeft(cashLeft);
+      if ((next.leftoverFromPrior - nextLeftover).abs() <= 0.0001) continue;
+      final newCash = computeMonthCashLeft(
+        leftoverFromPrior: nextLeftover,
+        incomeTotal: next.incomeTotal,
+        spentTotal: next.spentTotal,
+        depositTotal: next.depositTotal,
+      );
+      await nextRef.update({
+        'leftoverFromPrior': nextLeftover,
+        'cashLeft': newCash,
+      });
+    }
+  }
+
+  /// Propagate end balance of [subcategoryId] in [monthId] into following
+  /// months' openingBalance / balance (preserving their deposited/withdrawn).
+  Future<void> _cascadePotBalancesToFollowingMonths(
+    String householdId,
+    String monthId,
+    String subcategoryId,
+  ) async {
+    final months = await _months(householdId).get();
+    final sorted = months.docs.map((d) => d.id).toList()..sort();
+    final start = sorted.indexOf(monthId);
+    if (start < 0) return;
+
+    for (var i = start; i < sorted.length - 1; i++) {
+      final id = sorted[i];
+      final nextId = sorted[i + 1];
+      if (previousMonthId(nextId) != id && nextMonthId(id) != nextId) {
+        // Only cascade along contiguous calendar chain.
+        if (nextMonthId(id) != nextId) continue;
+      }
+      final curPot = await _monthRef(householdId, id)
+          .collection('potBalances')
+          .doc(subcategoryId)
+          .get();
+      if (!curPot.exists || curPot.data() == null) break;
+      final endBalance =
+          PotBalance.fromMap(subcategoryId, curPot.data()!).balance;
+
+      final nextPotRef = _monthRef(householdId, nextId)
+          .collection('potBalances')
+          .doc(subcategoryId);
+      final nextMonthRef = _monthRef(householdId, nextId);
+
+      await _db.runTransaction((tx) async {
+        final nextPotSnap = await tx.get(nextPotRef);
+        final monthSnap = await tx.get(nextMonthRef);
+        if (!monthSnap.exists) return;
+
+        final existing = nextPotSnap.exists
+            ? PotBalance.fromMap(subcategoryId, nextPotSnap.data()!)
+            : PotBalance(subcategoryId: subcategoryId);
+        final next = existing.copyWith(
+          openingBalance: endBalance,
+          balance: PotBalance.computeBalance(
+            openingBalance: endBalance,
+            deposited: existing.deposited,
+            withdrawn: existing.withdrawn,
+          ),
+        );
+        final openingDelta = next.openingBalance - existing.openingBalance;
+        final balanceDelta = next.balance - existing.balance;
+        tx.set(nextPotRef, next.toMap());
+        if (openingDelta != 0 || balanceDelta != 0) {
+          await _refreshCashLeftInTx(
+            tx,
+            nextMonthRef,
+            monthSnap.data()!,
+            savingsBeforeDelta: openingDelta,
+            savingsThroughDelta: balanceDelta,
+          );
+        }
+      });
+    }
   }
 }

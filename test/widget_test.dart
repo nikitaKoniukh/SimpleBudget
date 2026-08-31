@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sync_month/data/default_categories.dart';
 import 'package:sync_month/models/models.dart';
 import 'package:sync_month/utils/csv_export.dart';
+import 'package:sync_month/utils/leftover.dart';
 import 'package:sync_month/utils/money.dart';
 
 void main() {
@@ -31,13 +32,13 @@ void main() {
     expect(text.contains('₪'), isTrue);
   });
 
-  test('default categories are localized EN/RU', () {
+  test('default categories are localized EN/RU without debt type', () {
     expect(DefaultCategories.all, isNotEmpty);
     for (final cat in DefaultCategories.all) {
       expect(cat.nameEn, isNotEmpty);
       expect(cat.nameRu, isNotEmpty);
       expect(
-        ['spend', 'monthly', 'debt', 'savings'],
+        ['spend', 'monthly', 'savings'],
         contains(cat.type),
       );
     }
@@ -52,29 +53,15 @@ void main() {
       1,
     );
     expect(
-      DefaultCategories.all.any(
-        (c) => c.nameEn == 'Savings' && c.type == 'savings',
-      ),
-      isTrue,
-    );
-    expect(
-      DefaultCategories.all.any((c) => c.type == 'monthly'),
-      isTrue,
-    );
-    expect(
       DefaultCategories.all.any((c) => c.type == 'debt'),
-      isTrue,
+      isFalse,
     );
     expect(
-      DefaultCategories.all.any((c) => c.nameEn == 'Emergency fund'),
+      DefaultCategories.all.any((c) => c.nameEn == 'Loans & debt'),
       isFalse,
     );
     expect(
       DefaultPots.all.any((p) => p.nameEn == 'Emergency fund'),
-      isTrue,
-    );
-    expect(
-      DefaultPots.all.any((p) => p.nameEn == 'Investments'),
       isTrue,
     );
   });
@@ -111,11 +98,10 @@ void main() {
           categoryId: 'c1',
           nameEn: 'Insurance',
           nameRu: 'Страховка',
-          installmentTotal: 12,
         ),
       ],
       plans: const [
-        MonthPlan(subcategoryId: 'sub1', planned: 400, installmentCurrent: 3),
+        MonthPlan(subcategoryId: 'sub1', planned: 400),
       ],
       expenses: [
         Expense(
@@ -133,106 +119,193 @@ void main() {
     expect(csv.contains('Salary'), isTrue);
     expect(csv.contains('Insurance'), isTrue);
     expect(csv.contains('Phoenix'), isTrue);
-    expect(csv.contains('3/12'), isTrue);
     expect(csv.contains('TOTALS'), isTrue);
   });
 
-  test(
-    'BudgetCategory serializes optional target and ignores savedTotal in toMap',
-    () {
-      const cat = BudgetCategory(
-        id: 'c1',
-        nameEn: 'Emergency fund',
-        nameRu: 'Резервный фонд',
-        colorValue: 0xFFFFCC80,
-        iconKey: 'savings',
-        type: 'savings',
-        sortOrder: 0,
-        targetAmount: 30000,
-        savedTotal: 1200,
-      );
-      expect(cat.isSavings, isTrue);
-      final map = cat.toMap();
-      expect(map['targetAmount'], 30000);
-      expect(map['iconKey'], 'savings');
-      expect(map.containsKey('savedTotal'), isFalse);
+  test('BudgetCategory serializes optional target', () {
+    const cat = BudgetCategory(
+      id: 'c1',
+      nameEn: 'Emergency fund',
+      nameRu: 'Резервный фонд',
+      colorValue: 0xFFFFCC80,
+      iconKey: 'savings',
+      type: 'savings',
+      sortOrder: 0,
+      targetAmount: 30000,
+    );
+    expect(cat.isSavings, isTrue);
+    final map = cat.toMap();
+    expect(map['targetAmount'], 30000);
+    expect(map['iconKey'], 'savings');
+    expect(map.containsKey('savedTotal'), isFalse);
 
-      final parsed = BudgetCategory.fromMap('c1', {...map, 'savedTotal': 1200});
-      expect(parsed.targetAmount, 30000);
-      expect(parsed.savedTotal, 1200);
-      expect(parsed.iconKey, 'savings');
+    final parsed = BudgetCategory.fromMap('c1', map);
+    expect(parsed.targetAmount, 30000);
+    expect(parsed.iconKey, 'savings');
 
-      final noTarget = BudgetCategory.fromMap('c2', {
-        'nameEn': 'Savings',
-        'nameRu': 'Накопления',
-        'colorValue': 0,
-        'type': 'savings',
-        'sortOrder': 1,
-      });
-      expect(noTarget.targetAmount, isNull);
-      expect(noTarget.savedTotal, 0);
-      expect(noTarget.iconKey, 'category');
-    },
-  );
+    final noTarget = BudgetCategory.fromMap('c2', {
+      'nameEn': 'Savings',
+      'nameRu': 'Накопления',
+      'colorValue': 0,
+      'type': 'savings',
+      'sortOrder': 1,
+    });
+    expect(noTarget.targetAmount, isNull);
+    expect(noTarget.iconKey, 'category');
+  });
 
-  test(
-    'Subcategory serializes optional target and ignores savedTotal in toMap',
-    () {
-      const sub = Subcategory(
-        id: 's1',
-        categoryId: 'c1',
-        nameEn: 'Investments',
-        nameRu: 'Инвестиции',
-        targetAmount: 10000,
-        savedTotal: 2500,
-      );
-      final map = sub.toMap();
-      expect(map['targetAmount'], 10000);
-      expect(map.containsKey('savedTotal'), isFalse);
+  test('Subcategory serializes optional target and includeInTotal', () {
+    const sub = Subcategory(
+      id: 's1',
+      categoryId: 'c1',
+      nameEn: 'Investments',
+      nameRu: 'Инвестиции',
+      targetAmount: 10000,
+      includeInTotal: true,
+    );
+    final map = sub.toMap();
+    expect(map['targetAmount'], 10000);
+    expect(map.containsKey('savedTotal'), isFalse);
+    expect(map.containsKey('installmentTotal'), isFalse);
 
-      final parsed = Subcategory.fromMap('s1', {...map, 'savedTotal': 2500});
-      expect(parsed.targetAmount, 10000);
-      expect(parsed.savedTotal, 2500);
+    final parsed = Subcategory.fromMap('s1', map);
+    expect(parsed.targetAmount, 10000);
+    expect(parsed.includeInTotal, isTrue);
+  });
 
-      final noTarget = Subcategory.fromMap('s2', {
-        'categoryId': 'c1',
-        'nameEn': 'Car',
-        'nameRu': 'Автомобиль',
-      });
-      expect(noTarget.targetAmount, isNull);
-      expect(noTarget.savedTotal, 0);
-    },
-  );
+  test('PotBalance computes end balance', () {
+    final pot = PotBalance(
+      subcategoryId: 'p1',
+      openingBalance: 1000,
+      deposited: 200,
+      withdrawn: 50,
+      balance: PotBalance.computeBalance(
+        openingBalance: 1000,
+        deposited: 200,
+        withdrawn: 50,
+      ),
+    );
+    expect(pot.balance, 1150);
+    final map = pot.toMap();
+    final parsed = PotBalance.fromMap('p1', map);
+    expect(parsed.openingBalance, 1000);
+    expect(parsed.deposited, 200);
+    expect(parsed.balance, 1150);
+  });
 
-  test('invite share message shape via localizations is not empty', () {
+  test('BudgetMonth summary fields round-trip', () {
+    const month = BudgetMonth(
+      id: '2026-08',
+      incomeTotal: 10000,
+      spentTotal: 4000,
+      depositTotal: 1000,
+      leftoverFromPrior: 500,
+      cashLeft: 5500,
+      savingsBeforeMonth: 2000,
+      savingsThroughMonth: 3000,
+      debtPaidTotal: 800,
+    );
+    final map = month.toMap();
+    final parsed = BudgetMonth.fromMap('2026-08', map);
+    expect(parsed.incomeTotal, 10000);
+    expect(parsed.leftoverFromPrior, 500);
+    expect(parsed.savingsThroughMonth, 3000);
+    expect(parsed.debtPaidTotal, 800);
+  });
+
+  test('computeMonthCashLeft floors at zero', () {
+    expect(
+      computeMonthCashLeft(
+        leftoverFromPrior: 100,
+        incomeTotal: 1000,
+        spentTotal: 400,
+        depositTotal: 200,
+      ),
+      500,
+    );
+    expect(
+      computeMonthCashLeft(
+        leftoverFromPrior: 0,
+        incomeTotal: 100,
+        spentTotal: 200,
+        depositTotal: 0,
+      ),
+      0,
+    );
+  });
+
+  test('Loan and LoanPayment serialize', () {
+    final loan = Loan(
+      id: 'l1',
+      name: 'Car loan',
+      type: 'installment',
+      originalAmount: 60000,
+      remainingBalance: 48000,
+      monthlyPayment: 2000,
+      totalInstallments: 30,
+      paidInstallments: 6,
+      status: 'active',
+    );
+    final map = loan.toMap();
+    final parsed = Loan.fromMap('l1', map);
+    expect(parsed.isInstallment, isTrue);
+    expect(parsed.remainingBalance, 48000);
+    expect(parsed.monthlyPayment, 2000);
+    expect(parsed.isPaidOff, isFalse);
+
+    final finished = loan.copyWith(
+      paidInstallments: 30,
+      remainingBalance: 0,
+      status: 'paidOff',
+    );
+    expect(finished.isPaidOff, isTrue);
+
+    final finishedByCount = loan.copyWith(
+      paidInstallments: 30,
+      remainingBalance: 100,
+    );
+    expect(finishedByCount.isPaidOff, isTrue);
+
+    final payment = LoanPayment(
+      id: 'p1',
+      loanId: 'l1',
+      amount: 2000,
+      date: DateTime(2026, 8, 1),
+      reducesBalance: true,
+    );
+    final pMap = payment.toMap();
+    expect(pMap['loanId'], 'l1');
+    expect(LoanPayment.fromMap('p1', pMap).amount, 2000);
+  });
+
+  test('Deposit serializes like spend events without isDeposit flag', () {
+    final d = Deposit(
+      id: 'd1',
+      subcategoryId: 'pot1',
+      amount: 40,
+      date: DateTime(2026, 8, 12),
+      createdBy: 'u1',
+      createdByName: 'Ada',
+    );
+    final map = d.toMap();
+    expect(map['createdBy'], 'u1');
+    expect(map.containsKey('isDeposit'), isFalse);
+    final parsed = Deposit.fromMap('d1', map);
+    expect(parsed.createdByName, 'Ada');
+  });
+
+  test('MonthTotals remaining excludes deposits by structure', () {
     final totals = MonthTotals(
       income: 100,
       planned: 80,
       actual: 50,
       savedThisMonth: 20,
+      leftoverFromPrior: 10,
     );
     expect(totals.remaining, 30);
     expect(totals.cashLeft, 50);
     expect(totals.planExceedsIncome, isFalse);
-  });
-
-  test('Expense serializes createdBy and deposit', () {
-    final e = Expense(
-      id: 'x1',
-      subcategoryId: 'sub1',
-      amount: 40,
-      date: DateTime(2026, 8, 12),
-      createdBy: 'u1',
-      createdByName: 'Ada',
-      isDeposit: true,
-    );
-    final map = e.toMap();
-    expect(map['createdBy'], 'u1');
-    expect(map['isDeposit'], isTrue);
-    expect(map.containsKey('splitGroupId'), isFalse);
-    final parsed = Expense.fromMap('x1', map);
-    expect(parsed.createdByName, 'Ada');
-    expect(parsed.isDeposit, isTrue);
+    expect(totals.savedThisMonth, 20);
   });
 
   test('Household member roles default to editor', () {
@@ -253,36 +326,35 @@ void main() {
   });
 
   test('Household.isOwnedBy uses createdBy, or sole member if owner is missing',
-    () {
-      const owned = Household(
-        id: 'h1',
-        name: 'Ours',
-        memberIds: ['a', 'b'],
-        inviteCode: 'ABC123',
-        createdBy: 'a',
-      );
-      expect(owned.isOwnedBy('a'), isTrue);
-      expect(owned.isOwnedBy('b'), isFalse);
+      () {
+    const owned = Household(
+      id: 'h1',
+      name: 'Ours',
+      memberIds: ['a', 'b'],
+      inviteCode: 'ABC123',
+      createdBy: 'a',
+    );
+    expect(owned.isOwnedBy('a'), isTrue);
+    expect(owned.isOwnedBy('b'), isFalse);
 
-      const legacySole = Household(
-        id: 'h2',
-        name: 'Mine',
-        memberIds: ['a'],
-        inviteCode: 'XYZ789',
-      );
-      expect(legacySole.isOwnedBy('a'), isTrue);
-      expect(legacySole.isOwnedBy('b'), isFalse);
+    const legacySole = Household(
+      id: 'h2',
+      name: 'Mine',
+      memberIds: ['a'],
+      inviteCode: 'XYZ789',
+    );
+    expect(legacySole.isOwnedBy('a'), isTrue);
+    expect(legacySole.isOwnedBy('b'), isFalse);
 
-      const legacyShared = Household(
-        id: 'h3',
-        name: 'Shared',
-        memberIds: ['a', 'b'],
-        inviteCode: 'QWE456',
-      );
-      expect(legacyShared.isOwnedBy('a'), isFalse);
-      expect(legacyShared.isOwnedBy('b'), isFalse);
-    },
-  );
+    const legacyShared = Household(
+      id: 'h3',
+      name: 'Shared',
+      memberIds: ['a', 'b'],
+      inviteCode: 'QWE456',
+    );
+    expect(legacyShared.isOwnedBy('a'), isFalse);
+    expect(legacyShared.isOwnedBy('b'), isFalse);
+  });
 
   test('AppUser supports multiple householdIds and activeHouseholdId', () {
     final user = AppUser.fromMap('u1', {

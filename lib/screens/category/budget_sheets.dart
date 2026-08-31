@@ -26,18 +26,6 @@ Future<void> showPlanEditor(
         ? plan.planned.toStringAsFixed(2)
         : '',
   );
-  final installmentCurrentCtrl = TextEditingController(
-    text: plan?.installmentCurrent != null
-        ? '${plan!.installmentCurrent}'
-        : '',
-  );
-  final installmentTotalCtrl = TextEditingController(
-    text: subcategory.installmentTotal != null
-        ? '${subcategory.installmentTotal}'
-        : '',
-  );
-  final isDebt =
-      state.categoryById(subcategory.categoryId)?.isDebt ?? false;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -61,35 +49,6 @@ Future<void> showPlanEditor(
               ),
               autofocus: true,
             ),
-            if (isDebt) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: installmentCurrentCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.installmentCurrent,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: installmentTotalCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.installmentTotal,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                l10n.installmentHelper,
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-            ],
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l10n.save),
@@ -103,24 +62,10 @@ Future<void> showPlanEditor(
   if (ok != true || !context.mounted) return;
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
-  final curText = installmentCurrentCtrl.text.trim();
-  final totText = installmentTotalCtrl.text.trim();
-  final instCur = int.tryParse(curText);
-  final instTot = int.tryParse(totText);
   await state.upsertPlan(
     subcategoryId: subcategory.id,
     planned: planned,
-    installmentCurrent: isDebt ? instCur : null,
-    clearInstallmentCurrent: !isDebt || curText.isEmpty,
   );
-  if (isDebt && instTot != subcategory.installmentTotal) {
-    await state.updateSubcategory(
-      subcategory.copyWith(
-        installmentTotal: instTot,
-        clearInstallmentTotal: totText.isEmpty,
-      ),
-    );
-  }
 }
 
 Future<String?> showAddSubcategorySheet(
@@ -139,17 +84,6 @@ Future<String?> showAddSubcategorySheet(
         ? plan.planned.toStringAsFixed(2)
         : '',
   );
-  final installmentCurrentCtrl = TextEditingController(
-    text: plan?.installmentCurrent != null
-        ? '${plan!.installmentCurrent}'
-        : '',
-  );
-  final installmentTotalCtrl = TextEditingController(
-    text: existing?.installmentTotal != null
-        ? '${existing!.installmentTotal}'
-        : '',
-  );
-  final isDebt = state.categoryById(categoryId)?.isDebt ?? false;
 
   final ok = await showModalBottomSheet<bool>(
     context: context,
@@ -180,35 +114,6 @@ Future<String?> showAddSubcategorySheet(
                 labelText: l10n.plannedLabel,
               ),
             ),
-            if (isDebt) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: installmentCurrentCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.installmentCurrent,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: installmentTotalCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.installmentTotal,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                l10n.installmentHelper,
-                style: Theme.of(ctx).textTheme.bodySmall,
-              ),
-            ],
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(l10n.save),
@@ -224,24 +129,16 @@ Future<String?> showAddSubcategorySheet(
   if (name.isEmpty) return null;
   final planned =
       double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
-  final curText = installmentCurrentCtrl.text.trim();
-  final totText = installmentTotalCtrl.text.trim();
-  final instCur = int.tryParse(curText);
-  final instTot = int.tryParse(totText);
   if (existing != null) {
     await state.updateSubcategory(
       existing.copyWith(
         nameEn: name,
         nameRu: name,
-        installmentTotal: isDebt ? instTot : null,
-        clearInstallmentTotal: !isDebt || totText.isEmpty,
       ),
     );
     await state.upsertPlan(
       subcategoryId: existing.id,
       planned: planned,
-      installmentCurrent: isDebt ? instCur : null,
-      clearInstallmentCurrent: !isDebt || curText.isEmpty,
     );
     return existing.id;
   }
@@ -249,8 +146,6 @@ Future<String?> showAddSubcategorySheet(
     categoryId: categoryId,
     name: name,
     planned: planned,
-    installmentCurrent: isDebt ? instCur : null,
-    installmentTotal: isDebt ? instTot : null,
   );
 }
 

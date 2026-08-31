@@ -69,7 +69,10 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
         otherPots.where((p) => p.includeInTotal).toList(growable: false);
     final excluded =
         otherPots.where((p) => !p.includeInTotal).toList(growable: false);
-    final totalSaved = summable.fold<double>(0, (s, p) => s + p.savedTotal);
+    final totalSaved = summable.fold<double>(
+      0,
+      (s, p) => s + state.potBalanceAmount(p.id),
+    );
     final targeted = summable.where(
       (p) => p.targetAmount != null && p.targetAmount! > 0,
     );
@@ -79,7 +82,7 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
         ? 0.0
         : (totalSaved / totalTarget).clamp(0.0, 1.0);
     final monthSaved =
-        otherPots.fold<double>(0, (s, p) => s + state.spentFor(p.id));
+        otherPots.fold<double>(0, (s, p) => s + state.depositedFor(p.id));
     final monthPlan =
         otherPots.fold<double>(0, (s, p) => s + state.plannedFor(p.id));
 
@@ -321,15 +324,16 @@ class _PotCard extends StatelessWidget {
     final colorValue = state.categoryById(pot.categoryId)?.colorValue ??
         DefaultCategories.savingsColorValue;
     final isLeftover = DefaultPots.isLeftoverName(pot.nameEn);
+    final balance = state.potBalanceAmount(pot.id);
     final leftoverAmount =
-        isLeftover ? state.leftoverFromPreviousMonth : pot.savedTotal;
+        isLeftover ? state.leftoverFromPreviousMonth : balance;
     final leftoverSourceId = isLeftover ? state.leftoverSourceMonthId : null;
     final hasTarget =
         !isLeftover && pot.targetAmount != null && pot.targetAmount! > 0;
     final ratio = !hasTarget
-        ? (pot.savedTotal > 0 ? 1.0 : 0.0)
-        : (pot.savedTotal / pot.targetAmount!).clamp(0.0, 1.0);
-    final monthSaved = state.spentFor(pot.id);
+        ? (balance > 0 ? 1.0 : 0.0)
+        : (balance / pot.targetAmount!).clamp(0.0, 1.0);
+    final monthSaved = state.depositedFor(pot.id);
     final monthPlan = state.plannedFor(pot.id);
     final showMonth = !isLeftover && (monthSaved > 0 || monthPlan > 0);
     final metaStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -369,7 +373,7 @@ class _PotCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      formatIls(isLeftover ? leftoverAmount : pot.savedTotal),
+                      formatIls(isLeftover ? leftoverAmount : balance),
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ],
@@ -401,7 +405,7 @@ class _PotCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}'
+                    '${formatIls(balance)} / ${formatIls(pot.targetAmount!)}'
                     ' · ${(ratio * 100).round()}%',
                     style: metaStyle,
                   ),

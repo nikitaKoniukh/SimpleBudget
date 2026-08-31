@@ -23,8 +23,11 @@ class SubcategoryBudgetRow extends StatelessWidget {
     final state = context.watch<AppState>();
     final sub = subcategory;
     final planned = state.plannedFor(sub.id);
-    final spent = state.spentFor(sub.id);
-    final hint = state.installmentHint(sub);
+    final isSavings =
+        state.categoryById(sub.categoryId)?.isSavings ?? false;
+    // Savings activity is deposits; spend/monthly use expenses.
+    final spent =
+        isSavings ? state.depositedFor(sub.id) : state.spentFor(sub.id);
     final overPlan = spent > planned && planned > 0;
     final overColor = SyncColors.overspend;
 
@@ -38,23 +41,11 @@ class SubcategoryBudgetRow extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    state.localizedSubcategoryName(sub),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: overPlan ? overColor : null,
-                        ),
-                  ),
-                  if (hint != null)
-                    Text(
-                      hint,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: SyncColors.textMuted,
-                          ),
+              child: Text(
+                state.localizedSubcategoryName(sub),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: overPlan ? overColor : null,
                     ),
-                ],
               ),
             ),
             SizedBox(

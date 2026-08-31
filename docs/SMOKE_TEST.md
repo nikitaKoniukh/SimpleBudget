@@ -17,7 +17,7 @@
 ## Months
 - [ ] **Create this month** opens full-screen flow (pick month)
 - [ ] If another month exists: copy source, empty month, leftover rollover
-- [ ] Copy from previous → categories + planned copied, actuals 0 (unless rollover)
+- [ ] Copy from previous → categories + planned copied; monthly/savings also get spent/deposit equal to planned; spend actuals stay 0 (unless rollover)
 - [ ] Select month from Home swap control
 - [ ] **Start next month from this plan** in Settings
 
@@ -42,6 +42,13 @@
 ## Set aside
 - [ ] Pots with optional target and target date
 - [ ] Log deposit does not reduce Home remaining
+- [ ] Changing month shows pot balances through and including that month
+- [ ] Leftover uses month leftoverFromPrior (not lifetime pot total)
+
+## Loans
+- [ ] Settings → Loans & debt: add installment or balance loan
+- [ ] Log loan payment reduces remaining balance
+- [ ] Home shows active loans; payment does not reduce Home remaining spend
 
 ## Budget basics
 - [ ] Split a new spend across two line items

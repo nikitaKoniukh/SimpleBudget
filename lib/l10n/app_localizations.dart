@@ -237,6 +237,18 @@ class AppLocalizations {
   String get roleViewer => _s('roleViewer');
   String get roleOwner => _s('roleOwner');
   String get recurringBills => _s('recurringBills');
+  String get loans => _s('loans');
+  String get addLoan => _s('addLoan');
+  String get loanTypeInstallment => _s('loanTypeInstallment');
+  String get loanTypeBalance => _s('loanTypeBalance');
+  String loanPaymentsProgress(int paid, int total) => _s('loanPaymentsProgress')
+      .replaceAll('{paid}', '$paid')
+      .replaceAll('{total}', '$total');
+  String loanPaymentsLeft(int count) =>
+      _s('loanPaymentsLeft').replaceAll('{count}', '$count');
+  String get remainingBalance => _s('remainingBalance');
+  String get remainingBalanceHint => _s('remainingBalanceHint');
+  String get originalAmount => _s('originalAmount');
   String get addBill => _s('addBill');
   String get billDay => _s('billDay');
   String get upcomingBills => _s('upcomingBills');

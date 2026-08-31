@@ -28,8 +28,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
   bool _editing = false;
   late final TextEditingController _nameCtrl;
   late final TextEditingController _plannedCtrl;
-  late final TextEditingController _installmentCurrentCtrl;
-  late final TextEditingController _installmentTotalCtrl;
   late final TextEditingController _targetCtrl;
   late final TextEditingController _categoryTargetCtrl;
   DateTime? _targetDate;
@@ -39,8 +37,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
     super.initState();
     _nameCtrl = TextEditingController();
     _plannedCtrl = TextEditingController();
-    _installmentCurrentCtrl = TextEditingController();
-    _installmentTotalCtrl = TextEditingController();
     _targetCtrl = TextEditingController();
     _categoryTargetCtrl = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,8 +49,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _plannedCtrl.dispose();
-    _installmentCurrentCtrl.dispose();
-    _installmentTotalCtrl.dispose();
     _targetCtrl.dispose();
     _categoryTargetCtrl.dispose();
     super.dispose();
@@ -71,10 +65,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
     _plannedCtrl.text = plan != null && plan.planned > 0
         ? plan.planned.toStringAsFixed(2)
         : '';
-    _installmentCurrentCtrl.text =
-        plan?.installmentCurrent != null ? '${plan!.installmentCurrent}' : '';
-    _installmentTotalCtrl.text =
-        sub.installmentTotal != null ? '${sub.installmentTotal}' : '';
     _targetCtrl.text = sub.targetAmount != null && sub.targetAmount! > 0
         ? sub.targetAmount!.toStringAsFixed(2)
         : '';
@@ -113,12 +103,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
 
     final planned =
         double.tryParse(_plannedCtrl.text.replaceAll(',', '')) ?? 0;
-    final curText = _installmentCurrentCtrl.text.trim();
-    final totText = _installmentTotalCtrl.text.trim();
-    final instCur = int.tryParse(curText);
-    final instTot = int.tryParse(totText);
     final isPot = category?.isSavings ?? false;
-    final isDebt = category?.isDebt ?? false;
 
     try {
       if (category != null &&
@@ -146,13 +131,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
             clearTargetDate: _targetDate == null,
           ),
         );
-      } else if (isDebt) {
-        await state.updateSubcategory(
-          sub.copyWith(
-            installmentTotal: instTot,
-            clearInstallmentTotal: totText.isEmpty,
-          ),
-        );
       }
 
       final nameEnOverride = name == sub.nameEn ? null : name;
@@ -160,8 +138,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
       await state.upsertPlan(
         subcategoryId: sub.id,
         planned: planned,
-        installmentCurrent: isDebt ? instCur : null,
-        clearInstallmentCurrent: !isDebt || curText.isEmpty,
         nameEn: nameEnOverride,
         nameRu: nameRuOverride,
         clearNameEn: nameEnOverride == null,
@@ -233,11 +209,11 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
 
     final category = state.categoryById(sub.categoryId);
     final isPot = category?.isSavings ?? false;
-    final isDebt = category?.isDebt ?? false;
-    final expenses = state.expensesFor(sub.id);
-    final spent = state.spentFor(sub.id);
+    final expenses = isPot ? const <Expense>[] : state.expensesFor(sub.id);
+    final deposits = isPot ? state.depositsFor(sub.id) : const <Deposit>[];
+    final spent = isPot ? state.depositedFor(sub.id) : state.spentFor(sub.id);
+    final potBalance = isPot ? state.potBalanceAmount(sub.id) : 0.0;
     final planned = state.planFor(sub.id)?.planned ?? 0;
-    final plan = state.planFor(sub.id);
     final canEdit = state.canEditPlan;
     final dateFmt = DateFormat.yMMMd(
       Localizations.localeOf(context).languageCode,
@@ -283,11 +259,8 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                 l10n: l10n,
                 category: category,
                 isPot: isPot,
-                isDebt: isDebt,
                 nameCtrl: _nameCtrl,
                 plannedCtrl: _plannedCtrl,
-                installmentCurrentCtrl: _installmentCurrentCtrl,
-                installmentTotalCtrl: _installmentTotalCtrl,
                 targetCtrl: _targetCtrl,
                 categoryTargetCtrl: _categoryTargetCtrl,
                 targetDate: _targetDate,
@@ -329,22 +302,16 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                 const SizedBox(height: 12),
                 DetailInfoCard(
                   children: [
-                    if (category != null && category.savedTotal > 0)
-                      DetailInfoRow(
-                        label: l10n.savedLabel,
-                        value: formatIls(category.savedTotal),
-                        valueColor: SyncColors.primary,
-                      ),
                     if (category?.targetAmount != null &&
                         category!.targetAmount! > 0)
                       DetailInfoRow(
                         label: l10n.targetAmount,
                         value: formatIls(category.targetAmount!),
                       ),
-                    if (isPot && sub.savedTotal > 0)
+                    if (isPot && potBalance > 0)
                       DetailInfoRow(
                         label: l10n.savedLabel,
-                        value: formatIls(sub.savedTotal),
+                        value: formatIls(potBalance),
                         valueColor: SyncColors.primary,
                       ),
                     if (isPot && sub.targetAmount != null && sub.targetAmount! > 0)
@@ -360,25 +327,6 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                   ],
                 ),
               ],
-              if (isDebt &&
-                  (plan?.installmentCurrent != null ||
-                      sub.installmentTotal != null)) ...[
-                const SizedBox(height: 12),
-                DetailInfoCard(
-                  children: [
-                    if (plan?.installmentCurrent != null)
-                      DetailInfoRow(
-                        label: l10n.installmentCurrent,
-                        value: '${plan!.installmentCurrent}',
-                      ),
-                    if (sub.installmentTotal != null)
-                      DetailInfoRow(
-                        label: l10n.installmentTotal,
-                        value: '${sub.installmentTotal}',
-                      ),
-                  ],
-                ),
-              ],
             ],
             const SizedBox(height: 20),
             Text(
@@ -388,7 +336,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                   ),
             ),
             const SizedBox(height: 8),
-            if (expenses.isEmpty)
+            if ((isPot ? deposits : expenses).isEmpty)
               DetailInfoCard(
                 children: [
                   Padding(
@@ -403,28 +351,41 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                   ),
                 ],
               )
+            else if (isPot)
+              for (final deposit in deposits)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _LedgerTile(
+                    note: deposit.note,
+                    date: deposit.date,
+                    amount: deposit.amount,
+                    amountColor: SyncColors.primary,
+                    dateFmt: dateFmt,
+                    onTap: _editing
+                        ? () => showLogEntrySheet(
+                              context,
+                              kind: LogKind.save,
+                              deposit: deposit,
+                            )
+                        : null,
+                  ),
+                )
             else
               for (final expense in expenses)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _ExpenseTile(
-                    expense: expense,
-                    isPot: isPot,
-                    isDebt: isDebt,
+                  child: _LedgerTile(
+                    note: expense.note,
+                    date: expense.date,
+                    amount: expense.amount,
+                    amountColor: SyncColors.accent,
                     dateFmt: dateFmt,
                     onTap: _editing
-                        ? () {
-                            final editKind = isPot || expense.isDeposit
-                                ? LogKind.save
-                                : isDebt
-                                    ? LogKind.debt
-                                    : LogKind.spend;
-                            showLogEntrySheet(
+                        ? () => showLogEntrySheet(
                               context,
-                              kind: editKind,
+                              kind: LogKind.spend,
                               expense: expense,
-                            );
-                          }
+                            )
                         : null,
                   ),
                 ),
@@ -442,14 +403,9 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
             ] else ...[
               OutlinedButton.icon(
                 onPressed: () {
-                  final addKind = isPot
-                      ? LogKind.save
-                      : isDebt
-                          ? LogKind.debt
-                          : LogKind.spend;
                   showLogEntrySheet(
                     context,
-                    kind: addKind,
+                    kind: isPot ? LogKind.save : LogKind.spend,
                     subcategoryId: sub.id,
                   );
                 },
@@ -482,11 +438,8 @@ class _SubcategoryEditForm extends StatelessWidget {
     required this.l10n,
     required this.category,
     required this.isPot,
-    required this.isDebt,
     required this.nameCtrl,
     required this.plannedCtrl,
-    required this.installmentCurrentCtrl,
-    required this.installmentTotalCtrl,
     required this.targetCtrl,
     required this.categoryTargetCtrl,
     required this.targetDate,
@@ -497,11 +450,8 @@ class _SubcategoryEditForm extends StatelessWidget {
   final AppLocalizations l10n;
   final BudgetCategory? category;
   final bool isPot;
-  final bool isDebt;
   final TextEditingController nameCtrl;
   final TextEditingController plannedCtrl;
-  final TextEditingController installmentCurrentCtrl;
-  final TextEditingController installmentTotalCtrl;
   final TextEditingController targetCtrl;
   final TextEditingController categoryTargetCtrl;
   final DateTime? targetDate;
@@ -532,39 +482,6 @@ class _SubcategoryEditForm extends StatelessWidget {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(labelText: l10n.plannedLabel),
         ),
-        if (isDebt) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: installmentCurrentCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l10n.installmentCurrent,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: installmentTotalCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: l10n.installmentTotal,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.installmentHelper,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SyncColors.textMuted,
-                ),
-          ),
-        ],
         if (isPot) ...[
           const SizedBox(height: 12),
           TextField(
@@ -601,29 +518,26 @@ class _SubcategoryEditForm extends StatelessWidget {
   }
 }
 
-class _ExpenseTile extends StatelessWidget {
-  const _ExpenseTile({
-    required this.expense,
-    required this.isPot,
-    required this.isDebt,
+class _LedgerTile extends StatelessWidget {
+  const _LedgerTile({
+    required this.note,
+    required this.date,
+    required this.amount,
+    required this.amountColor,
     required this.dateFmt,
     this.onTap,
   });
 
-  final Expense expense;
-  final bool isPot;
-  final bool isDebt;
+  final String? note;
+  final DateTime date;
+  final double amount;
+  final Color amountColor;
   final DateFormat dateFmt;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final note = expense.note?.trim();
-    final amountColor = isPot
-        ? SyncColors.primary
-        : isDebt
-            ? SyncColors.warning
-            : SyncColors.accent;
+    final noteText = note?.trim();
 
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -634,14 +548,14 @@ class _ExpenseTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  note == null || note.isEmpty ? '—' : note,
+                  noteText == null || noteText.isEmpty ? '—' : noteText,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  dateFmt.format(expense.date),
+                  dateFmt.format(date),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: SyncColors.textMuted,
                       ),
@@ -650,7 +564,7 @@ class _ExpenseTile extends StatelessWidget {
             ),
           ),
           Text(
-            formatIls(expense.amount),
+            formatIls(amount),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: amountColor,

@@ -247,12 +247,24 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                     label: l10n.categoryType,
                     value: categoryTypeLabel(l10n, category.type),
                   ),
-                  if (category.isSavings && category.savedTotal > 0)
-                    DetailInfoRow(
-                      label: l10n.savedLabel,
-                      value: formatIls(category.savedTotal),
-                      valueColor: SyncColors.primary,
+                  if (category.isSavings) ...[
+                    Builder(
+                      builder: (context) {
+                        final potTotal = state
+                            .subcategoriesFor(category.id)
+                            .fold<double>(
+                              0,
+                              (s, p) => s + state.potBalanceAmount(p.id),
+                            );
+                        if (potTotal <= 0) return const SizedBox.shrink();
+                        return DetailInfoRow(
+                          label: l10n.savedLabel,
+                          value: formatIls(potTotal),
+                          valueColor: SyncColors.primary,
+                        );
+                      },
                     ),
+                  ],
                   if (category.targetAmount != null && category.targetAmount! > 0)
                     DetailInfoRow(
                       label: l10n.targetAmount,
@@ -389,7 +401,7 @@ class _CategoryEditForm extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final t in const ['spend', 'monthly', 'debt', 'savings'])
+            for (final t in const ['spend', 'monthly', 'savings'])
               ChoiceChip(
                 label: Text(categoryTypeLabel(l10n, t)),
                 selected: type == t,
@@ -457,7 +469,11 @@ class _SubcategoryListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spent = state.spentFor(subcategory.id);
+    final isSavings =
+        state.categoryById(subcategory.categoryId)?.isSavings ?? false;
+    final spent = isSavings
+        ? state.depositedFor(subcategory.id)
+        : state.spentFor(subcategory.id);
     final planned = state.planFor(subcategory.id)?.planned ?? 0;
 
     return Material(

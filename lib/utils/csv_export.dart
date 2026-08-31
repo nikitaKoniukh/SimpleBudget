@@ -34,7 +34,7 @@ String buildMonthCsv({
   }
   buf.writeln();
   buf.writeln('PLANS');
-  buf.writeln('Category,Subcategory,Planned,Spent,Installment');
+  buf.writeln('Category,Subcategory,Planned,Spent');
   final planBySub = {for (final p in plans) p.subcategoryId: p};
   for (final cat in categories) {
     final subs = subcategories.where((s) => s.categoryId == cat.id);
@@ -45,17 +45,12 @@ String buildMonthCsv({
           .fold<double>(0, (s, e) => s + e.amount);
       if (plan == null && spent <= 0) continue;
       final planned = plan?.planned ?? 0;
-      final current = plan?.installmentCurrent;
-      final installment = current != null && sub.installmentTotal != null
-          ? '$current/${sub.installmentTotal}'
-          : '';
       buf.writeln(
         [
           _csv(cat.localizedName(localeCode)),
           _csv(_subDisplayName(sub, plan, localeCode)),
           planned,
           spent,
-          installment,
         ].join(','),
       );
     }

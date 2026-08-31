@@ -3,18 +3,23 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../data/default_categories.dart';
 import '../../models/models.dart';
 import '../../navigation/adaptive_page_route.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
+import '../../utils/money.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/onboarding_flow.dart';
 import '../../widgets/sync_app_bar.dart';
 import '../category/budget_sheets.dart';
+import '../category/category_sheets.dart';
 import '../income/income_dialogs.dart';
+import '../investments/investments_sheets.dart';
+import '../settings/loan_sheets.dart';
 
-enum LogKind { spend, save, income, monthly, debt }
+enum LogKind { spend, save, income, monthly, loanPayment }
 
 enum _LogFlowStep { type, category, subcategory, details }
 
@@ -23,16 +28,20 @@ class LogEntryFlowScreen extends StatefulWidget {
     super.key,
     this.kind,
     this.expense,
+    this.deposit,
     this.incomeEntry,
     this.subcategoryId,
     this.incomeSourceId,
+    this.loanId,
   });
 
   final LogKind? kind;
   final Expense? expense;
+  final Deposit? deposit;
   final IncomeEntry? incomeEntry;
   final String? subcategoryId;
   final String? incomeSourceId;
+  final String? loanId;
 
   @override
   State<LogEntryFlowScreen> createState() => _LogEntryFlowScreenState();
@@ -45,6 +54,7 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   String? _selectedSubId;
   String? _selectedCategoryId;
   String? _selectedSourceId;
+  String? _selectedLoanId;
   var _step = 0;
   var _saving = false;
   late final TextEditingController _amountCtrl;
@@ -54,6 +64,10 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
 
   bool _skipWhereStepFor(AppState state) {
     if (_editing) return false;
+    if (_selectedKind == LogKind.loanPayment) {
+      return _selectedLoanId != null &&
+          state.activeLoans.any((l) => l.id == _selectedLoanId);
+    }
     if (_pinnedSubId == null) return false;
     final pinned = state.subcategoryById(_pinnedSubId!);
     if (pinned == null) return false;
@@ -61,9 +75,7 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   }
 
   bool _needsCategoryStep(LogKind kind) =>
-      kind == LogKind.spend ||
-      kind == LogKind.monthly ||
-      kind == LogKind.debt;
+      kind == LogKind.spend || kind == LogKind.monthly;
 
   List<_LogFlowStep> _stepsFor(AppState state) {
     final steps = <_LogFlowStep>[];
@@ -83,22 +95,22 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   @override
   void initState() {
     super.initState();
-    _editing = widget.expense != null || widget.incomeEntry != null;
+    _editing = widget.expense != null ||
+        widget.deposit != null ||
+        widget.incomeEntry != null;
     final state = context.read<AppState>();
-    _pinnedSubId = widget.expense?.subcategoryId ?? widget.subcategoryId;
+    _pinnedSubId = widget.expense?.subcategoryId ??
+        widget.deposit?.subcategoryId ??
+        widget.subcategoryId;
 
     var initialKind = widget.kind ??
         (widget.incomeEntry != null
             ? LogKind.income
-            : (widget.expense != null && state.isDepositExpense(widget.expense!)
-                ? LogKind.save
-                : LogKind.spend));
+            : (widget.deposit != null ? LogKind.save : LogKind.spend));
 
-    if (widget.incomeEntry == null) {
+    if (widget.incomeEntry == null && widget.deposit == null) {
       final subId = widget.expense?.subcategoryId ?? widget.subcategoryId;
-      if (widget.expense != null && state.isDepositExpense(widget.expense!)) {
-        initialKind = LogKind.save;
-      } else if (subId != null) {
+      if (subId != null) {
         final fromCat = kindForSubcategory(state, subId);
         if (fromCat != null) initialKind = fromCat;
       }
@@ -112,22 +124,34 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
     _selectedSourceId = widget.incomeEntry?.sourceId ??
         widget.incomeSourceId ??
         state.incomeSources.firstOrNull?.id;
+    _selectedLoanId = widget.loanId ?? state.activeLoans.firstOrNull?.id;
 
     _amountCtrl = TextEditingController(
       text: widget.expense != null
           ? widget.expense!.amount.toStringAsFixed(2)
-          : widget.incomeEntry != null
-              ? widget.incomeEntry!.amount.toStringAsFixed(2)
-              : '',
+          : widget.deposit != null
+              ? widget.deposit!.amount.toStringAsFixed(2)
+              : widget.incomeEntry != null
+                  ? widget.incomeEntry!.amount.toStringAsFixed(2)
+                  : '',
     );
+    _amountCtrl.addListener(_onAmountChanged);
     _noteCtrl = TextEditingController(
-      text: widget.expense?.note ?? widget.incomeEntry?.note ?? '',
+      text: widget.expense?.note ??
+          widget.deposit?.note ??
+          widget.incomeEntry?.note ??
+          '',
     );
-    _date = widget.expense?.date ?? DateTime.now();
+    _date = widget.expense?.date ?? widget.deposit?.date ?? DateTime.now();
+  }
+
+  void _onAmountChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _amountCtrl.removeListener(_onAmountChanged);
     _amountCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
@@ -143,15 +167,20 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
 
   void _syncSelections(AppState state) {
     final kindCats = catsForKind(state, _selectedKind);
-    final savingsCat = state.savingsCategory;
-    final pots = savingsCat == null
-        ? const <Subcategory>[]
-        : state.subcategoriesForMonth(savingsCat.id);
 
     if (_selectedKind == LogKind.save) {
+      final pots = subsForKind(state, LogKind.save);
       if (_selectedSubId != null && !pots.any((s) => s.id == _selectedSubId)) {
         _selectedSubId = pots.firstOrNull?.id;
       }
+      _selectedSubId ??= pots.firstOrNull?.id;
+    } else if (_selectedKind == LogKind.loanPayment) {
+      final loans = state.activeLoans;
+      if (_selectedLoanId != null &&
+          !loans.any((l) => l.id == _selectedLoanId)) {
+        _selectedLoanId = loans.firstOrNull?.id;
+      }
+      _selectedLoanId ??= loans.firstOrNull?.id;
     } else if (_selectedKind != LogKind.income) {
       final pinnedSub =
           _pinnedSubId == null ? null : state.subcategoryById(_pinnedSubId!);
@@ -194,13 +223,13 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
       _LogFlowStep.subcategory => switch (_selectedKind) {
           LogKind.spend ||
           LogKind.save ||
-          LogKind.monthly ||
-          LogKind.debt =>
+          LogKind.monthly =>
             _selectedSubId != null,
+          LogKind.loanPayment => _selectedLoanId != null,
           LogKind.income => _selectedSourceId != null,
         },
       _LogFlowStep.details =>
-        (double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0) > 0,
+        (double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0) > 0,
     };
   }
 
@@ -238,7 +267,8 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   }
 
   Future<void> _save(AppState state, AppLocalizations l10n) async {
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0;
+    final amount =
+        double.tryParse(_amountCtrl.text.replaceAll(',', '.')) ?? 0;
     if (amount <= 0) return;
 
     setState(() => _saving = true);
@@ -248,7 +278,6 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
 
       switch (_selectedKind) {
         case LogKind.spend:
-        case LogKind.debt:
           final subId = _selectedSubId;
           if (subId == null) return;
           if (widget.expense == null) {
@@ -269,14 +298,22 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
                 createdAt: widget.expense!.createdAt,
                 createdBy: widget.expense!.createdBy,
                 createdByName: widget.expense!.createdByName,
-                isDeposit: false,
               ),
             );
           }
+        case LogKind.loanPayment:
+          final loanId = _selectedLoanId;
+          if (loanId == null) return;
+          await state.addLoanPayment(
+            loanId: loanId,
+            amount: amount,
+            date: _date,
+            note: noteOrNull,
+          );
         case LogKind.save:
           final subId = _selectedSubId;
           if (subId == null) return;
-          if (widget.expense == null) {
+          if (widget.deposit == null) {
             await state.addDeposit(
               subcategoryId: subId,
               amount: amount,
@@ -284,17 +321,16 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
               note: noteOrNull,
             );
           } else {
-            await state.updateExpense(
-              Expense(
-                id: widget.expense!.id,
+            await state.updateDeposit(
+              Deposit(
+                id: widget.deposit!.id,
                 subcategoryId: subId,
                 amount: amount,
                 date: _date,
                 note: noteOrNull,
-                createdAt: widget.expense!.createdAt,
-                createdBy: widget.expense!.createdBy,
-                createdByName: widget.expense!.createdByName,
-                isDeposit: true,
+                createdAt: widget.deposit!.createdAt,
+                createdBy: widget.deposit!.createdBy,
+                createdByName: widget.deposit!.createdByName,
               ),
             );
           }
@@ -308,13 +344,8 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
               note: noteOrNull,
             );
           } else {
-            final hid = state.activeHouseholdId;
-            final monthId = state.monthId;
-            if (hid == null || monthId == null) return;
-            await state.repo.updateIncomeEntry(
-              householdId: hid,
-              monthId: monthId,
-              entry: widget.incomeEntry!.copyWith(
+            await state.updateIncomeEntry(
+              widget.incomeEntry!.copyWith(
                 sourceId: sourceId,
                 amount: amount,
                 note: noteOrNull,
@@ -343,9 +374,29 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
             subcategoryId: subId,
           );
           await state.upsertPlan(subcategoryId: subId, planned: amount);
+          // Also log this month's payment so Home spent reflects it.
+          var payDate = _date;
+          final monthId = state.monthId;
+          if (monthId != null) {
+            final base = dateFromMonthId(monthId);
+            final lastDay = DateTime(base.year, base.month + 1, 0).day;
+            final day = _billDay.clamp(1, lastDay);
+            payDate = DateTime(base.year, base.month, day);
+          }
+          await state.addExpense(
+            subcategoryId: subId,
+            amount: amount,
+            date: payDate,
+            note: noteOrNull,
+          );
       }
       if (!mounted) return;
       Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -354,16 +405,10 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   Future<void> _delete(AppState state) async {
     if (widget.expense != null) {
       await state.deleteExpense(widget.expense!.id);
+    } else if (widget.deposit != null) {
+      await state.deleteDeposit(widget.deposit!.id);
     } else if (widget.incomeEntry != null) {
-      final hid = state.activeHouseholdId;
-      final monthId = state.monthId;
-      if (hid != null && monthId != null) {
-        await state.repo.deleteIncomeEntry(
-          householdId: hid,
-          monthId: monthId,
-          entryId: widget.incomeEntry!.id,
-        );
-      }
+      await state.deleteIncomeEntry(widget.incomeEntry!.id);
     }
     if (mounted) Navigator.of(context).pop();
   }
@@ -421,6 +466,8 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
                                     catsForKind(state, kind).firstOrNull?.id;
                                 _selectedSourceId =
                                     state.incomeSources.firstOrNull?.id;
+                                _selectedLoanId =
+                                    state.activeLoans.firstOrNull?.id;
                               });
                             },
                           ),
@@ -446,12 +493,15 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
                             selectedCategoryId: _selectedCategoryId,
                             selectedSubId: _selectedSubId,
                             selectedSourceId: _selectedSourceId,
+                            selectedLoanId: _selectedLoanId,
                             billDay: _billDay,
                             editing: _editing,
                             onSubChanged: (id) =>
                                 setState(() => _selectedSubId = id),
                             onSourceChanged: (id) =>
                                 setState(() => _selectedSourceId = id),
+                            onLoanChanged: (id) =>
+                                setState(() => _selectedLoanId = id),
                             onBillDayChanged: (day) =>
                                 setState(() => _billDay = day),
                           ),
@@ -557,6 +607,23 @@ class _LogCategoryStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final kindCats = catsForKind(state, kind);
+    final preferredType = kind == LogKind.monthly ? 'monthly' : 'spend';
+
+    Future<void> addCategory() async {
+      final catId = await showAddCategoryFlow(
+        context,
+        preferredType: preferredType,
+      );
+      if (catId == null || !context.mounted) return;
+      // addSuggestedCategory / editor return category id; if a pot was
+      // created instead, resolve its parent category.
+      final state = context.read<AppState>();
+      final asSub = state.subcategoryById(catId);
+      final resolvedCatId = asSub?.categoryId ?? catId;
+      if (state.categoryById(resolvedCatId) == null) return;
+      onCategoryChanged(resolvedCatId);
+      if (asSub != null) onSubCreated(asSub.id);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -568,23 +635,16 @@ class _LogCategoryStep extends StatelessWidget {
         ),
         if (kindCats.isEmpty)
           _EmptyPicker(
-            message: l10n.noSubcategories,
+            message: l10n.emptyCategories,
             actions: [
               OutlinedButton.icon(
-                onPressed: () async {
-                  final id = await addCategoryAndSubcategory(context);
-                  if (id == null || !context.mounted) return;
-                  final catId =
-                      context.read<AppState>().subcategoryById(id)?.categoryId;
-                  if (catId != null) onCategoryChanged(catId);
-                  onSubCreated(id);
-                },
+                onPressed: addCategory,
                 icon: const Icon(Icons.add),
                 label: Text(l10n.addCategory),
               ),
             ],
           )
-        else
+        else ...[
           for (final cat in kindCats)
             Card(
               margin: const EdgeInsets.only(bottom: 8),
@@ -610,6 +670,15 @@ class _LogCategoryStep extends StatelessWidget {
                 onTap: () => onCategoryChanged(cat.id),
               ),
             ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: addCategory,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addCategory),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -623,10 +692,12 @@ class _LogSubcategoryStep extends StatelessWidget {
     required this.selectedCategoryId,
     required this.selectedSubId,
     required this.selectedSourceId,
+    required this.selectedLoanId,
     required this.billDay,
     required this.editing,
     required this.onSubChanged,
     required this.onSourceChanged,
+    required this.onLoanChanged,
     required this.onBillDayChanged,
   });
 
@@ -636,18 +707,17 @@ class _LogSubcategoryStep extends StatelessWidget {
   final String? selectedCategoryId;
   final String? selectedSubId;
   final String? selectedSourceId;
+  final String? selectedLoanId;
   final int billDay;
   final bool editing;
   final ValueChanged<String> onSubChanged;
   final ValueChanged<String> onSourceChanged;
+  final ValueChanged<String> onLoanChanged;
   final ValueChanged<int> onBillDayChanged;
 
   @override
   Widget build(BuildContext context) {
-    final savingsCat = state.savingsCategory;
-    var pots = savingsCat == null
-        ? const <Subcategory>[]
-        : state.subcategoriesForMonth(savingsCat.id);
+    var pots = subsForKind(state, LogKind.save);
     if (editing &&
         selectedSubId != null &&
         !pots.any((s) => s.id == selectedSubId)) {
@@ -668,6 +738,7 @@ class _LogSubcategoryStep extends StatelessWidget {
     }
 
     final sources = state.incomeSources;
+    final loans = state.activeLoans;
     final categoryName = selectedCategoryId == null
         ? null
         : state
@@ -681,26 +752,29 @@ class _LogSubcategoryStep extends StatelessWidget {
           icon: switch (kind) {
             LogKind.save => Icons.savings_outlined,
             LogKind.income => Icons.payments_outlined,
+            LogKind.loanPayment => Icons.credit_card_outlined,
             _ => Icons.bookmark_outline,
           },
           title: switch (kind) {
             LogKind.save => l10n.sectionSavings,
             LogKind.income => l10n.income,
+            LogKind.loanPayment => l10n.sectionDebt,
             _ => l10n.subcategory,
           },
           subtitle: switch (kind) {
-            LogKind.income || LogKind.save => kindLabel(l10n, kind),
+            LogKind.income || LogKind.save || LogKind.loanPayment =>
+              kindLabel(l10n, kind),
             _ => categoryName,
           },
         ),
-        if (kind == LogKind.spend ||
-            kind == LogKind.monthly ||
-            kind == LogKind.debt)
+        if (kind == LogKind.spend || kind == LogKind.monthly)
           ..._subcategoryPicker(context, catSubs: catSubs)
         else if (kind == LogKind.save)
           ..._potPicker(context, pots: pots)
         else if (kind == LogKind.income)
-          ..._incomePicker(context, sources: sources),
+          ..._incomePicker(context, sources: sources)
+        else if (kind == LogKind.loanPayment)
+          ..._loanPicker(context, loans: loans),
         if (kind == LogKind.monthly) ...[
           const SizedBox(height: 16),
           DropdownButtonFormField<int>(
@@ -899,6 +973,64 @@ class _LogSubcategoryStep extends StatelessWidget {
       ),
     ];
   }
+
+  List<Widget> _loanPicker(
+    BuildContext context, {
+    required List<Loan> loans,
+  }) {
+    Future<void> addLoan() async {
+      final id = await showAddLoanSheet(context);
+      if (id != null) onLoanChanged(id);
+    }
+
+    if (loans.isEmpty) {
+      return [
+        _EmptyPicker(
+          message: l10n.sectionDebt,
+          actions: [
+            OutlinedButton.icon(
+              onPressed: addLoan,
+              icon: const Icon(Icons.add),
+              label: Text(l10n.addLoan),
+            ),
+          ],
+        ),
+      ];
+    }
+
+    return [
+      for (final loan in loans)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: selectedLoanId == loan.id
+                  ? SyncColors.primary
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.credit_card_outlined),
+            title: Text(loan.name),
+            subtitle: Text(formatIls(loan.remainingBalance)),
+            trailing: selectedLoanId == loan.id
+                ? Icon(Icons.check_circle, color: SyncColors.primary)
+                : null,
+            onTap: () => onLoanChanged(loan.id),
+          ),
+        ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: addLoan,
+          icon: const Icon(Icons.add),
+          label: Text(l10n.addLoan),
+        ),
+      ),
+    ];
+  }
 }
 
 class _LogDetailsStep extends StatelessWidget {
@@ -939,7 +1071,7 @@ class _LogDetailsStep extends StatelessWidget {
               LogKind.save => l10n.amountSave,
               LogKind.income => l10n.amountIncome,
               LogKind.monthly => l10n.amountMonthly,
-              LogKind.debt => l10n.amountDebt,
+              LogKind.loanPayment => l10n.amountDebt,
             },
           ),
         ),
@@ -953,7 +1085,7 @@ class _LogDetailsStep extends StatelessWidget {
         ),
         if (kind == LogKind.spend ||
             kind == LogKind.save ||
-            kind == LogKind.debt) ...[
+            kind == LogKind.loanPayment) ...[
           const SizedBox(height: 8),
           Card(
             child: ListTile(
@@ -1002,7 +1134,7 @@ IconData iconForLogKind(LogKind kind) {
     LogKind.save => Icons.savings_outlined,
     LogKind.income => Icons.payments_outlined,
     LogKind.monthly => Icons.event_repeat_outlined,
-    LogKind.debt => Icons.credit_card_outlined,
+    LogKind.loanPayment => Icons.credit_card_outlined,
   };
 }
 
@@ -1012,7 +1144,7 @@ String kindLabel(AppLocalizations l10n, LogKind kind) {
     LogKind.save => l10n.logSave,
     LogKind.income => l10n.income,
     LogKind.monthly => l10n.logFixed,
-    LogKind.debt => l10n.logDebt,
+    LogKind.loanPayment => l10n.logDebt,
   };
 }
 
@@ -1021,7 +1153,6 @@ LogKind? kindForSubcategory(AppState state, String subcategoryId) {
     state.subcategoryById(subcategoryId)?.categoryId ?? '',
   );
   if (cat == null) return null;
-  if (cat.isDebt) return LogKind.debt;
   if (cat.isSavings) return LogKind.save;
   if (cat.isSpend || cat.isMonthly) return LogKind.spend;
   return null;
@@ -1032,7 +1163,7 @@ bool _subMatchesKind(AppState state, Subcategory sub, LogKind kind) {
   return switch (kind) {
     LogKind.spend => cat?.isSpend == true || cat?.isMonthly == true,
     LogKind.monthly => cat?.isMonthly ?? false,
-    LogKind.debt => cat?.isDebt ?? false,
+    LogKind.loanPayment => false,
     LogKind.save => cat?.isSavings ?? false,
     LogKind.income => false,
   };
@@ -1045,8 +1176,7 @@ List<BudgetCategory> catsForKind(AppState state, LogKind kind) {
         ...state.categoriesOfType('monthly'),
       ],
     LogKind.monthly => state.categoriesOfType('monthly'),
-    LogKind.debt => state.categoriesOfType('debt'),
-    LogKind.save || LogKind.income => const [],
+    LogKind.loanPayment || LogKind.save || LogKind.income => const [],
   };
 }
 
@@ -1057,8 +1187,11 @@ List<Subcategory> subsForKind(AppState state, LogKind kind) {
         ...state.subcategoriesOfType('monthly'),
       ],
     LogKind.monthly => state.subcategoriesOfType('monthly'),
-    LogKind.debt => state.subcategoriesOfType('debt'),
-    LogKind.save => state.savingsPots,
+    LogKind.loanPayment => const [],
+    // Leftover is cash rollover, not a deposit target.
+    LogKind.save => state.savingsPots
+        .where((p) => !DefaultPots.isLeftoverName(p.nameEn))
+        .toList(),
     LogKind.income => const [],
   };
 }
@@ -1068,43 +1201,19 @@ String? defaultSubForKind(AppState state, LogKind kind) {
 }
 
 Future<String?> promptAddPot(BuildContext context) async {
-  final l10n = AppLocalizations.of(context);
-  final nameCtrl = TextEditingController();
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(l10n.addPot),
-      content: TextField(
-        controller: nameCtrl,
-        textCapitalization: TextCapitalization.sentences,
-        decoration: InputDecoration(labelText: l10n.subcategoryName),
-        autofocus: true,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          child: Text(l10n.save),
-        ),
-      ],
-    ),
-  );
-  if (ok != true || !context.mounted) return null;
-  final name = sentenceCase(nameCtrl.text);
-  if (name.isEmpty) return null;
-  return context.read<AppState>().addPot(name: name);
+  // Reuse Set Aside pot form so monthly budget is collected.
+  return showEditPotSheet(context);
 }
 
 Future<void> openLogEntryFlow(
   BuildContext context, {
   LogKind? kind,
   Expense? expense,
+  Deposit? deposit,
   IncomeEntry? incomeEntry,
   String? subcategoryId,
   String? incomeSourceId,
+  String? loanId,
 }) async {
   final state = context.read<AppState>();
   if (!state.hasMonthSelected) return;
@@ -1112,21 +1221,18 @@ Future<void> openLogEntryFlow(
   var initialKind = kind ??
       (incomeEntry != null
           ? LogKind.income
-          : (expense != null && state.isDepositExpense(expense)
-              ? LogKind.save
-              : LogKind.spend));
+          : (deposit != null ? LogKind.save : LogKind.spend));
 
-  if (incomeEntry == null) {
+  if (incomeEntry == null && deposit == null) {
     final subId = expense?.subcategoryId ?? subcategoryId;
-    if (expense != null && state.isDepositExpense(expense)) {
-      initialKind = LogKind.save;
-    } else if (subId != null) {
+    if (subId != null) {
       final fromCat = kindForSubcategory(state, subId);
       if (fromCat != null) initialKind = fromCat;
     }
   }
 
-  final editing = expense != null || incomeEntry != null;
+  final editing =
+      expense != null || deposit != null || incomeEntry != null;
   if (initialKind == LogKind.income && !editing && state.incomeSources.isEmpty) {
     final created = await showAddIncomeSourceDialog(context);
     if (!context.mounted) return;
@@ -1136,11 +1242,13 @@ Future<void> openLogEntryFlow(
   await pushAdaptivePage<void>(
     context,
     LogEntryFlowScreen(
-      kind: kind,
+      kind: kind ?? initialKind,
       expense: expense,
+      deposit: deposit,
       incomeEntry: incomeEntry,
       subcategoryId: subcategoryId,
       incomeSourceId: incomeSourceId,
+      loanId: loanId,
     ),
   );
 }

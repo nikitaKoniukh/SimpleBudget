@@ -1,14 +1,15 @@
-import '../models/models.dart';
-
-/// Cash left: max(0, income − spent).
-double computeUnspentLeftover({
-  required double income,
-  required Iterable<Expense> expenses,
+/// Cash left entering next month: max(0, leftoverFromPrior + income − spent − deposits).
+double computeMonthCashLeft({
+  required double leftoverFromPrior,
+  required double incomeTotal,
+  required double spentTotal,
+  required double depositTotal,
 }) {
-  var totalSpent = 0.0;
-  for (final e in expenses) {
-    totalSpent += e.amount;
-  }
-  final leftover = income - totalSpent;
-  return leftover > 0 ? leftover : 0.0;
+  final cashLeft =
+      leftoverFromPrior + incomeTotal - spentTotal - depositTotal;
+  return cashLeft > 0 ? cashLeft : 0.0;
 }
+
+/// Floor leftover carried into a new month from the prior month's cash left.
+double leftoverFromPriorCashLeft(double priorCashLeft) =>
+    priorCashLeft > 0 ? priorCashLeft : 0.0;

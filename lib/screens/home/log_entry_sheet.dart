@@ -15,17 +15,21 @@ Future<void> showLogEntrySheet(
   BuildContext context, {
   LogKind? kind,
   Expense? expense,
+  Deposit? deposit,
   IncomeEntry? incomeEntry,
   String? subcategoryId,
   String? incomeSourceId,
+  String? loanId,
 }) {
   return openLogEntryFlow(
     context,
     kind: kind,
     expense: expense,
+    deposit: deposit,
     incomeEntry: incomeEntry,
     subcategoryId: subcategoryId,
     incomeSourceId: incomeSourceId,
+    loanId: loanId,
   );
 }
 
@@ -45,13 +49,13 @@ Future<void> showExpenseEditor(
 Future<void> showDepositEditor(
   BuildContext context, {
   Subcategory? subcategory,
-  Expense? expense,
+  Deposit? deposit,
 }) {
   return showLogEntrySheet(
     context,
-    kind: expense == null ? LogKind.save : null,
-    expense: expense,
-    subcategoryId: subcategory?.id ?? expense?.subcategoryId,
+    kind: deposit == null ? LogKind.save : null,
+    deposit: deposit,
+    subcategoryId: subcategory?.id ?? deposit?.subcategoryId,
   );
 }
 

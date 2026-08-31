@@ -17,6 +17,7 @@ import '../home/month_actions.dart';
 import '../overview/overview_screen.dart';
 import 'account_actions.dart';
 import 'recurring_bills_screen.dart';
+import 'loans_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -188,6 +189,14 @@ class SettingsScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 pushAdaptivePage(context, const RecurringBillsScreen());
+              },
+            ),
+            ListTile(
+              title: Text(l10n.loans),
+              leading: const Icon(Icons.account_balance_outlined),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                pushAdaptivePage(context, const LoansScreen());
               },
             ),
             ListTile(

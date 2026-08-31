@@ -135,7 +135,12 @@ Future<String?> showAddPotFlow(BuildContext context) async {
   if (choice == null || !context.mounted) return null;
   try {
     if (choice.suggested != null) {
-      return context.read<AppState>().addSuggestedPot(choice.suggested!);
+      final pot = choice.suggested!;
+      return showEditPotSheet(
+        context,
+        initialNameEn: pot.nameEn,
+        initialNameRu: pot.nameRu,
+      );
     }
     if (choice.wantsCustom) {
       return showEditPotSheet(context);
@@ -158,14 +163,18 @@ class _PotSourceChoice {
 }
 
 Future<String?> showEditPotSheet(
-  BuildContext context, [
+  BuildContext context, {
   Subcategory? existing,
-]) async {
+  String? initialNameEn,
+  String? initialNameRu,
+}) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
-  final nameCtrl = TextEditingController(
-    text: existing?.localizedName(state.localeCode) ?? '',
-  );
+  final prefillName = existing?.localizedName(state.localeCode) ??
+      (state.localeCode == 'ru'
+          ? (initialNameRu ?? initialNameEn)
+          : (initialNameEn ?? initialNameRu));
+  final nameCtrl = TextEditingController(text: prefillName ?? '');
   final targetCtrl = TextEditingController(
     text: existing?.targetAmount != null && existing!.targetAmount! > 0
         ? existing.targetAmount!.toStringAsFixed(2)
@@ -176,12 +185,9 @@ Future<String?> showEditPotSheet(
   final plannedCtrl = TextEditingController(
     text: existingPlanned > 0 ? existingPlanned.toStringAsFixed(2) : '',
   );
-  final existingMonthDeposits = existing == null
-      ? 0.0
-      : state.expensesFor(existing.id).fold<double>(0, (s, e) => s + e.amount);
   final existingPrior = existing == null
       ? 0.0
-      : (existing.savedTotal - existingMonthDeposits);
+      : state.potOpeningBalance(existing.id);
   final priorSavedCtrl = TextEditingController(
     text: existingPrior > 0 ? existingPrior.toStringAsFixed(2) : '',
   );
@@ -210,7 +216,8 @@ Future<String?> showEditPotSheet(
                   controller: nameCtrl,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: InputDecoration(labelText: l10n.subcategoryName),
-                  autofocus: existing == null,
+                  autofocus: existing == null &&
+                      (prefillName == null || prefillName.isEmpty),
                 ),
                 if (existing == null ||
                     !DefaultPots.isLeftoverName(existing.nameEn)) ...[
@@ -219,6 +226,9 @@ Future<String?> showEditPotSheet(
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(labelText: l10n.plannedLabel),
+                    autofocus: existing == null &&
+                        prefillName != null &&
+                        prefillName.isNotEmpty,
                   ),
                   TextField(
                     controller: priorSavedCtrl,
@@ -278,17 +288,19 @@ Future<String?> showEditPotSheet(
   if (ok != true || !context.mounted) return null;
   final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return null;
-  final parsed = double.tryParse(targetCtrl.text.replaceAll(',', ''));
+  final parsed = double.tryParse(targetCtrl.text.replaceAll(',', '.'));
   final target = parsed != null && parsed > 0 ? parsed : null;
   final planned =
-      double.tryParse(plannedCtrl.text.replaceAll(',', '')) ?? 0;
+      double.tryParse(plannedCtrl.text.replaceAll(',', '.')) ?? 0;
   final priorSaved =
-      double.tryParse(priorSavedCtrl.text.replaceAll(',', '')) ?? 0;
+      double.tryParse(priorSavedCtrl.text.replaceAll(',', '.')) ?? 0;
 
   try {
     if (existing == null) {
       return await state.addPot(
         name: name,
+        nameEn: initialNameEn ?? name,
+        nameRu: initialNameRu ?? name,
         targetAmount: target,
         targetDate: targetDate,
         includeInTotal: includeInTotal,
@@ -320,8 +332,8 @@ Future<String?> showEditPotSheet(
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${l10n.errorGeneric}: $e')),
     );
+    return null;
   }
-  return null;
 }
 
 Future<void> showAddPriorSavingsSheet(
@@ -359,8 +371,8 @@ Future<void> showAddPriorSavingsSheet(
                 ),
                 if (pots.length > 1)
                   DropdownButtonFormField<String>(
-                    key: ValueKey('prior-pot-${selected?.id}'),
-                    initialValue: selected?.id,
+                    key: ValueKey('prior-pot-${selected.id}'),
+                    initialValue: selected.id,
                     decoration: InputDecoration(labelText: l10n.sectionSavings),
                     items: [
                       for (final p in pots)
@@ -502,8 +514,9 @@ Future<void> showPotDetailSheet(
             builder: (ctx, scrollController) {
             final live = ctx.watch<AppState>();
             final pot = live.subcategoryById(subcategory.id) ?? subcategory;
-            final deposits = live.expensesFor(pot.id);
+            final deposits = live.depositsFor(pot.id);
             final color = _potColor(live, pot);
+            final balance = live.potBalanceAmount(pot.id);
             return ListView(
               controller: scrollController,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -530,15 +543,15 @@ Future<void> showPotDetailSheet(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () {
                         Navigator.pop(ctx);
-                        showEditPotSheet(context, pot);
+                        showEditPotSheet(context, existing: pot);
                       },
                     ),
                   ],
                 ),
                 Text(
                   pot.targetAmount != null && pot.targetAmount! > 0
-                      ? '${formatIls(pot.savedTotal)} / ${formatIls(pot.targetAmount!)}'
-                      : formatIls(pot.savedTotal),
+                      ? '${formatIls(balance)} / ${formatIls(pot.targetAmount!)}'
+                      : formatIls(balance),
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -584,20 +597,20 @@ Future<void> showPotDetailSheet(
                 if (deposits.isEmpty)
                   Text(l10n.noDepositsThisMonth)
                 else
-                  ...deposits.map((expense) {
-                    final note = expense.note?.trim();
+                  ...deposits.map((deposit) {
+                    final note = deposit.note?.trim();
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(
                         note == null || note.isEmpty
-                            ? DateFormat.MMMd().format(expense.date)
+                            ? DateFormat.MMMd().format(deposit.date)
                             : note,
                       ),
                       subtitle: note == null || note.isEmpty
                           ? null
-                          : Text(DateFormat.MMMd().format(expense.date)),
+                          : Text(DateFormat.MMMd().format(deposit.date)),
                       trailing: Text(
-                        formatIls(expense.amount),
+                        formatIls(deposit.amount),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       onTap: () {
@@ -605,7 +618,7 @@ Future<void> showPotDetailSheet(
                         showDepositEditor(
                           context,
                           subcategory: pot,
-                          expense: expense,
+                          deposit: deposit,
                         );
                       },
                     );

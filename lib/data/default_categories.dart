@@ -1,5 +1,6 @@
-/// Suggested spend / monthly / debt / savings categories with EN + RU names.
+/// Suggested spend / monthly / savings categories with EN + RU names.
 /// Used when creating a month, "Add defaults", and the add-category picker.
+/// Loans live as first-class [Loan] docs, not a category type.
 class DefaultCategories {
   static const savingsNameEn = 'Savings';
   static const savingsNameRu = 'Накопления';
@@ -141,14 +142,6 @@ class DefaultCategories {
       type: 'spend',
       colorValue: 0xFFFFF59D,
       iconKey: 'more',
-    ),
-    // —— Debt / payments ——
-    DefaultCategory(
-      nameEn: 'Loans & debt',
-      nameRu: 'Кредиты и долги',
-      type: 'debt',
-      colorValue: 0xFFE57373,
-      iconKey: 'account_balance',
     ),
     // —— Savings ——
     DefaultCategory(

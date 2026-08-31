@@ -39,6 +39,9 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final sourcesById = {
       for (final s in state.incomeSources) s.id: s,
     };
+    final loansById = {
+      for (final l in state.loans) l.id: l,
+    };
 
     final items = <_FeedItem>[];
 
@@ -79,6 +82,50 @@ class _ActivityScreenState extends State<ActivityScreen> {
         _FeedItem(
           sortDate: expense.date,
           expense: expense,
+        ),
+      );
+    }
+
+    for (final deposit in state.deposits) {
+      if (_categoryId != null) {
+        final sub = state.subcategoryById(deposit.subcategoryId);
+        if (sub == null || sub.categoryId != _categoryId) continue;
+      }
+      if (_filter == _ActivityFilter.income) continue;
+
+      final sub = state.subcategoryById(deposit.subcategoryId);
+      final cat =
+          sub == null ? null : state.categoryById(sub.categoryId);
+      final who =
+          deposit.createdByName ?? state.memberLabel(deposit.createdBy);
+      final haystack =
+          '${deposit.note ?? ''} ${sub != null ? state.localizedSubcategoryName(sub) : ''} ${cat?.localizedName(state.localeCode) ?? ''} $who ${l10n.deposit}';
+      if (!_matchesQuery(haystack)) continue;
+
+      items.add(
+        _FeedItem(
+          sortDate: deposit.date,
+          deposit: deposit,
+        ),
+      );
+    }
+
+    for (final payment in state.loanPayments) {
+      if (_filter == _ActivityFilter.income) continue;
+      // Loan payments are not tied to budget categories.
+      if (_categoryId != null) continue;
+
+      final loan = loansById[payment.loanId];
+      final who =
+          payment.createdByName ?? state.memberLabel(payment.createdBy);
+      final haystack =
+          '${payment.note ?? ''} ${loan?.name ?? ''} $who ${l10n.logDebt}';
+      if (!_matchesQuery(haystack)) continue;
+
+      items.add(
+        _FeedItem(
+          sortDate: payment.date,
+          loanPayment: payment,
         ),
       );
     }
@@ -126,8 +173,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
       );
     }
 
-    final hasAnyActivity =
-        state.incomeEntries.isNotEmpty || state.expenses.isNotEmpty;
+    final hasAnyActivity = state.incomeEntries.isNotEmpty ||
+        state.expenses.isNotEmpty ||
+        state.deposits.isNotEmpty ||
+        state.loanPayments.isNotEmpty;
     final feed = _buildFeed(state: state, l10n: l10n);
     final grouped = _groupByDay(feed);
     final sortedDays = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
@@ -317,16 +366,26 @@ class _FeedItem {
     required this.sortDate,
     this.incomeEntry,
     this.expense,
+    this.deposit,
+    this.loanPayment,
   }) : assert(
-          (incomeEntry != null) ^ (expense != null),
-          'Feed item must be income or expense',
+          (incomeEntry != null ? 1 : 0) +
+                  (expense != null ? 1 : 0) +
+                  (deposit != null ? 1 : 0) +
+                  (loanPayment != null ? 1 : 0) ==
+              1,
+          'Feed item must be exactly one kind',
         );
 
   final DateTime sortDate;
   final IncomeEntry? incomeEntry;
   final Expense? expense;
+  final Deposit? deposit;
+  final LoanPayment? loanPayment;
 
   bool get isIncome => incomeEntry != null;
+  bool get isDeposit => deposit != null;
+  bool get isLoanPayment => loanPayment != null;
 }
 
 class _ActivitySummaryBar extends StatelessWidget {
@@ -457,6 +516,20 @@ class _ActivityFeedTile extends StatelessWidget {
         l10n: l10n,
       );
     }
+    if (item.isDeposit) {
+      return _DepositTile(
+        deposit: item.deposit!,
+        state: state,
+        l10n: l10n,
+      );
+    }
+    if (item.isLoanPayment) {
+      return _LoanPaymentTile(
+        payment: item.loanPayment!,
+        state: state,
+        l10n: l10n,
+      );
+    }
     return _ExpenseTile(
       expense: item.expense!,
       state: state,
@@ -569,7 +642,6 @@ class _ExpenseTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final sub = state.subcategoryById(expense.subcategoryId);
     final cat = sub == null ? null : state.categoryById(sub.categoryId);
-    final isDeposit = state.isDepositExpense(expense);
     final title = expense.note?.trim().isNotEmpty == true
         ? expense.note!
         : (sub != null
@@ -578,18 +650,11 @@ class _ExpenseTile extends StatelessWidget {
     final who =
         expense.createdByName ?? state.memberLabel(expense.createdBy);
     final subtitleParts = <String>[
-      if (isDeposit) l10n.deposit,
       if (cat != null) cat.localizedName(state.localeCode),
       if (sub != null && expense.note?.trim().isNotEmpty == true)
         state.localizedSubcategoryName(sub),
       if (who.isNotEmpty) '${l10n.loggedBy} $who',
     ];
-
-    final amountColor = isDeposit
-        ? SyncColors.primary
-        : (cat?.isDebt ?? false)
-            ? SyncColors.warning
-            : SyncColors.accent;
 
     return Material(
       color: SyncColors.frostedSurface,
@@ -598,11 +663,7 @@ class _ExpenseTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         onTap: () => showLogEntrySheet(
           context,
-          kind: isDeposit
-              ? LogKind.save
-              : (cat?.isDebt ?? false)
-                  ? LogKind.debt
-                  : LogKind.spend,
+          kind: LogKind.spend,
           expense: expense,
           subcategoryId: expense.subcategoryId,
         ),
@@ -619,12 +680,11 @@ class _ExpenseTile extends StatelessWidget {
               else
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: const Color(0xFF90A4AE).withValues(alpha: 0.35),
-                  child: Icon(
-                    isDeposit
-                        ? Icons.savings_outlined
-                        : Icons.arrow_upward_rounded,
-                    color: amountColor,
+                  backgroundColor:
+                      const Color(0xFF90A4AE).withValues(alpha: 0.35),
+                  child: const Icon(
+                    Icons.arrow_upward_rounded,
+                    color: SyncColors.accent,
                     size: 20,
                   ),
                 ),
@@ -658,11 +718,201 @@ class _ExpenseTile extends StatelessWidget {
                 formatIls(expense.amount),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: amountColor,
+                      color: SyncColors.accent,
                     ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DepositTile extends StatelessWidget {
+  const _DepositTile({
+    required this.deposit,
+    required this.state,
+    required this.l10n,
+  });
+
+  final Deposit deposit;
+  final AppState state;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final sub = state.subcategoryById(deposit.subcategoryId);
+    final cat = sub == null ? null : state.categoryById(sub.categoryId);
+    final title = deposit.note?.trim().isNotEmpty == true
+        ? deposit.note!
+        : (sub != null
+            ? state.localizedSubcategoryName(sub)
+            : l10n.deposit);
+    final who =
+        deposit.createdByName ?? state.memberLabel(deposit.createdBy);
+    final subtitleParts = <String>[
+      l10n.deposit,
+      if (cat != null) cat.localizedName(state.localeCode),
+      if (sub != null && deposit.note?.trim().isNotEmpty == true)
+        state.localizedSubcategoryName(sub),
+      if (who.isNotEmpty) '${l10n.loggedBy} $who',
+    ];
+
+    return Material(
+      color: SyncColors.frostedSurface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showLogEntrySheet(
+          context,
+          kind: LogKind.save,
+          deposit: deposit,
+          subcategoryId: deposit.subcategoryId,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              if (cat != null)
+                CategoryColorIcon(
+                  colorValue: cat.colorValue,
+                  iconKey: cat.iconKey,
+                  size: 40,
+                )
+              else
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor:
+                      const Color(0xFF90A4AE).withValues(alpha: 0.35),
+                  child: const Icon(
+                    Icons.savings_outlined,
+                    color: SyncColors.primary,
+                    size: 20,
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    if (subtitleParts.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitleParts.join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: SyncColors.textMuted,
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                formatIls(deposit.amount),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: SyncColors.primary,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoanPaymentTile extends StatelessWidget {
+  const _LoanPaymentTile({
+    required this.payment,
+    required this.state,
+    required this.l10n,
+  });
+
+  final LoanPayment payment;
+  final AppState state;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    Loan? loan;
+    for (final l in state.loans) {
+      if (l.id == payment.loanId) {
+        loan = l;
+        break;
+      }
+    }
+    final title = payment.note?.trim().isNotEmpty == true
+        ? payment.note!
+        : (loan?.name ?? l10n.logDebt);
+    final who =
+        payment.createdByName ?? state.memberLabel(payment.createdBy);
+    final subtitleParts = <String>[
+      l10n.logDebt,
+      if (loan != null && payment.note?.trim().isNotEmpty == true) loan.name,
+      if (who.isNotEmpty) '${l10n.loggedBy} $who',
+    ];
+
+    return Material(
+      color: SyncColors.frostedSurface,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: SyncColors.warning.withValues(alpha: 0.25),
+              child: const Icon(
+                Icons.credit_card_outlined,
+                color: SyncColors.warning,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  if (subtitleParts.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitleParts.join(' · '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: SyncColors.textMuted,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              formatIls(payment.amount),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: SyncColors.warning,
+                  ),
+            ),
+          ],
         ),
       ),
     );

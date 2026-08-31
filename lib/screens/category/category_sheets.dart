@@ -89,7 +89,10 @@ Future<String?> showAddCategoryFlow(
   String? preferredType,
 }) async {
   final l10n = AppLocalizations.of(context);
-  final choice = await showCategorySourceSheet(context);
+  final choice = await showCategorySourceSheet(
+    context,
+    preferredType: preferredType,
+  );
   if (choice == null || !context.mounted) return null;
 
   try {
@@ -110,15 +113,22 @@ Future<String?> showAddCategoryFlow(
 }
 
 Future<CategorySourceChoice?> showCategorySourceSheet(
-  BuildContext context,
-) async {
+  BuildContext context, {
+  String? preferredType,
+}) async {
   final l10n = AppLocalizations.of(context);
   final state = context.read<AppState>();
   final existing = {
     for (final c in state.categories) c.nameEn.toLowerCase(),
   };
+  final allowedTypes = preferredType == null
+      ? null
+      : preferredType == 'spend'
+          ? const {'spend', 'monthly'}
+          : {preferredType};
   final available = DefaultCategories.all
       .where((c) => !existing.contains(c.nameEn.toLowerCase()))
+      .where((c) => allowedTypes == null || allowedTypes.contains(c.type))
       .toList();
 
   return showModalBottomSheet<CategorySourceChoice>(
@@ -207,6 +217,7 @@ Future<String?> showCategoryEditor(
         ? existing.targetAmount!.toStringAsFixed(2)
         : '',
   );
+  final plannedCtrl = TextEditingController();
   var type = existing?.type ?? preferredType ?? 'spend';
   var colorValue = existing?.colorValue ?? categoryColorPalette.first;
   var iconKey = existing?.iconKey ?? defaultCategoryIconKey;
@@ -242,7 +253,6 @@ Future<String?> showCategoryEditor(
                     for (final t in const [
                       'spend',
                       'monthly',
-                      'debt',
                       'savings',
                     ])
                       ChoiceChip(
@@ -252,13 +262,20 @@ Future<String?> showCategoryEditor(
                       ),
                   ],
                 ),
-                if (type == 'savings')
+                if (type == 'savings') ...[
+                  TextField(
+                    controller: plannedCtrl,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(labelText: l10n.plannedLabel),
+                  ),
                   TextField(
                     controller: targetCtrl,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(labelText: l10n.targetOptional),
                   ),
+                ],
                 if (existing != null || type != 'savings') ...[
                   Text(l10n.categoryColor),
                   Wrap(
@@ -304,15 +321,21 @@ Future<String?> showCategoryEditor(
   if (ok != true || !context.mounted) return null;
   final name = sentenceCase(nameCtrl.text);
   if (name.isEmpty) return null;
-  final parsedTarget = double.tryParse(targetCtrl.text.replaceAll(',', ''));
+  final parsedTarget = double.tryParse(targetCtrl.text.replaceAll(',', '.'));
   final target = type == 'savings' && parsedTarget != null && parsedTarget > 0
       ? parsedTarget
       : null;
+  final planned =
+      double.tryParse(plannedCtrl.text.replaceAll(',', '.')) ?? 0;
 
   try {
     if (existing == null) {
       if (type == 'savings') {
-        return await state.addPot(name: name, targetAmount: target);
+        return await state.addPot(
+          name: name,
+          targetAmount: target,
+          planned: planned,
+        );
       }
       return await state.addCategory(
         name: name,
