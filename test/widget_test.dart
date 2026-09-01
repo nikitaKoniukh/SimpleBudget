@@ -225,6 +225,16 @@ void main() {
     );
     expect(
       computeMonthCashLeft(
+        leftoverFromPrior: 100,
+        incomeTotal: 1000,
+        spentTotal: 400,
+        depositTotal: 200,
+        debtPaidTotal: 100,
+      ),
+      400,
+    );
+    expect(
+      computeMonthCashLeft(
         leftoverFromPrior: 0,
         incomeTotal: 100,
         spentTotal: 200,
@@ -294,16 +304,18 @@ void main() {
     expect(parsed.createdByName, 'Ada');
   });
 
-  test('MonthTotals remaining excludes deposits by structure', () {
-    final totals = MonthTotals(
+  test('MonthTotals totalSpent includes deposits and debt', () {
+    const totals = MonthTotals(
       income: 100,
       planned: 80,
       actual: 50,
       savedThisMonth: 20,
+      debtPaidThisMonth: 10,
       leftoverFromPrior: 10,
     );
-    expect(totals.remaining, 30);
-    expect(totals.cashLeft, 50);
+    expect(totals.totalSpent, 80);
+    expect(totals.remaining, 0);
+    expect(totals.cashLeft, 20);
     expect(totals.planExceedsIncome, isFalse);
     expect(totals.savedThisMonth, 20);
   });

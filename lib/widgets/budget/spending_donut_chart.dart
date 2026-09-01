@@ -110,7 +110,7 @@ class SpendingDonutChart extends StatelessWidget {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          '${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
+                          '${formatIls(totals.totalSpent)} / ${formatIls(totals.planned)}',
                           style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w700,
                               ),

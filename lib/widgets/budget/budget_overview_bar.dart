@@ -19,7 +19,7 @@ class BudgetOverviewBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final income = totals.income;
     final planned = totals.planned;
-    final spent = totals.actual;
+    final spent = totals.totalSpent;
     final unallocated = (income - planned).clamp(0.0, double.infinity);
     final remaining = (planned - spent).clamp(0.0, double.infinity);
     final overSpent = spent > planned ? spent - planned : 0.0;
@@ -98,8 +98,8 @@ class BudgetOverviewBar extends StatelessWidget {
                   Expanded(
                     child: _StatCell(
                       label: l10n.spentLabel,
-                      amount: totals.actual,
-                      highlight: totals.actual > totals.planned &&
+                      amount: totals.totalSpent,
+                      highlight: totals.totalSpent > totals.planned &&
                           totals.planned > 0,
                     ),
                   ),

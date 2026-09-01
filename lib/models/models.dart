@@ -1047,8 +1047,13 @@ class MonthTotals {
   final double debtPaidThisMonth;
   final double leftoverFromPrior;
 
-  double get remaining => planned - actual;
-  double get cashLeft => income - actual;
+  /// Expenses only (spend + monthly categories).
+  /// Use [totalSpent] for month-level outflow including savings and loans.
+  double get totalSpent =>
+      actual + savedThisMonth + debtPaidThisMonth;
+
+  double get remaining => planned - totalSpent;
+  double get cashLeft => income - totalSpent;
   double get unallocated => income - planned;
   bool get planExceedsIncome => planned > income;
 }

@@ -280,9 +280,9 @@ class _StatsSummaryPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overBudget =
-        totals.planned > 0 && totals.actual > totals.planned;
+        totals.planned > 0 && totals.totalSpent > totals.planned;
     final progress = totals.planned > 0
-        ? (totals.actual / totals.planned).clamp(0.0, 1.0)
+        ? (totals.totalSpent / totals.planned).clamp(0.0, 1.0)
         : 0.0;
 
     return Material(
@@ -306,7 +306,7 @@ class _StatsSummaryPanel extends StatelessWidget {
                 Expanded(
                   child: _StatCell(
                     label: l10n.spentLabel,
-                    amount: totals.actual,
+                    amount: totals.totalSpent,
                     color: overBudget ? SyncColors.overspend : SyncColors.accent,
                     alignEnd: true,
                   ),
@@ -347,7 +347,7 @@ class _StatsSummaryPanel extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '${l10n.actual}: ${formatIls(totals.actual)} / ${formatIls(totals.planned)}',
+                '${l10n.spentLabel}: ${formatIls(totals.totalSpent)} / ${formatIls(totals.planned)}',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: SyncColors.textMuted,
                     ),

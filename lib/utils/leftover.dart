@@ -1,12 +1,17 @@
-/// Cash left entering next month: max(0, leftoverFromPrior + income − spent − deposits).
+/// Cash left entering next month:
+/// max(0, leftoverFromPrior + income − spent − deposits − debt paid).
 double computeMonthCashLeft({
   required double leftoverFromPrior,
   required double incomeTotal,
   required double spentTotal,
   required double depositTotal,
+  double debtPaidTotal = 0,
 }) {
-  final cashLeft =
-      leftoverFromPrior + incomeTotal - spentTotal - depositTotal;
+  final cashLeft = leftoverFromPrior +
+      incomeTotal -
+      spentTotal -
+      depositTotal -
+      debtPaidTotal;
   return cashLeft > 0 ? cashLeft : 0.0;
 }
 

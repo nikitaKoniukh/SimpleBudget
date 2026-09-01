@@ -1291,11 +1291,13 @@ class BudgetRepository {
         (monthData['incomeTotal'] as num?)?.toDouble() ?? 0;
     final spent = (monthData['spentTotal'] as num?)?.toDouble() ?? 0;
     final deposit = (monthData['depositTotal'] as num?)?.toDouble() ?? 0;
+    final debtPaid = (monthData['debtPaidTotal'] as num?)?.toDouble() ?? 0;
     final leftover =
         (monthData['leftoverFromPrior'] as num?)?.toDouble() ?? 0;
     final nextIncome = income + (incomeDelta ?? 0);
     final nextSpent = spent + (spentDelta ?? 0);
     final nextDeposit = deposit + (depositDelta ?? 0);
+    final nextDebtPaid = debtPaid + (debtPaidDelta ?? 0);
     final updates = <String, dynamic>{
       if (incomeDelta != null && incomeDelta != 0)
         'incomeTotal': FieldValue.increment(incomeDelta),
@@ -1314,6 +1316,7 @@ class BudgetRepository {
         incomeTotal: nextIncome,
         spentTotal: nextSpent,
         depositTotal: nextDeposit,
+        debtPaidTotal: nextDebtPaid,
       ),
     };
     tx.update(monthRef, updates);
@@ -1896,6 +1899,7 @@ class BudgetRepository {
         incomeTotal: month.incomeTotal,
         spentTotal: month.spentTotal,
         depositTotal: month.depositTotal,
+        debtPaidTotal: month.debtPaidTotal,
       );
       if ((cashLeft - month.cashLeft).abs() > 0.0001) {
         await ref.update({'cashLeft': cashLeft});
@@ -1922,6 +1926,7 @@ class BudgetRepository {
             incomeTotal: cal.incomeTotal,
             spentTotal: cal.spentTotal,
             depositTotal: cal.depositTotal,
+            debtPaidTotal: cal.debtPaidTotal,
           );
           await calRef.update({
             'leftoverFromPrior': nextLeftover,
@@ -1941,6 +1946,7 @@ class BudgetRepository {
         incomeTotal: next.incomeTotal,
         spentTotal: next.spentTotal,
         depositTotal: next.depositTotal,
+        debtPaidTotal: next.debtPaidTotal,
       );
       await nextRef.update({
         'leftoverFromPrior': nextLeftover,

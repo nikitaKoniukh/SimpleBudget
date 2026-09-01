@@ -419,8 +419,8 @@ class _ActivitySummaryBar extends StatelessWidget {
             Expanded(
               child: _SummaryCell(
                 label: l10n.spentLabel,
-                amount: totals.actual,
-                color: totals.actual > totals.planned && totals.planned > 0
+                amount: totals.totalSpent,
+                color: totals.totalSpent > totals.planned && totals.planned > 0
                     ? SyncColors.overspend
                     : SyncColors.accent,
                 alignEnd: true,

@@ -97,7 +97,7 @@ class MonthHubScreen extends StatelessWidget {
             children: [
               SummaryCard(label: l10n.income, amount: totals.income),
               SummaryCard(label: l10n.budget, amount: totals.planned),
-              SummaryCard(label: l10n.actual, amount: totals.actual),
+              SummaryCard(label: l10n.actual, amount: totals.totalSpent),
               SummaryCard(
                 label: totals.remaining < 0 ? l10n.overspent : l10n.remaining,
                 amount: totals.remaining.abs(),
