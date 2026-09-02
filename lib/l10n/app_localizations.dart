@@ -200,6 +200,14 @@ class AppLocalizations {
   String get savingsHighlight => _s('savingsHighlight');
   String get addPot => _s('addPot');
   String get logDeposit => _s('logDeposit');
+  String get logWithdraw => _s('logWithdraw');
+  String get withdraw => _s('withdraw');
+  String get withdrawHint => _s('withdrawHint');
+  String get withdrawToIncome => _s('withdrawToIncome');
+  String get withdrawPotOnly => _s('withdrawPotOnly');
+  String get withdrawPotOnlyHint => _s('withdrawPotOnlyHint');
+  String get withdrawAmount => _s('withdrawAmount');
+  String get insufficientPotBalance => _s('insufficientPotBalance');
   String get deposit => _s('deposit');
   String get targetAmount => _s('targetAmount');
   String get targetOptional => _s('targetOptional');

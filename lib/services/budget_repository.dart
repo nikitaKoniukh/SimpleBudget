@@ -12,6 +12,9 @@ class BudgetRepository {
   BudgetRepository({FirebaseFirestore? firestore})
     : _db = firestore ?? FirebaseFirestore.instance;
 
+  /// Fixed income-source doc id for withdrawals from savings pots.
+  static const fromSavingsIncomeSourceId = 'from_savings';
+
   final FirebaseFirestore _db;
   final _uuid = const Uuid();
 
@@ -1637,6 +1640,94 @@ class BudgetRepository {
       monthId,
       subcategoryId,
     );
+  }
+
+  /// Ensures the fixed "From savings" income source exists for [monthId].
+  Future<void> ensureFromSavingsIncomeSource({
+    required String householdId,
+    required String monthId,
+  }) async {
+    final ref = _monthRef(householdId, monthId)
+        .collection('incomeSources')
+        .doc(fromSavingsIncomeSourceId);
+    final snap = await ref.get();
+    if (snap.exists) return;
+    await ref.set({
+      'nameEn': 'From savings',
+      'nameRu': 'Из накоплений',
+      'sortOrder': 9000,
+    });
+  }
+
+  /// Withdraws from a savings pot (existing schemas only).
+  ///
+  /// Always updates [PotBalance.withdrawn]/[PotBalance.balance] and
+  /// [savingsThroughMonth] when [includeInTotal].
+  /// When [creditIncome] is true, also creates an income entry under
+  /// [fromSavingsIncomeSourceId] and increases month income / cash left.
+  /// Caller should [ensureFromSavingsIncomeSource] first when crediting income.
+  Future<String?> addWithdrawal({
+    required String householdId,
+    required String monthId,
+    required String subcategoryId,
+    required double amount,
+    String? note,
+    String? createdBy,
+    String? createdByName,
+    bool includeInTotal = true,
+    bool creditIncome = true,
+  }) async {
+    if (amount <= 0) {
+      throw ArgumentError.value(amount, 'amount', 'Must be positive');
+    }
+    final monthRef = _monthRef(householdId, monthId);
+    final potRef = monthRef.collection('potBalances').doc(subcategoryId);
+    final incomeRef =
+        creditIncome ? monthRef.collection('incomeEntries').doc() : null;
+    await _db.runTransaction((tx) async {
+      final monthSnap = await tx.get(monthRef);
+      if (!monthSnap.exists) throw StateError('Month not found');
+      final potSnap = await tx.get(potRef);
+      final pot = potSnap.exists
+          ? PotBalance.fromMap(subcategoryId, potSnap.data()!)
+          : PotBalance(subcategoryId: subcategoryId);
+      if (amount > pot.balance + 1e-9) {
+        throw StateError('Insufficient pot balance');
+      }
+      final next = pot.copyWith(
+        withdrawn: pot.withdrawn + amount,
+      );
+      if (incomeRef != null) {
+        tx.set(incomeRef, {
+          'sourceId': fromSavingsIncomeSourceId,
+          'amount': amount,
+          'note': note,
+          'createdAt': DateTime.now().toIso8601String(),
+          'createdBy': createdBy,
+          'createdByName': createdByName,
+        });
+      }
+      tx.set(potRef, next.toMap());
+      final savingsDelta = includeInTotal ? -amount : 0.0;
+      if (creditIncome || savingsDelta != 0) {
+        await _refreshCashLeftInTx(
+          tx,
+          monthRef,
+          monthSnap.data()!,
+          incomeDelta: creditIncome ? amount : null,
+          savingsThroughDelta: savingsDelta,
+        );
+      }
+    });
+    if (creditIncome) {
+      await _cascadeLeftoverToFollowingMonths(householdId, monthId);
+    }
+    await _cascadePotBalancesToFollowingMonths(
+      householdId,
+      monthId,
+      subcategoryId,
+    );
+    return incomeRef?.id;
   }
 
   Future<void> addIncomeEntry({

@@ -49,6 +49,16 @@ Future<void> showSetAsideActionsSheet(BuildContext context) async {
                 ),
                 ListTile(
                   leading: const CircleAvatar(
+                    child: Icon(Icons.outbox_outlined),
+                  ),
+                  title: Text(l10n.logWithdraw),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    showWithdrawEditor(context);
+                  },
+                ),
+                ListTile(
+                  leading: const CircleAvatar(
                     child: Icon(Icons.account_balance_wallet_outlined),
                   ),
                   title: Text(l10n.addPriorSavings),
@@ -424,6 +434,158 @@ Future<void> showAddPriorSavingsSheet(
   }
 }
 
+Future<void> showWithdrawEditor(
+  BuildContext context, {
+  Subcategory? subcategory,
+}) async {
+  final l10n = AppLocalizations.of(context);
+  final state = context.read<AppState>();
+  final pots = state.savingsPots
+      .where((p) => !DefaultPots.isLeftoverName(p.nameEn))
+      .toList();
+  if (pots.isEmpty) return;
+
+  var selected = subcategory != null &&
+          pots.any((p) => p.id == subcategory.id)
+      ? pots.firstWhere((p) => p.id == subcategory.id)
+      : pots.first;
+  final amountCtrl = TextEditingController();
+  final noteCtrl = TextEditingController();
+  String? errorText;
+  var creditIncome = true;
+
+  final ok = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      return FormSheet(
+        child: StatefulBuilder(
+          builder: (ctx, setModal) {
+            final live = ctx.watch<AppState>();
+            final available = live.potBalanceAmount(selected.id);
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: [
+                Text(
+                  l10n.logWithdraw,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment<bool>(
+                      value: true,
+                      label: Text(l10n.withdrawToIncome),
+                      icon: const Icon(Icons.payments_outlined, size: 18),
+                    ),
+                    ButtonSegment<bool>(
+                      value: false,
+                      label: Text(l10n.withdrawPotOnly),
+                      icon: const Icon(Icons.remove_circle_outline, size: 18),
+                    ),
+                  ],
+                  selected: {creditIncome},
+                  onSelectionChanged: (next) {
+                    setModal(() => creditIncome = next.first);
+                  },
+                ),
+                Text(
+                  creditIncome ? l10n.withdrawHint : l10n.withdrawPotOnlyHint,
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+                if (pots.length > 1)
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('withdraw-pot-${selected.id}'),
+                    initialValue: selected.id,
+                    decoration: InputDecoration(labelText: l10n.sectionSavings),
+                    items: [
+                      for (final p in pots)
+                        DropdownMenuItem(
+                          value: p.id,
+                          child: Text(p.localizedName(live.localeCode)),
+                        ),
+                    ],
+                    onChanged: (id) {
+                      if (id == null) return;
+                      setModal(() {
+                        selected = pots.firstWhere((p) => p.id == id);
+                        errorText = null;
+                      });
+                    },
+                  ),
+                Text(
+                  '${l10n.savedLabel}: ${formatIls(available)}',
+                  style: Theme.of(ctx).textTheme.bodyMedium,
+                ),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: l10n.withdrawAmount,
+                    errorText: errorText,
+                  ),
+                  autofocus: true,
+                  onChanged: (_) {
+                    if (errorText != null) setModal(() => errorText = null);
+                  },
+                ),
+                if (creditIncome)
+                  TextField(
+                    controller: noteCtrl,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(labelText: l10n.note),
+                  ),
+                FilledButton(
+                  onPressed: () {
+                    final amount =
+                        double.tryParse(amountCtrl.text.replaceAll(',', '')) ??
+                            0;
+                    if (amount <= 0) return;
+                    final bal = live.potBalanceAmount(selected.id);
+                    if (amount > bal + 1e-9) {
+                      setModal(() => errorText = l10n.insufficientPotBalance);
+                      return;
+                    }
+                    Navigator.pop(ctx, true);
+                  },
+                  child: Text(l10n.save),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    },
+  );
+
+  if (ok != true || !context.mounted) return;
+  final amount = double.tryParse(amountCtrl.text.replaceAll(',', '')) ?? 0;
+  if (amount <= 0) return;
+  String? composedNote;
+  if (creditIncome) {
+    final note = noteCtrl.text.trim();
+    final potName = selected.localizedName(state.localeCode);
+    composedNote = note.isEmpty ? potName : '$potName — $note';
+  }
+
+  try {
+    await context.read<AppState>().addWithdrawal(
+          subcategoryId: selected.id,
+          amount: amount,
+          note: composedNote,
+          creditIncome: creditIncome,
+        );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${l10n.errorGeneric}: $e')),
+    );
+  }
+}
+
 Future<void> showSetTargetSheet(
   BuildContext context, {
   required Subcategory subcategory,
@@ -566,6 +728,16 @@ Future<void> showPotDetailSheet(
                       },
                       icon: const Icon(Icons.add, size: 18),
                       label: Text(l10n.logDeposit),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: balance <= 0
+                          ? null
+                          : () {
+                              Navigator.pop(ctx);
+                              showWithdrawEditor(context, subcategory: pot);
+                            },
+                      icon: const Icon(Icons.outbox_outlined, size: 18),
+                      label: Text(l10n.logWithdraw),
                     ),
                     OutlinedButton.icon(
                       onPressed: () {

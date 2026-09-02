@@ -1509,6 +1509,39 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  /// Withdraws from a savings pot for the selected month.
+  ///
+  /// When [creditIncome] is true, also logs income under "From savings".
+  Future<void> addWithdrawal({
+    required String subcategoryId,
+    required double amount,
+    String? note,
+    bool creditIncome = true,
+  }) async {
+    final hid = _activeHid;
+    final mid = _monthId;
+    if (hid == null || mid == null) throw StateError('No month selected');
+    if (!_isSavingsPot(subcategoryId)) return;
+    if (amount <= 0) return;
+    if (creditIncome) {
+      await _repo.ensureFromSavingsIncomeSource(
+        householdId: hid,
+        monthId: mid,
+      );
+    }
+    await _repo.addWithdrawal(
+      householdId: hid,
+      monthId: mid,
+      subcategoryId: subcategoryId,
+      amount: amount,
+      note: note,
+      createdBy: currentUid,
+      createdByName: currentDisplayName,
+      includeInTotal: potIncludeInTotal(subcategoryId),
+      creditIncome: creditIncome,
+    );
+  }
+
   /// Sets opening balance ("already saved") for a pot in the selected month.
   Future<void> addPriorSavings({
     required String subcategoryId,
