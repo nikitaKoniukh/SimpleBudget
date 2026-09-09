@@ -1,1 +1,46 @@
-{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"flutter":{"platforms":{"android":{"default":{"projectId":"simplebudget-family","appId":"1:339787672116:android:2496b3e3b1ad3ff30a7861","fileOutput":"android/app/google-services.json"}},"ios":{"default":{"projectId":"simplebudget-family","appId":"1:339787672116:ios:2f314c0946fbae380a7861","uploadDebugSymbols":false,"fileOutput":"ios/Runner/GoogleService-Info.plist"}},"dart":{"lib/firebase_options.dart":{"projectId":"simplebudget-family","configurations":{"android":"1:339787672116:android:2496b3e3b1ad3ff30a7861","ios":"1:339787672116:ios:2f314c0946fbae380a7861"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log"
+      ]
+    }
+  ],
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "simplebudget-family",
+          "appId": "1:339787672116:android:2496b3e3b1ad3ff30a7861",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "simplebudget-family",
+          "appId": "1:339787672116:ios:2f314c0946fbae380a7861",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "simplebudget-family",
+          "configurations": {
+            "android": "1:339787672116:android:2496b3e3b1ad3ff30a7861",
+            "ios": "1:339787672116:ios:2f314c0946fbae380a7861"
+          }
+        }
+      }
+    }
+  }
+}

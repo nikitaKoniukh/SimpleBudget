@@ -5,20 +5,27 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../l10n/locale_lookup.dart';
 import '../models/models.dart';
+import '../data/default_categories.dart';
+import '../data/local/local_budget_store.dart';
 import '../services/auth_service.dart';
 import '../services/budget_repository.dart';
-import '../data/default_categories.dart';
+import '../services/sync_engine.dart';
 import '../utils/money.dart';
 
 class AppState extends ChangeNotifier {
-  AppState({AuthService? authService, BudgetRepository? budgetRepository})
-    : _auth = authService ?? AuthService(),
-      _repo = budgetRepository ?? BudgetRepository() {
+  AppState({
+    AuthService? authService,
+    BudgetRepository? budgetRepository,
+    SyncEngine? syncEngine,
+  }) : _auth = authService ?? AuthService(),
+       _repo = budgetRepository ?? BudgetRepository() {
+    _sync = syncEngine ?? SyncEngine(repo: _repo);
     _authSub = _auth.authStateChanges.listen(_onAuthChanged);
   }
 
   final AuthService _auth;
   final BudgetRepository _repo;
+  late final SyncEngine _sync;
 
   AuthService get auth => _auth;
   BudgetRepository get repo => _repo;
@@ -54,7 +61,6 @@ class AppState extends ChangeNotifier {
   StreamSubscription<List<BudgetCategory>>? _categoriesSub;
   StreamSubscription<List<Subcategory>>? _subcategoriesSub;
   StreamSubscription<List<Loan>>? _loansSub;
-  StreamSubscription<BudgetMonth?>? _selectedMonthSub;
   StreamSubscription<List<IncomeSource>>? _sourcesSub;
   StreamSubscription<List<IncomeEntry>>? _entriesSub;
   StreamSubscription<List<MonthPlan>>? _plansSub;
@@ -96,6 +102,7 @@ class AppState extends ChangeNotifier {
 
   String? get currentUid => _firebaseUser?.uid;
   Map<String, String> _memberLabels = {};
+  List<String> _labeledMemberIds = const [];
 
   String get currentDisplayName {
     final name = _appUser?.displayName?.trim();
@@ -213,20 +220,33 @@ class AppState extends ChangeNotifier {
     if (hid == null) return {};
     final result = <String, MonthStatsSnapshot>{};
     await Future.wait(monthIds.map((monthId) async {
-      final expenses = await _repo.fetchExpenses(hid, monthId);
-      final deposits = await _repo.fetchDeposits(hid, monthId);
-      final plans = await _repo.fetchPlans(hid, monthId);
-      final month = await _repo.fetchMonth(hid, monthId);
-      final incomeEntries = await _repo.fetchIncomeEntries(hid, monthId);
-      result[monthId] = MonthStatsSnapshot(
+      if (monthId == _monthId) {
+        result[monthId] = MonthStatsSnapshot(
+          monthId: monthId,
+          expenses: List.of(_expenses),
+          deposits: List.of(_deposits),
+          plans: List.of(_plans),
+          income: _selectedMonth?.incomeTotal ??
+              _incomeEntries.fold<double>(0, (s, e) => s + e.amount),
+          debtPaid: _selectedMonth?.debtPaidTotal ?? 0,
+        );
+        return;
+      }
+      final local = await _sync.loadMonth(hid, monthId);
+      if (local != null && await _sync.isMonthSynced(hid, monthId)) {
+        result[monthId] = await _sync.statsFromBundle(monthId, local);
+        return;
+      }
+      final remote = await _repo.fetchMonthStats(hid, monthId);
+      await _sync.persistMonthBundle(
+        householdId: hid,
         monthId: monthId,
-        expenses: expenses,
-        deposits: deposits,
-        plans: plans,
-        income: month?.incomeTotal ??
-            incomeEntries.fold<double>(0, (s, e) => s + e.amount),
-        debtPaid: month?.debtPaidTotal ?? 0,
+        expenses: remote.expenses,
+        deposits: remote.deposits,
+        plans: remote.plans,
+        markSynced: true,
       );
+      result[monthId] = remote;
     }));
     return result;
   }
@@ -470,7 +490,6 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _detachCurrentMonthListeners({bool clearData = true}) async {
-    await _selectedMonthSub?.cancel();
     await _sourcesSub?.cancel();
     await _entriesSub?.cancel();
     await _plansSub?.cancel();
@@ -478,7 +497,6 @@ class AppState extends ChangeNotifier {
     await _depositsSub?.cancel();
     await _potBalancesSub?.cancel();
     await _loanPaymentsSub?.cancel();
-    _selectedMonthSub = null;
     _sourcesSub = null;
     _entriesSub = null;
     _plansSub = null;
@@ -524,6 +542,7 @@ class AppState extends ChangeNotifier {
       _loans = [];
       _recurringBills = [];
       _memberLabels = {};
+      _labeledMemberIds = const [];
       _monthId = null;
       _budgetDataReady = false;
     }
@@ -536,11 +555,22 @@ class AppState extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Rebinds Firestore listeners without clearing the UI loading gate.
+  /// Pull-to-refresh no longer re-subscribes listeners (that re-billed every doc).
   Future<void> refreshBudget() async {
     final hid = _activeHid;
-    if (hid == null || hid.isEmpty) return;
-    await _attachHousehold(hid, soft: true);
+    final mid = _monthId;
+    if (hid == null || mid == null) return;
+    try {
+      final month = await _repo.fetchMonth(hid, mid);
+      if (month != null) {
+        _selectedMonth = month;
+        await _sync.persistMonthSummary(hid, month);
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+    }
   }
 
   Future<void> _attachHousehold(
@@ -554,29 +584,34 @@ class AppState extends ChangeNotifier {
       return;
     }
 
+    final hydrated = await _hydrateFromLocal(householdId);
+    if (hydrated) {
+      _budgetDataReady = true;
+      notifyListeners();
+    }
+
     final ready = Completer<Household?>();
-    _householdSub = _repo
-        .watchHousehold(householdId)
-        .listen(
-          (h) {
-            _household = h;
-            if (h != null) {
-              unawaited(_refreshMemberLabels(h.memberIds));
-            }
-            if (!ready.isCompleted) ready.complete(h);
-            if (h == null) {
-              unawaited(_clearStaleHousehold());
-            }
-            notifyListeners();
-          },
-          onError: (Object e) {
-            if (!ready.isCompleted) {
-              ready.complete(null);
-            } else {
-              unawaited(_clearStaleHousehold());
-            }
-          },
-        );
+    _householdSub = _repo.watchHousehold(householdId).listen(
+      (h) {
+        _household = h;
+        if (h != null) {
+          unawaited(_sync.persistHousehold(h));
+          unawaited(_refreshMemberLabels(h.memberIds));
+        }
+        if (!ready.isCompleted) ready.complete(h);
+        if (h == null) {
+          unawaited(_clearStaleHousehold());
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        if (!ready.isCompleted) {
+          ready.complete(null);
+        } else {
+          unawaited(_clearStaleHousehold());
+        }
+      },
+    );
 
     final household = await ready.future;
     if (household == null) {
@@ -590,37 +625,36 @@ class AppState extends ChangeNotifier {
     final subcategoriesReady = Completer<void>();
     final monthsReady = Completer<void>();
 
-    _categoriesSub = _repo
-        .watchCategories(householdId)
-        .listen(
-          (v) {
-            _categories = v;
-            if (!categoriesReady.isCompleted) categoriesReady.complete();
-            notifyListeners();
-          },
-          onError: (Object e) {
-            _error = e.toString();
-            if (!categoriesReady.isCompleted) categoriesReady.complete();
-            notifyListeners();
-          },
-        );
-    _subcategoriesSub = _repo
-        .watchSubcategories(householdId)
-        .listen(
-          (v) {
-            _subcategories = v;
-            if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
-            notifyListeners();
-          },
-          onError: (Object e) {
-            _error = e.toString();
-            if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
-            notifyListeners();
-          },
-        );
+    _categoriesSub = _repo.watchCategories(householdId).listen(
+      (v) {
+        _categories = v;
+        unawaited(_sync.persistCategories(householdId, v));
+        if (!categoriesReady.isCompleted) categoriesReady.complete();
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (!categoriesReady.isCompleted) categoriesReady.complete();
+        notifyListeners();
+      },
+    );
+    _subcategoriesSub = _repo.watchSubcategories(householdId).listen(
+      (v) {
+        _subcategories = v;
+        unawaited(_sync.persistSubcategories(householdId, v));
+        if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        if (!subcategoriesReady.isCompleted) subcategoriesReady.complete();
+        notifyListeners();
+      },
+    );
     _billsSub = _repo.watchRecurringBills(householdId).listen(
       (v) {
         _recurringBills = v;
+        unawaited(_sync.persistBills(householdId, v));
         notifyListeners();
       },
       onError: (Object e) {
@@ -631,6 +665,7 @@ class AppState extends ChangeNotifier {
     _loansSub = _repo.watchLoans(householdId).listen(
       (v) {
         _loans = v;
+        unawaited(_sync.persistLoans(householdId, v));
         notifyListeners();
       },
       onError: (Object e) {
@@ -640,35 +675,25 @@ class AppState extends ChangeNotifier {
     );
     var isFirstMonths = true;
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
-      _months = list;
+      _months = mergeMonthSummaries(_months, list);
+      unawaited(_sync.persistMonthSummaries(householdId, list));
       try {
-        final monthIds = list.map((m) => m.id);
-        if (_monthId != null && !list.any((m) => m.id == _monthId)) {
-          _monthId = preferredMonthId(monthIds);
+        if (_monthId == null && _months.isNotEmpty) {
+          _monthId = preferredMonthId(_months.map((m) => m.id));
           if (_monthId != null) {
             await _listenMonthData(
               householdId,
               _monthId!,
-              waitForFirst: isFirstMonths,
+              waitForFirst: isFirstMonths && !hydrated,
             );
-          } else {
-            await _detachMonthDataListeners();
           }
-        } else if (_monthId == null && list.isNotEmpty) {
-          _monthId = preferredMonthId(monthIds);
-          await _listenMonthData(
-            householdId,
-            _monthId!,
-            waitForFirst: isFirstMonths,
-          );
         } else if (_monthId != null && isFirstMonths) {
           await _listenMonthData(
             householdId,
             _monthId!,
-            waitForFirst: true,
+            waitForFirst: !hydrated,
           );
         } else if (_monthId != null) {
-          // Keep selected month summary in sync from months list.
           for (final m in list) {
             if (m.id == _monthId) {
               _selectedMonth = m;
@@ -696,9 +721,51 @@ class AppState extends ChangeNotifier {
         monthsReady.future,
       ]);
     } finally {
-      if (!soft) _budgetDataReady = true;
+      _budgetDataReady = true;
       notifyListeners();
     }
+  }
+
+  Future<bool> _hydrateFromLocal(String householdId) async {
+    try {
+      final catalog = await _sync.loadCatalog(householdId);
+      if (catalog.household != null) _household = catalog.household;
+      if (catalog.categories.isNotEmpty) _categories = catalog.categories;
+      if (catalog.subcategories.isNotEmpty) {
+        _subcategories = catalog.subcategories;
+      }
+      if (catalog.bills.isNotEmpty) _recurringBills = catalog.bills;
+      if (catalog.loans.isNotEmpty) _loans = catalog.loans;
+      if (catalog.months.isNotEmpty) {
+        _months = catalog.months;
+        _monthId ??= preferredMonthId(catalog.months.map((m) => m.id));
+        for (final m in catalog.months) {
+          if (m.id == _monthId) {
+            _selectedMonth = m;
+            break;
+          }
+        }
+      }
+      final mid = _monthId;
+      if (mid != null) {
+        final bundle = await _sync.loadMonth(householdId, mid);
+        if (bundle != null) _applyMonthBundle(bundle);
+      }
+      return _household != null || _months.isNotEmpty || _categories.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _applyMonthBundle(LocalMonthBundle bundle) {
+    if (bundle.month != null) _selectedMonth = bundle.month;
+    _incomeSources = bundle.incomeSources;
+    _incomeEntries = bundle.incomeEntries;
+    _plans = bundle.plans;
+    _expenses = bundle.expenses;
+    _deposits = bundle.deposits;
+    _potBalances = bundle.potBalances;
+    _loanPayments = bundle.loanPayments;
   }
 
   Future<void> _clearStaleHousehold() async {
@@ -708,6 +775,7 @@ class AppState extends ChangeNotifier {
     _householdSub = null;
     _household = null;
     _memberLabels = {};
+    _labeledMemberIds = const [];
     if (uid != null && staleId != null) {
       try {
         await _auth.removeHouseholdMembership(uid, staleId);
@@ -717,8 +785,31 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _refreshMemberLabels(List<String> memberIds) async {
-    final labels = await _auth.getMemberLabels(memberIds);
-    _memberLabels = labels;
+    if (_listEquals(memberIds, _labeledMemberIds) &&
+        _memberLabels.isNotEmpty) {
+      return;
+    }
+    final fromProfiles = <String, String>{};
+    final household = _household;
+    if (household != null) {
+      for (final uid in memberIds) {
+        final name = household.memberName(uid).trim();
+        if (name.isNotEmpty && name != uid) {
+          fromProfiles[uid] = name;
+        }
+      }
+    }
+    final missing =
+        memberIds.where((id) => !fromProfiles.containsKey(id)).toList();
+    if (missing.isEmpty) {
+      _memberLabels = fromProfiles;
+      _labeledMemberIds = List.of(memberIds);
+      notifyListeners();
+      return;
+    }
+    final fetched = await _auth.getMemberLabels(missing);
+    _memberLabels = {...fromProfiles, ...fetched};
+    _labeledMemberIds = List.of(memberIds);
     notifyListeners();
   }
 
@@ -727,9 +818,8 @@ class AppState extends ChangeNotifier {
     String monthId, {
     bool waitForFirst = false,
   }) async {
-    await _detachCurrentMonthListeners();
+    await _detachCurrentMonthListeners(clearData: waitForFirst);
 
-    Completer<void>? monthReady;
     Completer<void>? sourcesReady;
     Completer<void>? entriesReady;
     Completer<void>? plansReady;
@@ -738,7 +828,6 @@ class AppState extends ChangeNotifier {
     Completer<void>? potBalancesReady;
     Completer<void>? loanPaymentsReady;
     if (waitForFirst) {
-      monthReady = Completer<void>();
       sourcesReady = Completer<void>();
       entriesReady = Completer<void>();
       plansReady = Completer<void>();
@@ -748,25 +837,36 @@ class AppState extends ChangeNotifier {
       loanPaymentsReady = Completer<void>();
     }
 
-    _selectedMonthSub = _repo.watchMonth(hid, monthId).listen(
-      (v) {
-        _selectedMonth = v;
-        if (monthReady != null && !monthReady.isCompleted) {
-          monthReady.complete();
-        }
-        notifyListeners();
-      },
-      onError: (Object e) {
-        _error = e.toString();
-        if (monthReady != null && !monthReady.isCompleted) {
-          monthReady.complete();
-        }
-        notifyListeners();
-      },
-    );
+    void persistChanged({
+      List<IncomeSource>? incomeSources,
+      List<IncomeEntry>? incomeEntries,
+      List<MonthPlan>? plans,
+      List<Expense>? expenses,
+      List<Deposit>? deposits,
+      List<PotBalance>? potBalances,
+      List<LoanPayment>? loanPayments,
+    }) {
+      unawaited(
+        _sync.persistMonthBundle(
+          householdId: hid,
+          monthId: monthId,
+          month: _selectedMonth,
+          incomeSources: incomeSources,
+          incomeEntries: incomeEntries,
+          plans: plans,
+          expenses: expenses,
+          deposits: deposits,
+          potBalances: potBalances,
+          loanPayments: loanPayments,
+          markSynced: !waitForFirst,
+        ),
+      );
+    }
+
     _sourcesSub = _repo.watchIncomeSources(hid, monthId).listen(
       (v) {
         _incomeSources = v;
+        persistChanged(incomeSources: v);
         if (sourcesReady != null && !sourcesReady.isCompleted) {
           sourcesReady.complete();
         }
@@ -783,6 +883,7 @@ class AppState extends ChangeNotifier {
     _entriesSub = _repo.watchIncomeEntries(hid, monthId).listen(
       (v) {
         _incomeEntries = v;
+        persistChanged(incomeEntries: v);
         if (entriesReady != null && !entriesReady.isCompleted) {
           entriesReady.complete();
         }
@@ -799,6 +900,7 @@ class AppState extends ChangeNotifier {
     _plansSub = _repo.watchPlans(hid, monthId).listen(
       (v) {
         _plans = v;
+        persistChanged(plans: v);
         if (plansReady != null && !plansReady.isCompleted) {
           plansReady.complete();
         }
@@ -815,6 +917,7 @@ class AppState extends ChangeNotifier {
     _expensesSub = _repo.watchExpenses(hid, monthId).listen(
       (v) {
         _expenses = v;
+        persistChanged(expenses: v);
         if (expensesReady != null && !expensesReady.isCompleted) {
           expensesReady.complete();
         }
@@ -831,6 +934,7 @@ class AppState extends ChangeNotifier {
     _depositsSub = _repo.watchDeposits(hid, monthId).listen(
       (v) {
         _deposits = v;
+        persistChanged(deposits: v);
         if (depositsReady != null && !depositsReady.isCompleted) {
           depositsReady.complete();
         }
@@ -847,6 +951,7 @@ class AppState extends ChangeNotifier {
     _potBalancesSub = _repo.watchPotBalances(hid, monthId).listen(
       (v) {
         _potBalances = v;
+        persistChanged(potBalances: v);
         if (potBalancesReady != null && !potBalancesReady.isCompleted) {
           potBalancesReady.complete();
         }
@@ -863,6 +968,7 @@ class AppState extends ChangeNotifier {
     _loanPaymentsSub = _repo.watchLoanPayments(hid, monthId).listen(
       (v) {
         _loanPayments = v;
+        persistChanged(loanPayments: v);
         if (loanPaymentsReady != null && !loanPaymentsReady.isCompleted) {
           loanPaymentsReady.complete();
         }
@@ -879,7 +985,6 @@ class AppState extends ChangeNotifier {
 
     if (waitForFirst) {
       await Future.wait([
-        monthReady!.future,
         sourcesReady!.future,
         entriesReady!.future,
         plansReady!.future,
@@ -888,17 +993,55 @@ class AppState extends ChangeNotifier {
         potBalancesReady!.future,
         loanPaymentsReady!.future,
       ]);
+      unawaited(
+        _sync.persistMonthBundle(
+          householdId: hid,
+          monthId: monthId,
+          month: _selectedMonth,
+          incomeSources: _incomeSources,
+          incomeEntries: _incomeEntries,
+          plans: _plans,
+          expenses: _expenses,
+          deposits: _deposits,
+          potBalances: _potBalances,
+          loanPayments: _loanPayments,
+          markSynced: true,
+        ),
+      );
     }
   }
+
+  Future<T> _trackedWrite<T>(
+    String op,
+    Map<String, dynamic> payload,
+    Future<T> Function() send,
+  ) {
+    return _sync.enqueueAndRun(op, payload, send);
+  }
+
   Future<void> setMonth(String monthId) async {
     final hid = _activeHid;
     if (hid == null) return;
-    final exists = await _repo.monthExists(hid, monthId);
-    if (!exists) {
-      throw StateError('Month does not exist. Create it first.');
+    if (_monthId == monthId) return;
+    final known = _months.any((m) => m.id == monthId) ||
+        await _sync.hasMonth(hid, monthId);
+    if (!known) {
+      final exists = await _repo.monthExists(hid, monthId);
+      if (!exists) {
+        throw StateError('Month does not exist. Create it first.');
+      }
     }
     _monthId = monthId;
-    await _listenMonthData(hid, monthId);
+    final bundle = await _sync.loadMonth(hid, monthId);
+    if (bundle != null) {
+      _applyMonthBundle(bundle);
+      notifyListeners();
+    }
+    await _listenMonthData(
+      hid,
+      monthId,
+      waitForFirst: bundle == null,
+    );
     notifyListeners();
   }
 
@@ -964,6 +1107,7 @@ class AppState extends ChangeNotifier {
       activeHouseholdId: h.id,
     );
     await _refreshMyHouseholds();
+    await _auth.refreshMembershipClaims();
     await _attachHousehold(h.id);
   }
 
@@ -989,6 +1133,7 @@ class AppState extends ChangeNotifier {
       activeHouseholdId: h.id,
     );
     await _refreshMyHouseholds();
+    await _auth.refreshMembershipClaims();
     await _attachHousehold(h.id);
   }
 
@@ -1032,6 +1177,7 @@ class AppState extends ChangeNotifier {
       clearActiveHouseholdId: remaining.isEmpty,
     );
     await _refreshMyHouseholds();
+    await _auth.refreshMembershipClaims();
     if (remaining.isEmpty) {
       _household = null;
       notifyListeners();
@@ -1057,6 +1203,7 @@ class AppState extends ChangeNotifier {
       clearActiveHouseholdId: remaining.isEmpty,
     );
     await _refreshMyHouseholds();
+    await _auth.refreshMembershipClaims();
     if (remaining.isEmpty) {
       await _detachBudgetListeners();
       notifyListeners();
@@ -1456,16 +1603,23 @@ class AppState extends ChangeNotifier {
     final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.addExpense(
-      householdId: hid,
-      monthId: mid,
-      subcategoryId: subcategoryId,
-      amount: amount,
-      date: date,
-      note: note,
-      createdBy: currentUid,
-      createdByName: currentDisplayName,
-    );
+    await _trackedWrite('addExpense', {
+      'householdId': hid,
+      'monthId': mid,
+      'subcategoryId': subcategoryId,
+      'amount': amount,
+    }, () {
+      return _repo.addExpense(
+        householdId: hid,
+        monthId: mid,
+        subcategoryId: subcategoryId,
+        amount: amount,
+        date: date,
+        note: note,
+        createdBy: currentUid,
+        createdByName: currentDisplayName,
+      );
+    });
   }
 
   Future<void> addIncomeEntry({
@@ -1476,15 +1630,22 @@ class AppState extends ChangeNotifier {
     final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.addIncomeEntry(
-      householdId: hid,
-      monthId: mid,
-      sourceId: sourceId,
-      amount: amount,
-      note: note,
-      createdBy: currentUid,
-      createdByName: currentDisplayName,
-    );
+    await _trackedWrite('addIncomeEntry', {
+      'householdId': hid,
+      'monthId': mid,
+      'sourceId': sourceId,
+      'amount': amount,
+    }, () {
+      return _repo.addIncomeEntry(
+        householdId: hid,
+        monthId: mid,
+        sourceId: sourceId,
+        amount: amount,
+        note: note,
+        createdBy: currentUid,
+        createdByName: currentDisplayName,
+      );
+    });
   }
 
   Future<void> addDeposit({
@@ -1496,17 +1657,24 @@ class AppState extends ChangeNotifier {
     final hid = _activeHid;
     final mid = _monthId;
     if (hid == null || mid == null) throw StateError('No month selected');
-    await _repo.addDeposit(
-      householdId: hid,
-      monthId: mid,
-      subcategoryId: subcategoryId,
-      amount: amount,
-      date: date,
-      note: note,
-      createdBy: currentUid,
-      createdByName: currentDisplayName,
-      includeInTotal: potIncludeInTotal(subcategoryId),
-    );
+    await _trackedWrite('addDeposit', {
+      'householdId': hid,
+      'monthId': mid,
+      'subcategoryId': subcategoryId,
+      'amount': amount,
+    }, () {
+      return _repo.addDeposit(
+        householdId: hid,
+        monthId: mid,
+        subcategoryId: subcategoryId,
+        amount: amount,
+        date: date,
+        note: note,
+        createdBy: currentUid,
+        createdByName: currentDisplayName,
+        includeInTotal: potIncludeInTotal(subcategoryId),
+      );
+    });
   }
 
   /// Withdraws from a savings pot for the selected month.

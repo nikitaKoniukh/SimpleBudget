@@ -528,14 +528,20 @@ class BudgetRepository {
     });
   }
 
+  static const recentMonthLimit = 12;
+
   Stream<List<BudgetMonth>> watchMonths(String householdId) {
-    return _months(householdId).snapshots().map((snap) {
-      final list = snap.docs
-          .map((d) => BudgetMonth.fromMap(d.id, d.data()))
-          .toList();
-      list.sort((a, b) => b.id.compareTo(a.id));
-      return list;
-    });
+    return _months(householdId)
+        .orderBy(FieldPath.documentId, descending: true)
+        .limit(recentMonthLimit)
+        .snapshots()
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => BudgetMonth.fromMap(d.id, d.data()))
+              .toList();
+          list.sort((a, b) => b.id.compareTo(a.id));
+          return list;
+        });
   }
 
   Stream<BudgetMonth?> watchMonth(String householdId, String monthId) {
@@ -972,6 +978,120 @@ class BudgetRepository {
     final snap = await _monthRef(householdId, monthId).get();
     if (!snap.exists || snap.data() == null) return null;
     return BudgetMonth.fromMap(snap.id, snap.data()!);
+  }
+
+  DocumentReference<Map<String, dynamic>> _monthArchiveRef(
+    String householdId,
+    String monthId,
+  ) =>
+      _monthRef(householdId, monthId).collection('archive').doc('bundle');
+
+  bool isClosedMonth(String monthId) =>
+      monthId.compareTo(monthIdFromDate(DateTime.now())) < 0;
+
+  Future<MonthStatsSnapshot?> fetchMonthArchive(
+    String householdId,
+    String monthId,
+  ) async {
+    final snap = await _monthArchiveRef(householdId, monthId).get();
+    if (!snap.exists || snap.data() == null) return null;
+    return monthStatsFromArchive(monthId, snap.data()!);
+  }
+
+  Future<void> writeMonthArchive({
+    required String householdId,
+    required String monthId,
+    required MonthStatsSnapshot stats,
+    BudgetMonth? month,
+  }) {
+    return _monthArchiveRef(householdId, monthId).set({
+      'month': month?.toMap(),
+      'income': stats.income,
+      'debtPaid': stats.debtPaid,
+      'expenses': [
+        for (final e in stats.expenses) {'id': e.id, ...e.toMap()},
+      ],
+      'deposits': [
+        for (final d in stats.deposits) {'id': d.id, ...d.toMap()},
+      ],
+      'plans': [
+        for (final p in stats.plans) {'id': p.subcategoryId, ...p.toMap()},
+      ],
+      'incomeEntries': const <Map<String, dynamic>>[],
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<MonthStatsSnapshot> fetchMonthStats(
+    String householdId,
+    String monthId, {
+    bool preferArchive = true,
+  }) async {
+    if (preferArchive) {
+      final archived = await fetchMonthArchive(householdId, monthId);
+      if (archived != null) return archived;
+    }
+    final expenses = await fetchExpenses(householdId, monthId);
+    final deposits = await fetchDeposits(householdId, monthId);
+    final plans = await fetchPlans(householdId, monthId);
+    final month = await fetchMonth(householdId, monthId);
+    final incomeEntries = await fetchIncomeEntries(householdId, monthId);
+    final stats = MonthStatsSnapshot(
+      monthId: monthId,
+      expenses: expenses,
+      deposits: deposits,
+      plans: plans,
+      income: month?.incomeTotal ??
+          incomeEntries.fold<double>(0, (s, e) => s + e.amount),
+      debtPaid: month?.debtPaidTotal ?? 0,
+    );
+    if (isClosedMonth(monthId)) {
+      try {
+        await writeMonthArchive(
+          householdId: householdId,
+          monthId: monthId,
+          stats: stats,
+          month: month,
+        );
+      } catch (_) {}
+    }
+    return stats;
+  }
+
+  static MonthStatsSnapshot monthStatsFromArchive(
+    String monthId,
+    Map<String, dynamic> data,
+  ) {
+    List<Map<String, dynamic>> maps(String key) {
+      final raw = data[key];
+      if (raw is! List) return const [];
+      return [
+        for (final item in raw)
+          if (item is Map) Map<String, dynamic>.from(item),
+      ];
+    }
+
+    final monthMap = data['month'];
+    final month = monthMap is Map
+        ? BudgetMonth.fromMap(monthId, Map<String, dynamic>.from(monthMap))
+        : null;
+    return MonthStatsSnapshot(
+      monthId: monthId,
+      expenses: [
+        for (final m in maps('expenses'))
+          Expense.fromMap(m['id'] as String? ?? '', m),
+      ],
+      deposits: [
+        for (final m in maps('deposits'))
+          Deposit.fromMap(m['id'] as String? ?? '', m),
+      ],
+      plans: [
+        for (final m in maps('plans'))
+          MonthPlan.fromMap(m['id'] as String? ?? m['subcategoryId'] as String? ?? '', m),
+      ],
+      income: (data['income'] as num?)?.toDouble() ?? month?.incomeTotal ?? 0,
+      debtPaid: (data['debtPaid'] as num?)?.toDouble() ?? month?.debtPaidTotal ?? 0,
+    );
   }
 
   Stream<List<IncomeSource>> watchIncomeSources(
@@ -1969,69 +2089,46 @@ class BudgetRepository {
     });
   }
 
-  /// Propagate cashLeft → leftoverFromPrior for months after [monthId].
+  /// Propagate cashLeft → leftoverFromPrior along the next calendar months only.
   Future<void> _cascadeLeftoverToFollowingMonths(
     String householdId,
     String monthId,
   ) async {
-    final months = await _months(householdId).get();
-    final sorted = months.docs.map((d) => d.id).toList()..sort();
-    final start = sorted.indexOf(monthId);
-    if (start < 0) return;
+    final currentSnap = await _monthRef(householdId, monthId).get();
+    if (!currentSnap.exists || currentSnap.data() == null) return;
+    final current = BudgetMonth.fromMap(currentSnap.id, currentSnap.data()!);
+    var cashLeft = computeMonthCashLeft(
+      leftoverFromPrior: current.leftoverFromPrior,
+      incomeTotal: current.incomeTotal,
+      spentTotal: current.spentTotal,
+      depositTotal: current.depositTotal,
+      debtPaidTotal: current.debtPaidTotal,
+    );
+    if ((cashLeft - current.cashLeft).abs() > 0.0001) {
+      await currentSnap.reference.update({'cashLeft': cashLeft});
+    }
 
-    for (var i = start; i < sorted.length; i++) {
-      final id = sorted[i];
-      final ref = _monthRef(householdId, id);
-      final snap = await ref.get();
-      if (!snap.exists || snap.data() == null) continue;
-      final month = BudgetMonth.fromMap(snap.id, snap.data()!);
-      final cashLeft = computeMonthCashLeft(
-        leftoverFromPrior: month.leftoverFromPrior,
-        incomeTotal: month.incomeTotal,
-        spentTotal: month.spentTotal,
-        depositTotal: month.depositTotal,
-        debtPaidTotal: month.debtPaidTotal,
-      );
-      if ((cashLeft - month.cashLeft).abs() > 0.0001) {
-        await ref.update({'cashLeft': cashLeft});
-      }
-
-      if (i + 1 >= sorted.length) break;
-      final nextId = sorted[i + 1];
-      // Only cascade into the calendar-next month when it exists in the list;
-      // also update any later months that claim this as prior via previousMonthId.
+    var id = monthId;
+    while (true) {
+      final nextId = nextMonthId(id);
       final nextRef = _monthRef(householdId, nextId);
-      final expectedPrior = previousMonthId(nextId);
-      if (expectedPrior != id) {
-        // Still update leftover for the immediate next calendar month if present.
-        final calendarNext = nextMonthId(id);
-        if (!sorted.contains(calendarNext)) continue;
-        final calRef = _monthRef(householdId, calendarNext);
-        final calSnap = await calRef.get();
-        if (!calSnap.exists || calSnap.data() == null) continue;
-        final cal = BudgetMonth.fromMap(calSnap.id, calSnap.data()!);
-        final nextLeftover = leftoverFromPriorCashLeft(cashLeft);
-        if ((cal.leftoverFromPrior - nextLeftover).abs() > 0.0001) {
-          final newCash = computeMonthCashLeft(
-            leftoverFromPrior: nextLeftover,
-            incomeTotal: cal.incomeTotal,
-            spentTotal: cal.spentTotal,
-            depositTotal: cal.depositTotal,
-            debtPaidTotal: cal.debtPaidTotal,
-          );
-          await calRef.update({
-            'leftoverFromPrior': nextLeftover,
-            'cashLeft': newCash,
-          });
-        }
-        continue;
-      }
-
       final nextSnap = await nextRef.get();
-      if (!nextSnap.exists || nextSnap.data() == null) continue;
+      if (!nextSnap.exists || nextSnap.data() == null) return;
       final next = BudgetMonth.fromMap(nextSnap.id, nextSnap.data()!);
       final nextLeftover = leftoverFromPriorCashLeft(cashLeft);
-      if ((next.leftoverFromPrior - nextLeftover).abs() <= 0.0001) continue;
+      if ((next.leftoverFromPrior - nextLeftover).abs() <= 0.0001 &&
+          (computeMonthCashLeft(
+                    leftoverFromPrior: next.leftoverFromPrior,
+                    incomeTotal: next.incomeTotal,
+                    spentTotal: next.spentTotal,
+                    depositTotal: next.depositTotal,
+                    debtPaidTotal: next.debtPaidTotal,
+                  ) -
+                  next.cashLeft)
+              .abs() <=
+          0.0001) {
+        return;
+      }
       final newCash = computeMonthCashLeft(
         leftoverFromPrior: nextLeftover,
         incomeTotal: next.incomeTotal,
@@ -2043,41 +2140,36 @@ class BudgetRepository {
         'leftoverFromPrior': nextLeftover,
         'cashLeft': newCash,
       });
+      cashLeft = newCash;
+      id = nextId;
     }
   }
 
-  /// Propagate end balance of [subcategoryId] in [monthId] into following
-  /// months' openingBalance / balance (preserving their deposited/withdrawn).
+  /// Propagate end balance of [subcategoryId] along the next calendar months.
   Future<void> _cascadePotBalancesToFollowingMonths(
     String householdId,
     String monthId,
     String subcategoryId,
   ) async {
-    final months = await _months(householdId).get();
-    final sorted = months.docs.map((d) => d.id).toList()..sort();
-    final start = sorted.indexOf(monthId);
-    if (start < 0) return;
-
-    for (var i = start; i < sorted.length - 1; i++) {
-      final id = sorted[i];
-      final nextId = sorted[i + 1];
-      if (previousMonthId(nextId) != id && nextMonthId(id) != nextId) {
-        // Only cascade along contiguous calendar chain.
-        if (nextMonthId(id) != nextId) continue;
-      }
+    var id = monthId;
+    while (true) {
+      final nextId = nextMonthId(id);
       final curPot = await _monthRef(householdId, id)
           .collection('potBalances')
           .doc(subcategoryId)
           .get();
-      if (!curPot.exists || curPot.data() == null) break;
+      if (!curPot.exists || curPot.data() == null) return;
       final endBalance =
           PotBalance.fromMap(subcategoryId, curPot.data()!).balance;
 
-      final nextPotRef = _monthRef(householdId, nextId)
-          .collection('potBalances')
-          .doc(subcategoryId);
       final nextMonthRef = _monthRef(householdId, nextId);
+      final nextMonthSnap = await nextMonthRef.get();
+      if (!nextMonthSnap.exists) return;
 
+      final nextPotRef =
+          nextMonthRef.collection('potBalances').doc(subcategoryId);
+      var openingDelta = 0.0;
+      var balanceDelta = 0.0;
       await _db.runTransaction((tx) async {
         final nextPotSnap = await tx.get(nextPotRef);
         final monthSnap = await tx.get(nextMonthRef);
@@ -2094,8 +2186,8 @@ class BudgetRepository {
             withdrawn: existing.withdrawn,
           ),
         );
-        final openingDelta = next.openingBalance - existing.openingBalance;
-        final balanceDelta = next.balance - existing.balance;
+        openingDelta = next.openingBalance - existing.openingBalance;
+        balanceDelta = next.balance - existing.balance;
         tx.set(nextPotRef, next.toMap());
         if (openingDelta != 0 || balanceDelta != 0) {
           await _refreshCashLeftInTx(
@@ -2107,6 +2199,8 @@ class BudgetRepository {
           );
         }
       });
+      if (openingDelta == 0 && balanceDelta == 0) return;
+      id = nextId;
     }
   }
 }

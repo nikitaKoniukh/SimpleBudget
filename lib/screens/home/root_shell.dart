@@ -43,11 +43,11 @@ class _RootShellState extends State<RootShell> {
       return const OnboardingScreen();
     }
 
-    final pages = const [
-      HomeScreen(),
-      StatisticsScreen(),
-      ActivityScreen(),
-      InvestmentsScreen(),
+    final pages = [
+      const HomeScreen(),
+      StatisticsScreen(isActive: _index == 1),
+      const ActivityScreen(),
+      const InvestmentsScreen(),
     ];
 
     return SyncBackground(

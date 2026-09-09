@@ -5,10 +5,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function claimHouseholdIds() {
+      return request.auth.token.get('householdIds', []);
+    }
+
     function isMember(householdId) {
-      return signedIn()
-        && exists(/databases/$(database)/documents/households/$(householdId))
-        && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberIds;
+      return signedIn() && (
+        householdId in claimHouseholdIds()
+        || (
+          exists(/databases/$(database)/documents/households/$(householdId))
+          && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.memberIds
+        )
+      );
     }
 
     // Non-member may only append their own uid to memberIds (invite join).
@@ -145,12 +153,15 @@ service cloud.firestore {
         match /loanPayments/{docId} {
           allow read, write: if isMember(householdId);
         }
+        match /archive/{docId} {
+          allow read, write: if isMember(householdId);
+        }
       }
     }
 
     // Collection-group reads for loan payment history.
     match /{path=**}/loanPayments/{docId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && claimHouseholdIds().size() > 0;
     }
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sync_month/data/default_categories.dart';
+import 'package:sync_month/data/local/local_budget_store.dart';
 import 'package:sync_month/models/models.dart';
+import 'package:sync_month/services/budget_repository.dart';
 import 'package:sync_month/utils/csv_export.dart';
 import 'package:sync_month/utils/leftover.dart';
 import 'package:sync_month/utils/money.dart';
@@ -390,5 +392,52 @@ void main() {
     expect(empty.householdIds, isEmpty);
     expect(empty.activeHouseholdId, isNull);
     expect(empty.hasHouseholds, isFalse);
+  });
+
+  test('mergeMonthSummaries keeps older local months', () {
+    const local = [
+      BudgetMonth(id: '2025-01', incomeTotal: 1),
+      BudgetMonth(id: '2026-08', incomeTotal: 2),
+    ];
+    const live = [
+      BudgetMonth(id: '2026-09', incomeTotal: 9),
+      BudgetMonth(id: '2026-08', incomeTotal: 8),
+    ];
+    final merged = mergeMonthSummaries(local, live);
+    expect(merged.map((m) => m.id).toList(), ['2026-09', '2026-08', '2025-01']);
+    expect(merged.firstWhere((m) => m.id == '2026-08').incomeTotal, 8);
+  });
+
+  test('monthStatsFromArchive round-trips expenses', () {
+    final expense = Expense(
+      id: 'e1',
+      subcategoryId: 's1',
+      amount: 40,
+      date: DateTime(2026, 1, 2),
+    );
+    final stats = MonthStatsSnapshot(
+      monthId: '2026-01',
+      expenses: [expense],
+      deposits: const [],
+      plans: const [MonthPlan(subcategoryId: 's1', planned: 100)],
+      income: 1000,
+      debtPaid: 0,
+    );
+    final archive = {
+      'income': stats.income,
+      'debtPaid': stats.debtPaid,
+      'expenses': [
+        for (final e in stats.expenses) {'id': e.id, ...e.toMap()},
+      ],
+      'deposits': <Map<String, dynamic>>[],
+      'plans': [
+        for (final p in stats.plans) {'id': p.subcategoryId, ...p.toMap()},
+      ],
+    };
+    final parsed =
+        BudgetRepository.monthStatsFromArchive('2026-01', archive);
+    expect(parsed.income, 1000);
+    expect(parsed.expenses.single.amount, 40);
+    expect(parsed.plans.single.planned, 100);
   });
 }

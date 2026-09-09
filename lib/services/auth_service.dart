@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -313,6 +314,7 @@ class AuthService {
   }
 
   Future<Map<String, String>> getMemberLabels(List<String> uids) async {
+    if (uids.isEmpty) return {};
     final labels = <String, String>{};
     for (final uid in uids) {
       final snap = await _db.collection('users').doc(uid).get();
@@ -330,6 +332,18 @@ class AuthService {
       }
     }
     return labels;
+  }
+
+  /// Reloads Auth custom claims after membership changes.
+  Future<void> refreshMembershipClaims() async {
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('refreshMembershipClaims')
+          .call();
+    } catch (_) {
+      // Functions may be undeployed; token refresh still picks up trigger writes.
+    }
+    await _auth.currentUser?.getIdToken(true);
   }
 
   Future<void> updateLocale(String uid, String localeCode) async {

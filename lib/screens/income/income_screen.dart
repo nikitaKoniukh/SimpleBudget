@@ -133,10 +133,7 @@ class IncomeScreen extends StatelessWidget {
     if (amount <= 0) return;
     final noteText = sentenceCase(noteCtrl.text);
     final state = context.read<AppState>();
-    final hid = state.activeHouseholdId!;
-    await state.repo.addIncomeEntry(
-      householdId: hid,
-      monthId: state.monthId!,
+    await state.addIncomeEntry(
       sourceId: sourceId,
       amount: amount,
       note: noteText.isEmpty ? null : noteText,

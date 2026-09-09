@@ -14,7 +14,9 @@ enum _StatsRange { vsPrev, last3, last6 }
 
 /// Statistics: donut for selected month + multi-month category compare.
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  const StatisticsScreen({super.key, this.isActive = true});
+
+  final bool isActive;
 
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
@@ -30,7 +32,17 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant StatisticsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _reload();
+    }
   }
 
   List<String> _monthIdsForRange(AppState state) {
@@ -53,7 +65,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   Future<void> _reload() async {
     final state = context.read<AppState>();
     if (!state.hasHousehold) return;
-    await state.refreshBudget();
     if (!mounted) return;
     final ids = _monthIdsForRange(state);
     if (ids.isEmpty) {
