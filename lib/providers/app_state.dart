@@ -252,34 +252,32 @@ class AppState extends ChangeNotifier {
   }
 
   MonthTotals get totals {
-    final month = _selectedMonth;
-    final income = month?.incomeTotal ??
-        _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
+    // Live collections, not month.spentTotal — that summary only refreshes
+    // on pull-to-refresh, so the Home hero would lag behind logged expenses.
     final liveSubIds = subcategories.map((s) => s.id).toSet();
     final leftoverId = leftoverPotId;
-    final planned = month?.plannedTotal ??
-        _plans
-            .where(
-              (p) =>
-                  liveSubIds.contains(p.subcategoryId) &&
-                  p.subcategoryId != leftoverId,
-            )
-            .fold<double>(0, (s, p) => s + p.planned);
-    final actual = month?.spentTotal ??
-        _expenses
-            .where((e) => liveSubIds.contains(e.subcategoryId))
-            .fold<double>(0, (s, e) => s + e.amount);
-    final savedThisMonth = month?.depositTotal ??
-        _deposits
-            .where((d) => liveSubIds.contains(d.subcategoryId))
-            .fold<double>(0, (s, d) => s + d.amount);
+    final income = _incomeEntries.fold<double>(0, (s, e) => s + e.amount);
+    final planned = _plans
+        .where(
+          (p) =>
+              liveSubIds.contains(p.subcategoryId) &&
+              p.subcategoryId != leftoverId,
+        )
+        .fold<double>(0, (s, p) => s + p.planned);
+    final actual = _expenses
+        .where((e) => liveSubIds.contains(e.subcategoryId))
+        .fold<double>(0, (s, e) => s + e.amount);
+    final savedThisMonth = _deposits
+        .where((d) => liveSubIds.contains(d.subcategoryId))
+        .fold<double>(0, (s, d) => s + d.amount);
+    final debtPaid = _loanPayments.fold<double>(0, (s, p) => s + p.amount);
     return MonthTotals(
       income: income,
       planned: planned,
       actual: actual,
       savedThisMonth: savedThisMonth,
-      debtPaidThisMonth: month?.debtPaidTotal ?? 0,
-      leftoverFromPrior: month?.leftoverFromPrior ?? 0,
+      debtPaidThisMonth: debtPaid,
+      leftoverFromPrior: _selectedMonth?.leftoverFromPrior ?? 0,
     );
   }
 
