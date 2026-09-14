@@ -33,6 +33,9 @@ class LogEntryFlowScreen extends StatefulWidget {
     this.subcategoryId,
     this.incomeSourceId,
     this.loanId,
+    this.skipTypeStep = false,
+    this.onCompleted,
+    this.onCancel,
   });
 
   final LogKind? kind;
@@ -42,6 +45,15 @@ class LogEntryFlowScreen extends StatefulWidget {
   final String? subcategoryId;
   final String? incomeSourceId;
   final String? loanId;
+
+  /// When true (e.g. widget quick log), skip the kind picker.
+  final bool skipTypeStep;
+
+  /// Called after a successful save instead of [Navigator.pop] when set.
+  final VoidCallback? onCompleted;
+
+  /// Called when backing out of the first step instead of [Navigator.maybePop].
+  final VoidCallback? onCancel;
 
   @override
   State<LogEntryFlowScreen> createState() => _LogEntryFlowScreenState();
@@ -79,7 +91,7 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
 
   List<_LogFlowStep> _stepsFor(AppState state) {
     final steps = <_LogFlowStep>[];
-    if (!_editing && !_skipWhereStepFor(state)) {
+    if (!_editing && !widget.skipTypeStep && !_skipWhereStepFor(state)) {
       steps.add(_LogFlowStep.type);
     }
     if (!_skipWhereStepFor(state)) {
@@ -160,6 +172,8 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
   void _goBack() {
     if (_step > 0) {
       setState(() => _step--);
+    } else if (widget.onCancel != null) {
+      widget.onCancel!();
     } else {
       Navigator.maybePop(context);
     }
@@ -391,7 +405,11 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
           );
       }
       if (!mounted) return;
-      Navigator.of(context).pop();
+      if (widget.onCompleted != null) {
+        widget.onCompleted!();
+      } else {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -431,9 +449,14 @@ class _LogEntryFlowScreenState extends State<LogEntryFlowScreen> {
     final primaryLabel = isLastStep ? l10n.save : l10n.continueLabel;
 
     return PopScope(
-      canPop: _step == 0,
+      canPop: _step == 0 && widget.onCancel == null,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _step > 0) setState(() => _step--);
+        if (didPop) return;
+        if (_step > 0) {
+          setState(() => _step--);
+        } else {
+          widget.onCancel?.call();
+        }
       },
       child: SyncBackground(
         child: Scaffold(

@@ -292,6 +292,12 @@ class AppLocalizations {
   String get cashLeft => _s('cashLeft');
   String get unallocated => _s('unallocated');
   String get logSpend => _s('logSpend');
+  String get widgetSignInToLog => _s('widgetSignInToLog');
+  String get widgetNeedHousehold => _s('widgetNeedHousehold');
+  String get widgetLogSpend => _s('widgetLogSpend');
+  String get widgetAddCompact => _s('widgetAddCompact');
+  String get widgetAddExtended => _s('widgetAddExtended');
+  String get widgetPinUnsupported => _s('widgetPinUnsupported');
   String get logSave => _s('logSave');
   String get logDebt => _s('logDebt');
   String get logFixed => _s('logFixed');

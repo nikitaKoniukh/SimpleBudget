@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,10 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/app_state.dart';
+import 'screens/home/quick_log_overlay_screen.dart';
 import 'screens/home/root_shell.dart';
+import 'services/quick_log_launch.dart';
+import 'services/quick_log_widget_service.dart';
 import 'theme/sync_theme.dart';
 
 Future<void> main() async {
@@ -18,6 +23,7 @@ Future<void> main() async {
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
+  await QuickLogLaunch.init();
   runApp(const SyncMonthApp());
 }
 
@@ -30,29 +36,37 @@ class SyncMonthApp extends StatelessWidget {
       create: (_) => AppState(),
       child: Consumer<AppState>(
         builder: (context, state, _) {
+          unawaited(QuickLogWidgetService.sync(state));
           final locale = Locale(state.localeCode);
-          return MaterialApp(
-            title: 'SyncMonth',
-            debugShowCheckedModeBanner: false,
-            locale: locale,
-            supportedLocales: const [
-              Locale('en'),
-              Locale('ru'),
-              Locale('he'),
-              Locale('es'),
-              Locale('fr'),
-              Locale('uk'),
-              Locale('ar'),
-              Locale('de'),
-            ],
-            localizationsDelegates: const [
-              AppLocalizationsDelegate(),
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            theme: buildSyncTheme(),
-            home: const RootShell(),
+          return ValueListenableBuilder<bool>(
+            valueListenable: QuickLogLaunch.spendOverlay,
+            builder: (context, quickLogSpend, _) {
+              return MaterialApp(
+                title: 'SyncMonth',
+                debugShowCheckedModeBanner: false,
+                locale: locale,
+                supportedLocales: const [
+                  Locale('en'),
+                  Locale('ru'),
+                  Locale('he'),
+                  Locale('es'),
+                  Locale('fr'),
+                  Locale('uk'),
+                  Locale('ar'),
+                  Locale('de'),
+                ],
+                localizationsDelegates: const [
+                  AppLocalizationsDelegate(),
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                theme: buildSyncTheme(),
+                home: quickLogSpend
+                    ? const QuickLogOverlayScreen()
+                    : const RootShell(),
+              );
+            },
           );
         },
       ),

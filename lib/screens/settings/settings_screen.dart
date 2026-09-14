@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../navigation/adaptive_page_route.dart';
 import '../../providers/app_state.dart';
+import '../../services/quick_log_widget_service.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
@@ -21,6 +22,23 @@ import 'loans_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _pinWidget(
+    BuildContext context, {
+    required Future<bool> Function() pin,
+  }) async {
+    final l10n = AppLocalizations.of(context);
+    final state = context.read<AppState>();
+    // Ensure SharedPreferences snapshot exists before the system binds the widget.
+    await QuickLogWidgetService.sync(state);
+    final ok = await pin();
+    if (!context.mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.widgetPinUnsupported)),
+      );
+    }
+  }
 
   Future<void> _shareInvite(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
@@ -172,6 +190,22 @@ class SettingsScreen extends StatelessWidget {
             LanguagePickerTile(
               localeCode: state.localeCode,
               onLocaleSelected: state.setLocale,
+            ),
+            ListTile(
+              title: Text(l10n.widgetAddCompact),
+              leading: const Icon(Icons.widgets_outlined),
+              onTap: () => _pinWidget(
+                context,
+                pin: QuickLogWidgetService.pinCompact,
+              ),
+            ),
+            ListTile(
+              title: Text(l10n.widgetAddExtended),
+              leading: const Icon(Icons.dashboard_outlined),
+              onTap: () => _pinWidget(
+                context,
+                pin: QuickLogWidgetService.pinExtended,
+              ),
             ),
             ListTile(
               title: Text(l10n.reports),

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_compact_label">Log spend</string>
+    <string name="widget_compact_description">Remaining balance and quick spend logging</string>
+    <string name="widget_extended_label">Month overview</string>
+    <string name="widget_extended_description">Month remaining, income, spent, and quick spend logging</string>
+    <string name="widget_log_spend">Log spend</string>
+    <string name="widget_log_spend_short">+</string>
+    <string name="widget_sign_in_to_log">Sign in to log</string>
+    <string name="widget_open_app_to_refresh">Open SyncMonth to refresh</string>
+    <string name="widget_remaining">Remaining</string>
+    <string name="widget_income">Income</string>
+    <string name="widget_spent">Spent</string>
+    <string name="widget_saved">Saved</string>
+    <string name="widget_budget">Budget</string>
+</resources>
