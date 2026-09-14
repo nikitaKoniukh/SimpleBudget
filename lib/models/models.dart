@@ -1052,6 +1052,13 @@ class MonthTotals {
   double get totalSpent =>
       actual + savedThisMonth + debtPaidThisMonth;
 
+  /// Home hero: income left after expenses and savings deposits.
+  /// Debt payments are excluded (tracked under loans).
+  double get spendRemaining => income - actual - savedThisMonth;
+
+  /// Expenses + savings this month (hero “Spent”).
+  double get spentWithSavings => actual + savedThisMonth;
+
   double get remaining => planned - totalSpent;
   double get cashLeft => income - totalSpent;
   double get unallocated => income - planned;

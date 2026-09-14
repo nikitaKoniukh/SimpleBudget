@@ -5,7 +5,7 @@ import '../../models/models.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
-/// Compact 4-segment overview: spent, remaining budget, unallocated income.
+/// Month health: Remaining, then Income / Spent / Saved / Budget.
 class BudgetOverviewBar extends StatelessWidget {
   const BudgetOverviewBar({
     super.key,
@@ -17,59 +17,11 @@ class BudgetOverviewBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final income = totals.income;
-    final planned = totals.planned;
-    final spent = totals.totalSpent;
-    final unallocated = (income - planned).clamp(0.0, double.infinity);
-    final remaining = (planned - spent).clamp(0.0, double.infinity);
-    final overSpent = spent > planned ? spent - planned : 0.0;
-
-    final segments = <_Segment>[];
-    if (income <= 0) {
-      if (spent > 0) {
-        segments.add(_Segment(spent, SyncColors.accent, l10n.spentLabel));
-      }
-    } else {
-      final scale = income;
-      if (spent <= planned) {
-        if (spent > 0) {
-          segments.add(
-            _Segment(spent / scale, SyncColors.accent, l10n.spentLabel),
-          );
-        }
-        if (remaining > 0) {
-          segments.add(
-            _Segment(
-              remaining / scale,
-              SyncColors.primary,
-              l10n.remaining,
-            ),
-          );
-        }
-        if (unallocated > 0) {
-          segments.add(
-            _Segment(
-              unallocated / scale,
-              SyncColors.surfaceMint,
-              l10n.unallocated,
-            ),
-          );
-        }
-      } else {
-        segments.add(
-          _Segment(planned / scale, SyncColors.accent, l10n.spentLabel),
-        );
-        if (overSpent > 0) {
-          segments.add(
-            _Segment(
-              (overSpent / scale).clamp(0.0, 1.0),
-              SyncColors.overspend,
-              l10n.overspent,
-            ),
-          );
-        }
-      }
-    }
+    final remaining = totals.spendRemaining;
+    final isOver = remaining < 0;
+    final primaryAmount = isOver ? -remaining : remaining;
+    final primaryLabel = isOver ? l10n.overLabel : l10n.remaining;
+    final primaryColor = isOver ? SyncColors.overspend : SyncColors.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -77,50 +29,68 @@ class BudgetOverviewBar extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text(
+                primaryLabel,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: SyncColors.textMuted,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                formatIls(primaryAmount),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: primaryColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
-                    child: _StatCell(
+                    child: _StatTile(
                       label: l10n.income,
                       amount: totals.income,
                     ),
                   ),
+                  const SizedBox(width: 6),
                   Expanded(
-                    child: _StatCell(
-                      label: l10n.plannedLabel,
-                      amount: totals.planned,
-                    ),
-                  ),
-                  Expanded(
-                    child: _StatCell(
+                    child: _StatTile(
                       label: l10n.spentLabel,
-                      amount: totals.totalSpent,
-                      highlight: totals.totalSpent > totals.planned &&
-                          totals.planned > 0,
+                      amount: totals.actual,
+                      highlight: isOver && totals.income > 0,
                     ),
                   ),
                 ],
               ),
-              if (segments.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: SizedBox(
-                    height: 8,
-                    child: Row(
-                      children: [
-                        for (final seg in segments)
-                          Expanded(
-                            flex: (seg.flex * 1000).round().clamp(1, 100000),
-                            child: Container(color: seg.color),
-                          ),
-                      ],
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: _StatTile(
+                      label: l10n.savedLabel,
+                      amount: totals.savedThisMonth,
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: _StatTile(
+                      label: l10n.budget,
+                      amount: totals.planned,
+                    ),
+                  ),
+                ],
+              ),
+              if (totals.planExceedsIncome) ...[
+                const SizedBox(height: 10),
+                Text(
+                  l10n.planExceedsIncome,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: SyncColors.warning,
+                      ),
                 ),
               ],
             ],
@@ -131,16 +101,8 @@ class BudgetOverviewBar extends StatelessWidget {
   }
 }
 
-class _Segment {
-  const _Segment(this.flex, this.color, this.label);
-
-  final double flex;
-  final Color color;
-  final String label;
-}
-
-class _StatCell extends StatelessWidget {
-  const _StatCell({
+class _StatTile extends StatelessWidget {
+  const _StatTile({
     required this.label,
     required this.amount,
     this.highlight = false,
@@ -152,24 +114,35 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: SyncColors.textMuted,
-              ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          formatIls(amount),
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: highlight ? SyncColors.overspend : null,
-              ),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: SyncColors.surfaceMint.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: SyncColors.textMuted,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            formatIls(amount),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: highlight ? SyncColors.overspend : SyncColors.text,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

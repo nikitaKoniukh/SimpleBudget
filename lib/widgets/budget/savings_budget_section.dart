@@ -7,9 +7,10 @@ import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../screens/investments/investments_sheets.dart';
 import '../../theme/sync_theme.dart';
+import 'envelope_progress.dart';
 import 'subcategory_budget_row.dart';
 
-/// Savings on Home: same section header pattern as Spend / Monthly.
+/// Savings on Home: pot list with Deposited | Planned columns.
 class SavingsBudgetSection extends StatelessWidget {
   const SavingsBudgetSection({super.key});
 
@@ -84,8 +85,13 @@ class SavingsBudgetSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  BudgetAmountHeaders(
+                    spentLabel: l10n.depositedLabel,
+                    plannedLabel: l10n.budget,
+                  ),
                   for (var i = 0; i < pots.length; i++) ...[
-                    if (i > 0) Divider(height: 1, thickness: 1, color: hairline),
+                    if (i > 0)
+                      Divider(height: 1, thickness: 1, color: hairline),
                     SubcategoryBudgetRow(subcategory: pots[i]),
                   ],
                 ],

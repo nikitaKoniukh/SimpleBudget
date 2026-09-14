@@ -5,24 +5,24 @@ import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
-import '../../utils/money.dart';
 import '../../screens/category/budget_sheets.dart';
 import '../../screens/category/category_sheets.dart';
 import 'category_color_icon.dart';
+import 'envelope_progress.dart';
 import 'subcategory_budget_row.dart';
 
-const _amountColWidth = 88.0;
-
-/// Sheet-like category block: tappable header + Name | Spent | Planned rows.
+/// Category card: optional Spent | Planned headers + progress under each row.
 class CategoryBudgetSection extends StatelessWidget {
   const CategoryBudgetSection({
     super.key,
     required this.category,
     this.scrollKey,
+    this.showColumnHeaders = true,
   });
 
   final BudgetCategory category;
   final Key? scrollKey;
+  final bool showColumnHeaders;
 
   @override
   Widget build(BuildContext context) {
@@ -47,52 +47,30 @@ class CategoryBudgetSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (showColumnHeaders)
+              BudgetAmountHeaders(
+                spentLabel: l10n.spentLabel,
+                plannedLabel: l10n.budget,
+                leadingInset: 36,
+              ),
             InkWell(
               onTap: () => showCategoryRegisterSheet(
                 context,
                 category: cat,
               ),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                child: Row(
-                  children: [
-                    CategoryColorIcon(
-                      colorValue: cat.colorValue,
-                      iconKey: cat.iconKey,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        cat.localizedName(state.localeCode),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: _amountColWidth,
-                      child: Text(
-                        formatIls(actual),
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: overPlan ? overColor : null,
-                            ),
-                      ),
-                    ),
-                    SizedBox(
-                      width: _amountColWidth,
-                      child: Text(
-                        formatIls(planned),
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              color: SyncColors.textMuted,
-                            ),
-                      ),
-                    ),
-                  ],
+              child: EnvelopeAmountRow(
+                leading: CategoryColorIcon(
+                  colorValue: cat.colorValue,
+                  iconKey: cat.iconKey,
+                  size: 28,
                 ),
+                name: cat.localizedName(state.localeCode),
+                spent: actual,
+                planned: planned,
+                nameStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: overPlan ? overColor : null,
+                    ),
               ),
             ),
             if (subs.isEmpty)

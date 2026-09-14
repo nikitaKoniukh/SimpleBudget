@@ -311,6 +311,19 @@ class AppLocalizations {
   String leftoverThroughPeriod(String monthTitle) =>
       _s('leftoverThroughPeriod').replaceAll('{monthTitle}', monthTitle);
 
+  String get overLabel => _s('overLabel');
+  String get setAsideThisMonth => _s('setAsideThisMonth');
+  String get viewSavings => _s('viewSavings');
+
+  String spentOfPlanned(String spent, String planned) => _s('spentOfPlanned')
+      .replaceAll('{spent}', spent)
+      .replaceAll('{planned}', planned);
+
+  String amountLeft(String amount) =>
+      _s('amountLeft').replaceAll('{amount}', amount);
+
+  String get depositedLabel => _s('depositedLabel');
+
   String moreExpenses(int count) =>
       _s('moreExpenses').replaceAll('{count}', '$count');
 

@@ -212,7 +212,12 @@ class _TypedSection extends StatelessWidget {
             ],
           ),
         ),
-        ...categories.map((cat) => CategoryBudgetSection(category: cat)),
+        ...categories.asMap().entries.map(
+              (e) => CategoryBudgetSection(
+                category: e.value,
+                showColumnHeaders: e.key == 0,
+              ),
+            ),
       ],
     );
   }
