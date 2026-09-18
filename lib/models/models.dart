@@ -1087,6 +1087,14 @@ class MonthStatsSnapshot {
       .where((e) => e.subcategoryId == subcategoryId)
       .fold(0, (s, e) => s + e.amount);
 
+  double depositedForSub(String subcategoryId) => deposits
+      .where((d) => d.subcategoryId == subcategoryId)
+      .fold(0, (s, d) => s + d.amount);
+
+  /// Expenses for spend/monthly; deposits for savings pots.
+  double activityForSub(String subcategoryId, {required bool isSavings}) =>
+      isSavings ? depositedForSub(subcategoryId) : spentForSub(subcategoryId);
+
   double spentForCategory(
     String categoryId,
     List<Subcategory> allSubs,
@@ -1094,6 +1102,19 @@ class MonthStatsSnapshot {
     final ids =
         allSubs.where((s) => s.categoryId == categoryId).map((s) => s.id);
     return ids.fold<double>(0, (s, id) => s + spentForSub(id));
+  }
+
+  double activityForCategory(
+    String categoryId,
+    List<Subcategory> allSubs, {
+    required bool isSavings,
+  }) {
+    final ids =
+        allSubs.where((s) => s.categoryId == categoryId).map((s) => s.id);
+    return ids.fold<double>(
+      0,
+      (s, id) => s + activityForSub(id, isSavings: isSavings),
+    );
   }
 
   double get totalSpent => expenses.fold(0, (s, e) => s + e.amount);

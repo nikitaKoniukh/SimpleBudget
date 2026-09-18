@@ -324,6 +324,52 @@ void main() {
     expect(totals.savedThisMonth, 20);
   });
 
+  test('MonthStatsSnapshot activity uses deposits for savings', () {
+    final snap = MonthStatsSnapshot(
+      monthId: '2026-09',
+      expenses: [
+        Expense(
+          id: 'e1',
+          subcategoryId: 'food',
+          amount: 40,
+          date: DateTime(2026, 9, 1),
+        ),
+      ],
+      deposits: [
+        Deposit(
+          id: 'd1',
+          subcategoryId: 'pot',
+          amount: 25,
+          date: DateTime(2026, 9, 2),
+        ),
+      ],
+      plans: const [],
+      income: 100,
+    );
+    const food = Subcategory(
+      id: 'food',
+      categoryId: 'spend',
+      nameEn: 'Food',
+      nameRu: 'Food',
+      sortOrder: 0,
+    );
+    const pot = Subcategory(
+      id: 'pot',
+      categoryId: 'save',
+      nameEn: 'Pot',
+      nameRu: 'Pot',
+      sortOrder: 0,
+    );
+    expect(
+      snap.activityForCategory('spend', [food, pot], isSavings: false),
+      40,
+    );
+    expect(
+      snap.activityForCategory('save', [food, pot], isSavings: true),
+      25,
+    );
+  });
+
   test('Household member roles default to editor', () {
     const household = Household(
       id: 'h1',

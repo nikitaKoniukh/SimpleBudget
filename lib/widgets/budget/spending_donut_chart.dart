@@ -7,6 +7,7 @@ import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 
+/// Expense mix for the selected month (savings pots excluded).
 class SpendingDonutChart extends StatelessWidget {
   const SpendingDonutChart({
     super.key,
@@ -19,28 +20,44 @@ class SpendingDonutChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
-    final totals = state.totals;
 
     final segments = <_ChartSegment>[];
     for (final cat in state.categories) {
+      if (cat.isSavings) continue;
       final spent = state.categoryActual(cat.id);
-      final planned = state.categoryPlanned(cat.id);
-      final value = spent > 0 ? spent : planned;
-      if (value <= 0) continue;
+      if (spent <= 0) continue;
       segments.add(
         _ChartSegment(
           categoryId: cat.id,
           label: cat.localizedName(state.localeCode),
-          value: value,
+          value: spent,
           color: Color(cat.colorValue),
         ),
       );
     }
 
     if (segments.isEmpty) {
-      return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Material(
+          color: SyncColors.frostedSurface,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
+            child: Center(
+              child: Text(
+                l10n.noData,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: SyncColors.textMuted,
+                    ),
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
+    segments.sort((a, b) => b.value.compareTo(a.value));
     final total = segments.fold<double>(0, (s, e) => s + e.value);
 
     return Padding(
@@ -49,7 +66,7 @@ class SpendingDonutChart extends StatelessWidget {
         color: SyncColors.frostedSurface,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -59,82 +76,100 @@ class SpendingDonutChart extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                formatIls(total),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: SyncColors.accent,
+                    ),
+              ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 180,
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 44,
-                          startDegreeOffset: -90,
-                          sections: segments.map((seg) {
-                            final pct = seg.value / total;
-                            return PieChartSectionData(
-                              value: seg.value,
-                              color: seg.color,
-                              radius: 52,
-                              title: pct >= 0.08
-                                  ? '${(pct * 100).round()}%'
-                                  : '',
-                              titleStyle: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            );
-                          }).toList(),
-                          pieTouchData: PieTouchData(
-                            touchCallback: (event, response) {
-                              if (!event.isInterestedForInteractions) return;
-                              final idx = response?.touchedSection?.touchedSectionIndex;
-                              if (idx == null ||
-                                  idx < 0 ||
-                                  idx >= segments.length) {
-                                return;
-                              }
-                              onCategoryTap?.call(segments[idx].categoryId);
-                            },
-                          ),
-                        ),
-                      ),
+                height: 168,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 48,
+                    startDegreeOffset: -90,
+                    sections: segments.map((seg) {
+                      final pct = seg.value / total;
+                      return PieChartSectionData(
+                        value: seg.value,
+                        color: seg.color,
+                        radius: 48,
+                        title: pct >= 0.08
+                            ? '${(pct * 100).round()}%'
+                            : '',
+                        titleStyle:
+                            Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                      );
+                    }).toList(),
+                    pieTouchData: PieTouchData(
+                      touchCallback: (event, response) {
+                        if (!event.isInterestedForInteractions) return;
+                        final idx =
+                            response?.touchedSection?.touchedSectionIndex;
+                        if (idx == null ||
+                            idx < 0 ||
+                            idx >= segments.length) {
+                          return;
+                        }
+                        onCategoryTap?.call(segments[idx].categoryId);
+                      },
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${formatIls(totals.totalSpent)} / ${formatIls(totals.planned)}',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 10,
-                runSpacing: 6,
-                children: [
-                  for (final seg in segments)
-                    _LegendChip(
-                      color: seg.color,
-                      label: seg.label,
-                      onTap: onCategoryTap == null
-                          ? null
-                          : () => onCategoryTap!(seg.categoryId),
+              const SizedBox(height: 10),
+              for (final seg in segments)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: InkWell(
+                    onTap: onCategoryTap == null
+                        ? null
+                        : () => onCategoryTap!(seg.categoryId),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: seg.color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            seg.label,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                        Text(
+                          formatIls(seg.value),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${((seg.value / total) * 100).round()}%',
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: SyncColors.textMuted,
+                                  ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -155,45 +190,4 @@ class _ChartSegment {
   final String label;
   final double value;
   final Color color;
-}
-
-class _LegendChip extends StatelessWidget {
-  const _LegendChip({
-    required this.color,
-    required this.label,
-    this.onTap,
-  });
-
-  final Color color;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
-      ],
-    );
-
-    if (onTap == null) return child;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: child,
-      ),
-    );
-  }
 }
