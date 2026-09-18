@@ -50,6 +50,9 @@ class _RootShellState extends State<RootShell> {
       const InvestmentsScreen(),
     ];
 
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -57,32 +60,34 @@ class _RootShellState extends State<RootShell> {
           index: _index,
           children: pages,
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home_rounded),
-              label: l10n.home,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.pie_chart_outline),
-              selectedIcon: const Icon(Icons.pie_chart),
-              label: l10n.statistics,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.receipt_long_outlined),
-              selectedIcon: const Icon(Icons.receipt_long),
-              label: l10n.activity,
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.savings_outlined),
-              selectedIcon: const Icon(Icons.savings),
-              label: l10n.savingsHighlight,
-            ),
-          ],
-        ),
+        bottomNavigationBar: isLandscape
+            ? null
+            : NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: const Icon(Icons.home_rounded),
+                    label: l10n.home,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.pie_chart_outline),
+                    selectedIcon: const Icon(Icons.pie_chart),
+                    label: l10n.statistics,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    selectedIcon: const Icon(Icons.receipt_long),
+                    label: l10n.activity,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.savings_outlined),
+                    selectedIcon: const Icon(Icons.savings),
+                    label: l10n.savingsHighlight,
+                  ),
+                ],
+              ),
       ),
     );
   }

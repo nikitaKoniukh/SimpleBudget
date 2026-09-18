@@ -86,8 +86,19 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
         SyncAppBarKind.flow => 48,
       };
 
+  /// Home/tab chrome hides in landscape; page/modal/flow keep back/close.
+  bool get _hidesInLandscape =>
+      kind == SyncAppBarKind.home || kind == SyncAppBarKind.tab;
+
+  bool get _isLandscape {
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    final size = view.physicalSize / view.devicePixelRatio;
+    return size.width > size.height;
+  }
+
   @override
   Size get preferredSize {
+    if (_hidesInLandscape && _isLandscape) return Size.zero;
     final view = WidgetsBinding.instance.platformDispatcher.views.first;
     final topPadding = view.padding.top / view.devicePixelRatio;
     return Size.fromHeight(_contentHeight + topPadding);
@@ -99,6 +110,12 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.orientationOf(context) == Orientation.landscape;
+    if (_hidesInLandscape && isLandscape) {
+      return const SizedBox.shrink();
+    }
+
     final l10n = AppLocalizations.of(context);
     final state = context.watch<AppState>();
     final theme = Theme.of(context);
