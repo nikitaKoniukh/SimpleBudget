@@ -8,14 +8,17 @@ import '../l10n/app_localizations.dart';
 import '../providers/app_state.dart';
 import '../utils/money.dart';
 
-/// Pushes month hero/overview data into Android quick-log home-screen widgets.
+/// Pushes month hero/overview data into Android/iOS quick-log home-screen widgets.
 abstract final class QuickLogWidgetService {
+  static const appGroupId = 'group.com.yetzira.syncmonth';
   static const compactAndroidName = 'QuickLogCompactWidgetProvider';
   static const extendedAndroidName = 'QuickLogExtendedWidgetProvider';
   static const compactQualifiedName =
       'com.yetzira.syncmonth.QuickLogCompactWidgetProvider';
   static const extendedQualifiedName =
       'com.yetzira.syncmonth.QuickLogExtendedWidgetProvider';
+  static const compactIosName = 'QuickLogCompactWidget';
+  static const extendedIosName = 'QuickLogExtendedWidget';
 
   static String? _fingerprint;
 
@@ -37,8 +40,18 @@ abstract final class QuickLogWidgetService {
     return format.format(amount);
   }
 
+  static bool get _isSupported {
+    if (kIsWeb) return false;
+    return Platform.isAndroid || Platform.isIOS;
+  }
+
+  static Future<void> _ensureAppGroup() async {
+    if (!Platform.isIOS) return;
+    await HomeWidget.setAppGroupId(appGroupId);
+  }
+
   static Future<void> sync(AppState state) async {
-    if (kIsWeb || !Platform.isAndroid) return;
+    if (!_isSupported) return;
 
     final l10n = AppLocalizations(state.localeCode);
     final rtl = _isRtlLocale(state.localeCode);
@@ -103,6 +116,7 @@ abstract final class QuickLogWidgetService {
     if (fingerprint == _fingerprint) return;
 
     try {
+      await _ensureAppGroup();
       await Future.wait([
         for (final entry in payload.entries)
           HomeWidget.saveWidgetData<String>(entry.key, entry.value),
@@ -110,11 +124,15 @@ abstract final class QuickLogWidgetService {
       await Future.wait([
         HomeWidget.updateWidget(
           name: compactAndroidName,
+          androidName: compactAndroidName,
           qualifiedAndroidName: compactQualifiedName,
+          iOSName: compactIosName,
         ),
         HomeWidget.updateWidget(
           name: extendedAndroidName,
+          androidName: extendedAndroidName,
           qualifiedAndroidName: extendedQualifiedName,
+          iOSName: extendedIosName,
         ),
       ]);
       _fingerprint = fingerprint;

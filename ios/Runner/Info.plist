@@ -77,6 +77,16 @@
 				<string>com.googleusercontent.apps.339787672116-gh10imd92oavvqn1bqu8c5bore73kati</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.yetzira.syncmonth.quicklog</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>syncmonth</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

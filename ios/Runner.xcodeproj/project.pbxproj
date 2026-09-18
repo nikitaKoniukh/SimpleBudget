@@ -18,6 +18,10 @@
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		D20AB36C15CF239AC351E41E /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43BF06F9C6D80300D590C9F8 /* Pods_RunnerTests.framework */; };
 		EE2BC89C1049419F979789C9 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 36F16A5B67634BA1B387F6C8 /* GoogleService-Info.plist */; };
+		A11B2C3D4E5F60718293A007 /* QuickLogWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11B2C3D4E5F60718293A001 /* QuickLogWidget.swift */; };
+		A11B2C3D4E5F60718293A008 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A11B2C3D4E5F60718293A006 /* WidgetKit.framework */; };
+		A11B2C3D4E5F60718293A009 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A11B2C3D4E5F60718293A005 /* SwiftUI.framework */; };
+		A11B2C3D4E5F60718293A00A /* QuickLogWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A11B2C3D4E5F60718293A004 /* QuickLogWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +31,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		A11B2C3D4E5F60718293A011 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A11B2C3D4E5F60718293A00C;
+			remoteInfo = QuickLogWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -39,6 +50,17 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11B2C3D4E5F60718293A010 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A11B2C3D4E5F60718293A00A /* QuickLogWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -70,6 +92,13 @@
 		D3B3E27258B98B4EBA789F85 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		F2C31E17C541971DBD4983E2 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA097578A4057DA3BAF59F52 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		A11B2C3D4E5F60718293A001 /* QuickLogWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickLogWidget.swift; sourceTree = "<group>"; };
+		A11B2C3D4E5F60718293A002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A11B2C3D4E5F60718293A003 /* QuickLogWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = QuickLogWidget.entitlements; sourceTree = "<group>"; };
+		A11B2C3D4E5F60718293A004 /* QuickLogWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = QuickLogWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A11B2C3D4E5F60718293A005 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		A11B2C3D4E5F60718293A006 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		A11B2C3D4E5F60718293A017 /* QuickLogWidget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = QuickLogWidget.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +118,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A11B2C3D4E5F60718293A00E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A11B2C3D4E5F60718293A008 /* WidgetKit.framework in Frameworks */,
+				A11B2C3D4E5F60718293A009 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -105,8 +143,21 @@
 			children = (
 				F2C31E17C541971DBD4983E2 /* Pods_Runner.framework */,
 				43BF06F9C6D80300D590C9F8 /* Pods_RunnerTests.framework */,
+				A11B2C3D4E5F60718293A006 /* WidgetKit.framework */,
+				A11B2C3D4E5F60718293A005 /* SwiftUI.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A11B2C3D4E5F60718293A00B /* QuickLogWidget */ = {
+			isa = PBXGroup;
+			children = (
+				A11B2C3D4E5F60718293A001 /* QuickLogWidget.swift */,
+				A11B2C3D4E5F60718293A002 /* Info.plist */,
+				A11B2C3D4E5F60718293A003 /* QuickLogWidget.entitlements */,
+				A11B2C3D4E5F60718293A017 /* QuickLogWidget.xcconfig */,
+			);
+			path = QuickLogWidget;
 			sourceTree = "<group>";
 		};
 		9656ADA1F07D6A517F5845E8 /* Pods */ = {
@@ -138,6 +189,7 @@
 			children = (
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
+				A11B2C3D4E5F60718293A00B /* QuickLogWidget */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				36F16A5B67634BA1B387F6C8 /* GoogleService-Info.plist */,
@@ -151,6 +203,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				A11B2C3D4E5F60718293A004 /* QuickLogWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -204,17 +257,36 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				A11B2C3D4E5F60718293A010 /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				8C8F997C83A772813F44E627 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A11B2C3D4E5F60718293A012 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A11B2C3D4E5F60718293A00C /* QuickLogWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A11B2C3D4E5F60718293A016 /* Build configuration list for PBXNativeTarget "QuickLogWidget" */;
+			buildPhases = (
+				A11B2C3D4E5F60718293A00D /* Sources */,
+				A11B2C3D4E5F60718293A00E /* Frameworks */,
+				A11B2C3D4E5F60718293A00F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = QuickLogWidget;
+			productName = QuickLogWidget;
+			productReference = A11B2C3D4E5F60718293A004 /* QuickLogWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -233,6 +305,15 @@
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
+						SystemCapabilities = {
+							"com.apple.ApplicationGroups.iOS" = {
+								enabled = 1;
+							};
+						};
+					};
+					A11B2C3D4E5F60718293A00C = {
+						CreatedOnToolsVersion = 16.0;
+						DevelopmentTeam = N5KK6475ZS;
 					};
 				};
 			};
@@ -251,6 +332,7 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				A11B2C3D4E5F60718293A00C /* QuickLogWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -272,6 +354,13 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				EE2BC89C1049419F979789C9 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A11B2C3D4E5F60718293A00F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -391,6 +480,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A11B2C3D4E5F60718293A00D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A11B2C3D4E5F60718293A007 /* QuickLogWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -398,6 +495,11 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		A11B2C3D4E5F60718293A012 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A11B2C3D4E5F60718293A00C /* QuickLogWidget */;
+			targetProxy = A11B2C3D4E5F60718293A011 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -707,6 +809,88 @@
 			};
 			name = Release;
 		};
+		A11B2C3D4E5F60718293A013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A11B2C3D4E5F60718293A017 /* QuickLogWidget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = QuickLogWidget/QuickLogWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = N5KK6475ZS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = QuickLogWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yetzira.syncmonth.QuickLogWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A11B2C3D4E5F60718293A014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A11B2C3D4E5F60718293A017 /* QuickLogWidget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = QuickLogWidget/QuickLogWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = N5KK6475ZS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = QuickLogWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yetzira.syncmonth.QuickLogWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A11B2C3D4E5F60718293A015 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A11B2C3D4E5F60718293A017 /* QuickLogWidget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = QuickLogWidget/QuickLogWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = N5KK6475ZS;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = QuickLogWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yetzira.syncmonth.QuickLogWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -736,6 +920,16 @@
 				97C147061CF9000F007C117D /* Debug */,
 				97C147071CF9000F007C117D /* Release */,
 				249021D4217E4FDB00AE95B9 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A11B2C3D4E5F60718293A016 /* Build configuration list for PBXNativeTarget "QuickLogWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11B2C3D4E5F60718293A013 /* Debug */,
+				A11B2C3D4E5F60718293A014 /* Release */,
+				A11B2C3D4E5F60718293A015 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

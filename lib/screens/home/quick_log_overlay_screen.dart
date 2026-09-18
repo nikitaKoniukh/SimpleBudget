@@ -11,11 +11,11 @@ import '../../services/quick_log_widget_service.dart';
 import '../../theme/sync_theme.dart';
 import 'log_entry_flow.dart';
 
-/// Compact spend-only log opened from the Android home-screen widget.
+/// Compact spend-only log opened from a home-screen widget.
 class QuickLogOverlayScreen extends StatelessWidget {
   const QuickLogOverlayScreen({super.key});
 
-  void _exitToAndroidHome() {
+  void _exitToHomeScreen() {
     QuickLogLaunch.clear();
     SystemNavigator.pop();
   }
@@ -64,7 +64,7 @@ class QuickLogOverlayScreen extends StatelessWidget {
       skipTypeStep: true,
       onCompleted: () {
         unawaited(QuickLogWidgetService.sync(state));
-        _exitToAndroidHome();
+        _exitToHomeScreen();
       },
       onCancel: _openMainApp,
     );

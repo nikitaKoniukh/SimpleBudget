@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:home_widget/home_widget.dart';
 
-/// Tracks whether the app was opened from the Android quick-log widget.
+import 'quick_log_widget_service.dart';
+
+/// Tracks whether the app was opened from a quick-log home-screen widget.
 abstract final class QuickLogLaunch {
   static final ValueNotifier<bool> spendOverlay = ValueNotifier(false);
 
@@ -12,6 +14,9 @@ abstract final class QuickLogLaunch {
   static Future<void> init() async {
     if (kIsWeb) return;
     try {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        await HomeWidget.setAppGroupId(QuickLogWidgetService.appGroupId);
+      }
       handleUri(await HomeWidget.initiallyLaunchedFromHomeWidget());
       await _clickSub?.cancel();
       _clickSub = HomeWidget.widgetClicked.listen(handleUri);
