@@ -263,6 +263,12 @@ class AppLocalizations {
   String get remainingBalanceHint => _s('remainingBalanceHint');
   String get originalAmount => _s('originalAmount');
   String get addBill => _s('addBill');
+  String get editBill => _s('editBill');
+  String get emptyBills => _s('emptyBills');
+  String get deleteBillConfirm => _s('deleteBillConfirm');
+  String get monthlyBillsTotal => _s('monthlyBillsTotal');
+  String get nextBill => _s('nextBill');
+  String get dueSoon => _s('dueSoon');
   String get billDay => _s('billDay');
   String get upcomingBills => _s('upcomingBills');
   String get splitSpend => _s('splitSpend');

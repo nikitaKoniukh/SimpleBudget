@@ -1248,6 +1248,12 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  Future<void> updateRecurringBill(RecurringBill bill) async {
+    final hid = _activeHid;
+    if (hid == null) throw StateError('No household');
+    await _repo.updateRecurringBill(householdId: hid, bill: bill);
+  }
+
   Future<void> deleteRecurringBill(String billId) async {
     final hid = _activeHid;
     if (hid == null) throw StateError('No household');

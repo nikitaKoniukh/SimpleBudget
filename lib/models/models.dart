@@ -537,6 +537,24 @@ class RecurringBill {
     'subcategoryId': subcategoryId,
   };
 
+  RecurringBill copyWith({
+    String? name,
+    double? amount,
+    int? dayOfMonth,
+    String? subcategoryId,
+    bool clearSubcategoryId = false,
+  }) {
+    return RecurringBill(
+      id: id,
+      name: name ?? this.name,
+      amount: amount ?? this.amount,
+      dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+      subcategoryId: clearSubcategoryId
+          ? null
+          : (subcategoryId ?? this.subcategoryId),
+    );
+  }
+
   factory RecurringBill.fromMap(String id, Map<String, dynamic> map) {
     return RecurringBill(
       id: id,

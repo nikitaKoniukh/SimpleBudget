@@ -379,6 +379,20 @@ class BudgetRepository {
     });
   }
 
+  Future<void> updateRecurringBill({
+    required String householdId,
+    required RecurringBill bill,
+  }) async {
+    await _householdRef(
+      householdId,
+    ).collection('recurringBills').doc(bill.id).set({
+      'name': bill.name,
+      'amount': bill.amount,
+      'dayOfMonth': bill.dayOfMonth.clamp(1, 28),
+      'subcategoryId': bill.subcategoryId,
+    });
+  }
+
   Future<void> deleteRecurringBill({
     required String householdId,
     required String billId,
