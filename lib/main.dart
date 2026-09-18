@@ -9,8 +9,10 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/app_state.dart';
+import 'screens/auth/app_intro_screen.dart';
 import 'screens/home/quick_log_overlay_screen.dart';
 import 'screens/home/root_shell.dart';
+import 'services/app_intro_prefs.dart';
 import 'services/quick_log_launch.dart';
 import 'services/quick_log_widget_service.dart';
 import 'theme/sync_theme.dart';
@@ -24,11 +26,26 @@ Future<void> main() async {
     persistenceEnabled: true,
   );
   await QuickLogLaunch.init();
-  runApp(const SyncMonthApp());
+  final introCompleted = await AppIntroPrefs.isCompleted();
+  runApp(SyncMonthApp(introCompleted: introCompleted));
 }
 
-class SyncMonthApp extends StatelessWidget {
-  const SyncMonthApp({super.key});
+class SyncMonthApp extends StatefulWidget {
+  const SyncMonthApp({super.key, this.introCompleted = false});
+
+  final bool introCompleted;
+
+  @override
+  State<SyncMonthApp> createState() => _SyncMonthAppState();
+}
+
+class _SyncMonthAppState extends State<SyncMonthApp> {
+  late bool _introCompleted = widget.introCompleted;
+
+  Future<void> _finishIntro() async {
+    await AppIntroPrefs.markCompleted();
+    if (mounted) setState(() => _introCompleted = true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +81,9 @@ class SyncMonthApp extends StatelessWidget {
                 theme: buildSyncTheme(),
                 home: quickLogSpend
                     ? const QuickLogOverlayScreen()
-                    : const RootShell(),
+                    : !_introCompleted
+                        ? AppIntroScreen(onCompleted: _finishIntro)
+                        : const RootShell(),
               );
             },
           );

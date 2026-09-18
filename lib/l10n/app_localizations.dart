@@ -335,6 +335,19 @@ class AppLocalizations {
 
   String get depositedLabel => _s('depositedLabel');
   String get spendTotal => _s('spendTotal');
+  String get introSkip => _s('introSkip');
+  String get introNext => _s('introNext');
+  String get introGetStarted => _s('introGetStarted');
+  String get introWelcomeTitle => _s('introWelcomeTitle');
+  String get introWelcomeBody => _s('introWelcomeBody');
+  String get introPlanTitle => _s('introPlanTitle');
+  String get introPlanBody => _s('introPlanBody');
+  String get introLogTitle => _s('introLogTitle');
+  String get introLogBody => _s('introLogBody');
+  String get introFamilyTitle => _s('introFamilyTitle');
+  String get introFamilyBody => _s('introFamilyBody');
+  String get introTrackTitle => _s('introTrackTitle');
+  String get introTrackBody => _s('introTrackBody');
 
   String moreExpenses(int count) =>
       _s('moreExpenses').replaceAll('{count}', '$count');
