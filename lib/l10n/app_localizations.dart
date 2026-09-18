@@ -247,6 +247,11 @@ class AppLocalizations {
   String get recurringBills => _s('recurringBills');
   String get loans => _s('loans');
   String get addLoan => _s('addLoan');
+  String get editLoan => _s('editLoan');
+  String get remainingDebt => _s('remainingDebt');
+  String get paidOffSection => _s('paidOffSection');
+  String get deleteLoanConfirm => _s('deleteLoanConfirm');
+  String get emptyLoans => _s('emptyLoans');
   String get loanTypeInstallment => _s('loanTypeInstallment');
   String get loanTypeBalance => _s('loanTypeBalance');
   String loanPaymentsProgress(int paid, int total) => _s('loanPaymentsProgress')

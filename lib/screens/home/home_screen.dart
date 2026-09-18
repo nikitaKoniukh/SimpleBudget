@@ -6,9 +6,9 @@ import '../../models/models.dart';
 import '../../navigation/adaptive_page_route.dart';
 import '../../providers/app_state.dart';
 import '../../theme/sync_theme.dart';
-import '../../utils/money.dart';
 import '../../widgets/budget/budget_overview_bar.dart';
 import '../../widgets/budget/category_budget_section.dart';
+import '../../widgets/budget/loan_card.dart';
 import '../../widgets/budget/savings_budget_section.dart';
 import '../../widgets/sync_app_bar.dart';
 import '../category/category_sheets.dart';
@@ -231,7 +231,8 @@ class _LoansSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final canEdit = context.watch<AppState>().canEditPlan;
+    final state = context.watch<AppState>();
+    final canEdit = state.canEditPlan;
     if (loans.isEmpty && !canEdit) return const SizedBox.shrink();
 
     return Column(
@@ -291,126 +292,24 @@ class _LoansSection extends StatelessWidget {
             ),
           )
         else
-          Material(
-            color: Colors.white.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(12),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (var i = 0; i < loans.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      height: 1,
-                      color: SyncColors.textMuted.withValues(alpha: 0.12),
-                    ),
-                  _LoanHomeRow(loan: loans[i]),
-                ],
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _LoanHomeRow extends StatelessWidget {
-  const _LoanHomeRow({required this.loan});
-
-  final Loan loan;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: SyncColors.textMuted,
-    );
-    final paidOff = loan.isPaidOff;
-    final progress = loan.installmentProgress;
-    final total = loan.totalInstallments;
-    final left = loan.remainingInstallmentCount;
-    final canPay = loan.isActive && !paidOff;
-
-    final progressLine = <String>[];
-    if (loan.isInstallment && total != null && total > 0) {
-      progressLine.add(l10n.loanPaymentsProgress(loan.paidCount, total));
-      if (left != null && !paidOff) {
-        progressLine.add(l10n.loanPaymentsLeft(left));
-      }
-    } else {
-      progressLine.add(
-        loan.isInstallment
-            ? l10n.loanTypeInstallment
-            : l10n.loanTypeBalance,
-      );
-      if (loan.monthlyPayment != null && loan.monthlyPayment! > 0) {
-        progressLine.add(formatIls(loan.monthlyPayment!));
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  loan.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: paidOff ? SyncColors.textMuted : null,
-                    decoration: paidOff ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${l10n.remainingBalance}: ${formatIls(loan.remainingBalance)}',
-                  style: muted,
-                ),
-                if (progressLine.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(progressLine.join(' · '), style: muted),
-                ],
-                if (progress != null) ...[
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 6,
-                      backgroundColor:
-                          SyncColors.textMuted.withValues(alpha: 0.15),
-                      color: paidOff ? SyncColors.textMuted : SyncColors.primary,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (canPay)
-            IconButton(
-              tooltip: l10n.logDebt,
-              icon: const Icon(Icons.payments_outlined),
-              onPressed: () => showLogEntrySheet(
-                context,
-                kind: LogKind.loanPayment,
-                loanId: loan.id,
-              ),
-            )
-          else if (paidOff)
+          for (final loan in loans)
             Padding(
-              padding: const EdgeInsets.all(12),
-              child: Icon(
-                Icons.check_circle_outline,
-                color: SyncColors.textMuted,
-                size: 22,
+              padding: const EdgeInsets.only(bottom: 8),
+              child: LoanCard(
+                loan: loan,
+                dense: true,
+                canPay: state.hasMonthSelected &&
+                    loan.isActive &&
+                    !loan.isPaidOff,
+                onPay: () => showLogEntrySheet(
+                  context,
+                  kind: LogKind.loanPayment,
+                  loanId: loan.id,
+                ),
+                onTap: () => pushAdaptivePage(context, const LoansScreen()),
               ),
             ),
-        ],
-      ),
+      ],
     );
   }
 }
