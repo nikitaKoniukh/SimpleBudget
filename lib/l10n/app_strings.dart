@@ -2732,6 +2732,16 @@ abstract final class AppStrings {
       'مودع',
       'Eingezahlt',
     ),
+    'spendTotal': l10nRow(
+      'Total spent',
+      'Всего потрачено',
+      'סה״כ הוצא',
+      'Total gastado',
+      'Total dépensé',
+      'Всього витрачено',
+      'إجمالي الإنفاق',
+      'Gesamt ausgegeben',
+    ),
   };
 
   static const monthNames = <String, List<String>>{

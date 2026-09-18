@@ -329,6 +329,7 @@ class AppLocalizations {
       _s('amountLeft').replaceAll('{amount}', amount);
 
   String get depositedLabel => _s('depositedLabel');
+  String get spendTotal => _s('spendTotal');
 
   String moreExpenses(int count) =>
       _s('moreExpenses').replaceAll('{count}', '$count');

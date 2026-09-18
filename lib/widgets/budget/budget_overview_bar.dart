@@ -61,7 +61,6 @@ class BudgetOverviewBar extends StatelessWidget {
                     child: _StatTile(
                       label: l10n.spentLabel,
                       amount: totals.actual,
-                      highlight: isOver && totals.income > 0,
                     ),
                   ),
                 ],
@@ -83,6 +82,12 @@ class BudgetOverviewBar extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 6),
+              _StatTile(
+                label: l10n.spendTotal,
+                amount: totals.spentWithSavings,
+                highlight: isOver && totals.income > 0,
               ),
               if (totals.planExceedsIncome) ...[
                 const SizedBox(height: 10),
