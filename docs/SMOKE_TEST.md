@@ -22,7 +22,7 @@
 - [ ] **Start next month from this plan** in Settings
 
 ## Home
-- [ ] Hero shows Remaining / Over from **income − spends** (deposits do not count as spend)
+- [ ] Hero shows Remaining / Over from **income − spends − deposits − loan payments**
 - [ ] Set aside this month is a separate line when deposits exist
 - [ ] Watchlist chips when a category is at/over 80% of plan
 - [ ] Upcoming recurring bills for the rest of this month
@@ -41,14 +41,14 @@
 
 ## Set aside
 - [ ] Pots with optional target and target date
-- [ ] Log deposit does not reduce Home remaining
+- [ ] Log deposit reduces Home remaining
 - [ ] Changing month shows pot balances through and including that month
 - [ ] Leftover uses month leftoverFromPrior (not lifetime pot total)
 
 ## Loans
 - [ ] Settings → Loans & debt: add installment or balance loan
 - [ ] Log loan payment reduces remaining balance
-- [ ] Home shows active loans; payment does not reduce Home remaining spend
+- [ ] Home shows active loans; payment reduces Home remaining
 
 ## Budget basics
 - [ ] Split a new spend across two line items

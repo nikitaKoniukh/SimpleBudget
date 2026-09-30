@@ -317,8 +317,8 @@ void main() {
     );
     expect(totals.totalSpent, 80);
     expect(totals.remaining, 0);
-    expect(totals.spentWithSavings, 70); // expenses + deposits
-    expect(totals.spendRemaining, 30); // income − expenses − deposits
+    expect(totals.spentWithSavings, 80); // expenses + deposits + debt
+    expect(totals.spendRemaining, 20); // income − expenses − deposits − debt
     expect(totals.cashLeft, 20);
     expect(totals.planExceedsIncome, isFalse);
     expect(totals.savedThisMonth, 20);
