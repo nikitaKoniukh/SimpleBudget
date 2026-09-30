@@ -68,6 +68,7 @@ class AppState extends ChangeNotifier {
   StreamSubscription<List<Deposit>>? _depositsSub;
   StreamSubscription<List<PotBalance>>? _potBalancesSub;
   StreamSubscription<List<LoanPayment>>? _loanPaymentsSub;
+  StreamSubscription<BudgetMonth?>? _monthDocSub;
   bool get loading => _loading;
   bool get budgetDataReady => _budgetDataReady;
   String? get error => _error;
@@ -495,6 +496,7 @@ class AppState extends ChangeNotifier {
     await _depositsSub?.cancel();
     await _potBalancesSub?.cancel();
     await _loanPaymentsSub?.cancel();
+    await _monthDocSub?.cancel();
     _sourcesSub = null;
     _entriesSub = null;
     _plansSub = null;
@@ -502,6 +504,7 @@ class AppState extends ChangeNotifier {
     _depositsSub = null;
     _potBalancesSub = null;
     _loanPaymentsSub = null;
+    _monthDocSub = null;
     if (clearData) {
       _selectedMonth = null;
       _incomeSources = [];
@@ -980,6 +983,21 @@ class AppState extends ChangeNotifier {
         notifyListeners();
       },
     );
+    // Month doc (leftoverFromPrior / cashLeft) is not covered by subcollection
+    // listeners; without this, setMonth can show a stale local leftover until PTR.
+    _monthDocSub = _repo.watchMonth(hid, monthId).listen(
+      (month) {
+        if (month == null) return;
+        _selectedMonth = month;
+        unawaited(_sync.persistMonthSummary(hid, month));
+        persistChanged();
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _error = e.toString();
+        notifyListeners();
+      },
+    );
 
     if (waitForFirst) {
       await Future.wait([
@@ -1030,11 +1048,23 @@ class AppState extends ChangeNotifier {
       }
     }
     _monthId = monthId;
+    BudgetMonth? fromList;
+    for (final m in _months) {
+      if (m.id == monthId) {
+        fromList = m;
+        break;
+      }
+    }
     final bundle = await _sync.loadMonth(hid, monthId);
     if (bundle != null) {
       _applyMonthBundle(bundle);
-      notifyListeners();
     }
+    // Live months list already has cascaded leftoverFromPrior; month-scoped
+    // local cache can lag until pull-to-refresh / watchMonth catches up.
+    if (fromList != null) {
+      _selectedMonth = fromList;
+    }
+    notifyListeners();
     await _listenMonthData(
       hid,
       monthId,
