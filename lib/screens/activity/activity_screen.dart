@@ -24,6 +24,7 @@ class ActivityScreen extends StatefulWidget {
 class _ActivityScreenState extends State<ActivityScreen> {
   String _query = '';
   String? _categoryId;
+  String? _incomeSourceId;
   _ActivityFilter _filter = _ActivityFilter.all;
 
   bool _matchesQuery(String haystack) {
@@ -46,6 +47,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final items = <_FeedItem>[];
 
     for (final entry in state.incomeEntries) {
+      if (_filter == _ActivityFilter.income &&
+          _incomeSourceId != null &&
+          entry.sourceId != _incomeSourceId) {
+        continue;
+      }
       final source = sourcesById[entry.sourceId];
       final title =
           source?.localizedName(state.localeCode) ?? l10n.income;
@@ -181,6 +187,20 @@ class _ActivityScreenState extends State<ActivityScreen> {
     final grouped = _groupByDay(feed);
     final sortedDays = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
+    final selectedIncomeSource = _incomeSourceId == null
+        ? null
+        : state.incomeSources
+            .where((s) => s.id == _incomeSourceId)
+            .firstOrNull;
+    final summaryIncome = _filter == _ActivityFilter.income &&
+            _incomeSourceId != null
+        ? state.incomeForSource(_incomeSourceId!)
+        : state.totals.income;
+    final summaryIncomeLabel = selectedIncomeSource?.localizedName(
+          state.localeCode,
+        ) ??
+        l10n.income;
+
     return SyncBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -239,7 +259,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                   children: [
-                    _ActivitySummaryBar(totals: state.totals),
+                    _ActivitySummaryBar(
+                      totals: state.totals,
+                      incomeLabel: summaryIncomeLabel,
+                      incomeAmount: summaryIncome,
+                    ),
                     const SizedBox(height: 12),
                     Material(
                       color: SyncColors.frostedSurface,
@@ -274,10 +298,49 @@ class _ActivityScreenState extends State<ActivityScreen> {
                         ),
                       ],
                       selected: {_filter},
-                      onSelectionChanged: (selection) => setState(
-                        () => _filter = selection.first,
-                      ),
+                      onSelectionChanged: (selection) => setState(() {
+                        _filter = selection.first;
+                        if (_filter != _ActivityFilter.income) {
+                          _incomeSourceId = null;
+                        }
+                        if (_filter == _ActivityFilter.income) {
+                          _categoryId = null;
+                        }
+                      }),
                     ),
+                    if (_filter == _ActivityFilter.income &&
+                        state.incomeSources.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            FilterChip(
+                              label: Text(l10n.filterAll),
+                              selected: _incomeSourceId == null,
+                              onSelected: (_) =>
+                                  setState(() => _incomeSourceId = null),
+                            ),
+                            const SizedBox(width: 8),
+                            ...state.incomeSources.map(
+                              (s) => Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Text(
+                                    s.localizedName(state.localeCode),
+                                  ),
+                                  selected: _incomeSourceId == s.id,
+                                  onSelected: (_) => setState(
+                                    () => _incomeSourceId =
+                                        _incomeSourceId == s.id ? null : s.id,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (_filter != _ActivityFilter.income &&
                         state.categories.isNotEmpty) ...[
                       const SizedBox(height: 12),
@@ -389,9 +452,15 @@ class _FeedItem {
 }
 
 class _ActivitySummaryBar extends StatelessWidget {
-  const _ActivitySummaryBar({required this.totals});
+  const _ActivitySummaryBar({
+    required this.totals,
+    required this.incomeLabel,
+    required this.incomeAmount,
+  });
 
   final MonthTotals totals;
+  final String incomeLabel;
+  final double incomeAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -406,8 +475,8 @@ class _ActivitySummaryBar extends StatelessWidget {
           children: [
             Expanded(
               child: _SummaryCell(
-                label: l10n.income,
-                amount: totals.income,
+                label: incomeLabel,
+                amount: incomeAmount,
                 color: SyncColors.primary,
               ),
             ),
