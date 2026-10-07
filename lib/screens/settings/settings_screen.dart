@@ -106,6 +106,8 @@ class SettingsScreen extends StatelessWidget {
         appBar: SyncAppBar.page(title: l10n.settings),
         body: ListView(
           children: [
+            const ThemeModeSwitcher(),
+            const Divider(),
             ListTile(
               title: Text(l10n.myHouseholds),
               subtitle: Text(
@@ -192,7 +194,6 @@ class SettingsScreen extends StatelessWidget {
               localeCode: state.localeCode,
               onLocaleSelected: state.setLocale,
             ),
-            const ThemePickerTile(),
             ListTile(
               title: Text(l10n.widgetAddCompact),
               leading: const Icon(Icons.widgets_outlined),

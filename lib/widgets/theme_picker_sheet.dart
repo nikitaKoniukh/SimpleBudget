@@ -25,53 +25,9 @@ IconData themeModeIcon(ThemeMode mode) {
   }
 }
 
-Future<void> showThemePickerSheet(BuildContext context) {
-  final l10n = AppLocalizations.of(context);
-  final theme = Theme.of(context);
-  final selected = ThemePrefs.mode.value;
-
-  return showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (ctx) {
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
-              child: Text(
-                l10n.appearance,
-                style: theme.textTheme.titleLarge,
-              ),
-            ),
-            for (final mode in ThemeMode.values)
-              ListTile(
-                leading: Icon(themeModeIcon(mode)),
-                title: Text(themeModeLabel(l10n, mode)),
-                trailing: selected == mode
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        color: theme.colorScheme.primary,
-                      )
-                    : null,
-                selected: selected == mode,
-                onTap: () {
-                  ThemePrefs.set(mode);
-                  Navigator.pop(ctx);
-                },
-              ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
-/// Settings row: Appearance — System / Light / Dark.
-class ThemePickerTile extends StatelessWidget {
-  const ThemePickerTile({super.key});
+/// Inline Settings control: System | Light | Dark, applied immediately.
+class ThemeModeSwitcher extends StatelessWidget {
+  const ThemeModeSwitcher({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -79,12 +35,38 @@ class ThemePickerTile extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemePrefs.mode,
       builder: (context, mode, _) {
-        return ListTile(
-          leading: Icon(themeModeIcon(mode)),
-          title: Text(l10n.appearance),
-          subtitle: Text(themeModeLabel(l10n, mode)),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => showThemePickerSheet(context),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.appearance,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<ThemeMode>(
+                showSelectedIcon: false,
+                segments: [
+                  for (final m in ThemeMode.values)
+                    ButtonSegment<ThemeMode>(
+                      value: m,
+                      icon: Icon(themeModeIcon(m)),
+                      label: Text(
+                        themeModeLabel(l10n, m),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                selected: {mode},
+                onSelectionChanged: (selection) =>
+                    ThemePrefs.set(selection.first),
+              ),
+            ],
+          ),
         );
       },
     );
