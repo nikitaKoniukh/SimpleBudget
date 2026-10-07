@@ -192,6 +192,10 @@ class AppLocalizations {
   String get monthLabel => _s('monthLabel');
   String get members => _s('members');
   String get language => _s('language');
+  String get appearance => _s('appearance');
+  String get themeSystem => _s('themeSystem');
+  String get themeLight => _s('themeLight');
+  String get themeDark => _s('themeDark');
   String get currency => _s('currency');
   String get duplicateMonth => _s('duplicateMonth');
   String get manageCategories => _s('manageCategories');

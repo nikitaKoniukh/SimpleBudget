@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
@@ -30,9 +31,6 @@ internal object QuickLogWidgetViews {
 
   const val QUICK_LOG_SPEND_URI = "syncmonth://quicklog/spend"
 
-  private const val COLOR_TEXT = 0xFF1C2A24.toInt()
-  private const val COLOR_PRIMARY = 0xFF3D7A5F.toInt()
-  private const val COLOR_OVERSPEND = 0xFFE07A5F.toInt()
 
   fun launchIntent(context: Context): PendingIntent {
     return HomeWidgetLaunchIntent.getActivity(
@@ -121,10 +119,13 @@ internal object QuickLogWidgetViews {
     setTextViewText(R.id.widget_action, action)
     setTextViewText(R.id.widget_hero_label, heroLabel)
     setTextViewText(R.id.widget_hero_amount, heroAmount)
-    setTextColor(
-        R.id.widget_hero_amount,
-        if (heroIsOver) COLOR_OVERSPEND else COLOR_PRIMARY,
-    )
+    val heroColor = if (heroIsOver) R.color.widget_overspend else R.color.widget_primary
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      // Resolved by the launcher, so it follows its day/night configuration.
+      setColorStateList(R.id.widget_hero_amount, "setTextColor", heroColor)
+    } else {
+      setTextColor(R.id.widget_hero_amount, context.getColor(heroColor))
+    }
 
     if (ready) {
       setViewVisibility(R.id.widget_status, View.GONE)
@@ -168,10 +169,6 @@ internal object QuickLogWidgetViews {
             R.id.widget_budget_amount,
             widgetData.getString(KEY_BUDGET_AMOUNT, null) ?: "—",
         )
-        setTextColor(R.id.widget_income_amount, COLOR_TEXT)
-        setTextColor(R.id.widget_spent_amount, COLOR_TEXT)
-        setTextColor(R.id.widget_saved_amount, COLOR_TEXT)
-        setTextColor(R.id.widget_budget_amount, COLOR_TEXT)
       }
     } else {
       setViewVisibility(R.id.widget_status, View.VISIBLE)

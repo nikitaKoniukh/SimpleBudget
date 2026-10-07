@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +16,7 @@ import 'screens/home/root_shell.dart';
 import 'services/app_intro_prefs.dart';
 import 'services/quick_log_launch.dart';
 import 'services/quick_log_widget_service.dart';
+import 'services/theme_prefs.dart';
 import 'theme/sync_theme.dart';
 
 Future<void> main() async {
@@ -26,6 +28,7 @@ Future<void> main() async {
     persistenceEnabled: true,
   );
   await QuickLogLaunch.init();
+  await ThemePrefs.init();
   final introCompleted = await AppIntroPrefs.isCompleted();
   runApp(SyncMonthApp(introCompleted: introCompleted));
 }
@@ -41,6 +44,8 @@ class SyncMonthApp extends StatefulWidget {
 
 class _SyncMonthAppState extends State<SyncMonthApp> {
   late bool _introCompleted = widget.introCompleted;
+  final _lightTheme = buildSyncTheme();
+  final _darkTheme = buildSyncDarkTheme();
 
   Future<void> _finishIntro() async {
     await AppIntroPrefs.markCompleted();
@@ -58,34 +63,55 @@ class _SyncMonthAppState extends State<SyncMonthApp> {
           return ValueListenableBuilder<bool>(
             valueListenable: QuickLogLaunch.spendOverlay,
             builder: (context, quickLogSpend, _) {
-              return MaterialApp(
-                title: 'SyncMonth',
-                debugShowCheckedModeBanner: false,
-                locale: locale,
-                supportedLocales: const [
-                  Locale('en'),
-                  Locale('ru'),
-                  Locale('he'),
-                  Locale('es'),
-                  Locale('fr'),
-                  Locale('uk'),
-                  Locale('ar'),
-                  Locale('de'),
-                ],
-                localizationsDelegates: const [
-                  AppLocalizationsDelegate(),
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                theme: buildSyncTheme(),
-                darkTheme: buildSyncDarkTheme(),
-                themeMode: ThemeMode.system,
-                home: quickLogSpend
-                    ? const QuickLogOverlayScreen()
-                    : !_introCompleted
-                        ? AppIntroScreen(onCompleted: _finishIntro)
-                        : const RootShell(),
+              return ValueListenableBuilder<ThemeMode>(
+                valueListenable: ThemePrefs.mode,
+                builder: (context, themeMode, _) {
+                  return MaterialApp(
+                    title: 'SyncMonth',
+                    debugShowCheckedModeBanner: false,
+                    locale: locale,
+                    supportedLocales: const [
+                      Locale('en'),
+                      Locale('ru'),
+                      Locale('he'),
+                      Locale('es'),
+                      Locale('fr'),
+                      Locale('uk'),
+                      Locale('ar'),
+                      Locale('de'),
+                    ],
+                    localizationsDelegates: const [
+                      AppLocalizationsDelegate(),
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    theme: _lightTheme,
+                    darkTheme: _darkTheme,
+                    themeMode: themeMode,
+                    // SyncAppBar is not a Material AppBar, so set the status
+                    // bar contrast here for both themes.
+                    builder: (context, child) {
+                      final isDark =
+                          Theme.of(context).brightness == Brightness.dark;
+                      return AnnotatedRegion<SystemUiOverlayStyle>(
+                        value: SystemUiOverlayStyle(
+                          statusBarColor: Colors.transparent,
+                          statusBarBrightness:
+                              isDark ? Brightness.dark : Brightness.light,
+                          statusBarIconBrightness:
+                              isDark ? Brightness.light : Brightness.dark,
+                        ),
+                        child: child!,
+                      );
+                    },
+                    home: quickLogSpend
+                        ? const QuickLogOverlayScreen()
+                        : !_introCompleted
+                            ? AppIntroScreen(onCompleted: _finishIntro)
+                            : const RootShell(),
+                  );
+                },
               );
             },
           );
