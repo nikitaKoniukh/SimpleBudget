@@ -12,6 +12,7 @@ import '../../utils/share_helpers.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/form_sheet.dart';
 import '../../widgets/language_picker_sheet.dart';
+import '../../widgets/theme_picker_sheet.dart';
 import '../../widgets/sync_app_bar.dart';
 import '../household/household_sheets.dart';
 import '../home/month_actions.dart';
@@ -191,6 +192,7 @@ class SettingsScreen extends StatelessWidget {
               localeCode: state.localeCode,
               onLocaleSelected: state.setLocale,
             ),
+            const ThemePickerTile(),
             ListTile(
               title: Text(l10n.widgetAddCompact),
               leading: const Icon(Icons.widgets_outlined),

@@ -4,12 +4,28 @@ import WidgetKit
 private let widgetGroupId = "group.com.yetzira.syncmonth"
 private let spendURL = URL(string: "syncmonth://quicklog/spend?homeWidget")!
 
-private let colorText = Color(red: 28 / 255, green: 42 / 255, blue: 36 / 255)
-private let colorMuted = Color(red: 90 / 255, green: 107 / 255, blue: 99 / 255)
-private let colorPrimary = Color(red: 61 / 255, green: 122 / 255, blue: 95 / 255)
-private let colorOverspend = Color(red: 224 / 255, green: 122 / 255, blue: 95 / 255)
-private let colorSurface = Color(red: 247 / 255, green: 244 / 255, blue: 239 / 255)
-private let colorStat = Color(red: 232 / 255, green: 240 / 255, blue: 235 / 255)
+/// SyncMonth palette; the second value is the dark-appearance variant.
+private func syncColor(_ light: UInt32, _ dark: UInt32) -> Color {
+  func ui(_ hex: UInt32) -> UIColor {
+    UIColor(
+      red: CGFloat((hex >> 16) & 0xFF) / 255,
+      green: CGFloat((hex >> 8) & 0xFF) / 255,
+      blue: CGFloat(hex & 0xFF) / 255,
+      alpha: 1
+    )
+  }
+  return Color(UIColor { traits in
+    traits.userInterfaceStyle == .dark ? ui(dark) : ui(light)
+  })
+}
+
+private let colorText = syncColor(0x1C2A24, 0xE8EEE9)
+private let colorMuted = syncColor(0x5A6B63, 0xA2B2AA)
+private let colorPrimary = syncColor(0x3D7A5F, 0x6DB592)
+private let colorOnPrimary = syncColor(0xFFFFFF, 0x0E1F17)
+private let colorOverspend = syncColor(0xE07A5F, 0xF2957D)
+private let colorSurface = syncColor(0xF7F4EF, 0x141A17)
+private let colorStat = syncColor(0xE8F0EB, 0x1E2A24)
 
 struct QuickLogEntry: TimelineEntry {
   let date: Date
@@ -80,7 +96,7 @@ private struct LogSpendButton: View {
   var body: some View {
     Text(title)
       .font(.system(size: 12, weight: .bold))
-      .foregroundColor(.white)
+      .foregroundColor(colorOnPrimary)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 6)
       .background(colorPrimary)

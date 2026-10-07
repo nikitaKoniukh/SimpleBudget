@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick Log widget colors (SyncMonth light palette). Dark: values-night. -->
+<resources>
+    <color name="widget_surface">#F7F4EF</color>
+    <color name="widget_stat">#E8F0EB</color>
+    <color name="widget_stroke">#D7E2DB</color>
+    <color name="widget_text">#1C2A24</color>
+    <color name="widget_text_muted">#5A6B63</color>
+    <color name="widget_primary">#3D7A5F</color>
+    <color name="widget_on_primary">#FFFFFF</color>
+    <color name="widget_overspend">#E07A5F</color>
+</resources>
