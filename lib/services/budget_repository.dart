@@ -542,20 +542,27 @@ class BudgetRepository {
     });
   }
 
-  static const recentMonthLimit = 12;
-
   Stream<List<BudgetMonth>> watchMonths(String householdId) {
-    return _months(householdId)
-        .orderBy(FieldPath.documentId, descending: true)
-        .limit(recentMonthLimit)
-        .snapshots()
-        .map((snap) {
-          final list = snap.docs
-              .map((d) => BudgetMonth.fromMap(d.id, d.data()))
-              .toList();
-          list.sort((a, b) => b.id.compareTo(a.id));
-          return list;
-        });
+    return _months(householdId).snapshots().map((snap) {
+      final list = snap.docs
+          .map((d) => BudgetMonth.fromMap(d.id, d.data()))
+          .toList();
+      list.sort((a, b) => b.id.compareTo(a.id));
+      return list;
+    });
+  }
+
+  /// Full month list from server (bootstrap when the months listener is empty).
+  Future<List<BudgetMonth>> fetchRecentMonths(
+    String householdId, {
+    Source source = Source.server,
+  }) async {
+    final snap = await _months(householdId).get(GetOptions(source: source));
+    final list = snap.docs
+        .map((d) => BudgetMonth.fromMap(d.id, d.data()))
+        .toList();
+    list.sort((a, b) => b.id.compareTo(a.id));
+    return list;
   }
 
   Stream<BudgetMonth?> watchMonth(String householdId, String monthId) {

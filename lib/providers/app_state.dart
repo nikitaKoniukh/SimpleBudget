@@ -421,6 +421,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     try {
       _appUser = await _auth.ensureUserDoc(user);
+      await _auth.refreshMembershipClaims();
       _localeCode = _appUser!.localeCode;
       _userSub = _auth.watchAppUser(user.uid).listen((u) async {
         if (u == null) return;
@@ -556,22 +557,10 @@ class AppState extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Pull-to-refresh no longer re-subscribes listeners (that re-billed every doc).
   Future<void> refreshBudget() async {
     final hid = _activeHid;
-    final mid = _monthId;
-    if (hid == null || mid == null) return;
-    try {
-      final month = await _repo.fetchMonth(hid, mid);
-      if (month != null) {
-        _selectedMonth = month;
-        await _sync.persistMonthSummary(hid, month);
-        notifyListeners();
-      }
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
-    }
+    if (hid == null || hid.isEmpty) return;
+    await _attachHousehold(hid, soft: true);
   }
 
   Future<void> _attachHousehold(
@@ -676,23 +665,33 @@ class AppState extends ChangeNotifier {
     );
     var isFirstMonths = true;
     _monthsSub = _repo.watchMonths(householdId).listen((list) async {
-      _months = mergeMonthSummaries(_months, list);
+      _months = list;
       unawaited(_sync.persistMonthSummaries(householdId, list));
       try {
-        if (_monthId == null && _months.isNotEmpty) {
-          _monthId = preferredMonthId(_months.map((m) => m.id));
+        final monthIds = list.map((m) => m.id);
+        if (_monthId != null && !list.any((m) => m.id == _monthId)) {
+          _monthId = preferredMonthId(monthIds);
           if (_monthId != null) {
             await _listenMonthData(
               householdId,
               _monthId!,
-              waitForFirst: isFirstMonths && !hydrated,
+              waitForFirst: isFirstMonths,
             );
+          } else {
+            await _detachMonthDataListeners();
           }
+        } else if (_monthId == null && list.isNotEmpty) {
+          _monthId = preferredMonthId(monthIds);
+          await _listenMonthData(
+            householdId,
+            _monthId!,
+            waitForFirst: isFirstMonths,
+          );
         } else if (_monthId != null && isFirstMonths) {
           await _listenMonthData(
             householdId,
             _monthId!,
-            waitForFirst: !hydrated,
+            waitForFirst: true,
           );
         } else if (_monthId != null) {
           for (final m in list) {
@@ -712,6 +711,7 @@ class AppState extends ChangeNotifier {
     }, onError: (Object e) {
       _error = e.toString();
       if (!monthsReady.isCompleted) monthsReady.complete();
+      unawaited(_bootstrapMonthsFromServer(householdId, hydrated: hydrated));
       notifyListeners();
     });
 
@@ -721,8 +721,44 @@ class AppState extends ChangeNotifier {
         subcategoriesReady.future,
         monthsReady.future,
       ]);
+      if (_months.isEmpty) {
+        await _bootstrapMonthsFromServer(householdId, hydrated: hydrated);
+      }
     } finally {
       _budgetDataReady = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _bootstrapMonthsFromServer(
+    String householdId, {
+    required bool hydrated,
+  }) async {
+    try {
+      final remote = await _repo.fetchRecentMonths(householdId);
+      if (remote.isEmpty) return;
+      _months = remote;
+      unawaited(_sync.persistMonthSummaries(householdId, remote));
+      if (_monthId == null) {
+        _monthId = preferredMonthId(_months.map((m) => m.id));
+        if (_monthId != null) {
+          await _listenMonthData(
+            householdId,
+            _monthId!,
+            waitForFirst: !hydrated,
+          );
+        }
+      } else {
+        for (final m in remote) {
+          if (m.id == _monthId) {
+            _selectedMonth = m;
+            break;
+          }
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
       notifyListeners();
     }
   }
