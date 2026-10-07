@@ -36,7 +36,7 @@ class BillCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.92),
+        color: context.sync.panelBase.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -74,14 +74,14 @@ class BillCard extends StatelessWidget {
                         formatIls(bill.amount),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: SyncColors.text,
+                              color: context.sync.text,
                             ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         meta.join(' · '),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ],
@@ -91,7 +91,7 @@ class BillCard extends StatelessWidget {
                   PopupMenuButton<_BillAction>(
                     icon: Icon(
                       Icons.more_vert,
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
                     onSelected: (action) {
                       switch (action) {
@@ -135,13 +135,13 @@ class _DueSoonChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: SyncColors.warning.withValues(alpha: 0.18),
+        color: context.sync.warning.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: SyncColors.warning,
+              color: context.sync.warningText,
               fontWeight: FontWeight.w700,
             ),
       ),

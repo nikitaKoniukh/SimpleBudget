@@ -79,6 +79,8 @@ class _SyncMonthAppState extends State<SyncMonthApp> {
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 theme: buildSyncTheme(),
+                darkTheme: buildSyncDarkTheme(),
+                themeMode: ThemeMode.system,
                 home: quickLogSpend
                     ? const QuickLogOverlayScreen()
                     : !_introCompleted

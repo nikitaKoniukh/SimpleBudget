@@ -107,14 +107,14 @@ class _InvestmentsScreenState extends State<InvestmentsScreen> {
                     Icon(
                       Icons.savings_outlined,
                       size: 56,
-                      color: SyncColors.primary.withValues(alpha: 0.65),
+                      color: context.sync.primary.withValues(alpha: 0.65),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.emptyPots,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                     const SizedBox(height: 24),
@@ -192,7 +192,7 @@ class _SectionHeader extends StatelessWidget {
           Text(
             subtitle!,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
         ],
@@ -226,7 +226,7 @@ class _SetAsideHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final metaStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: SyncColors.textMuted,
+          color: context.sync.textMuted,
         );
     final showMonth = monthSaved > 0 || monthPlan > 0;
     final remaining =
@@ -235,11 +235,11 @@ class _SetAsideHero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
+        color: context.sync.panelBase.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: SyncColors.text.withValues(alpha: 0.06),
+            color: context.sync.text.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -251,14 +251,14 @@ class _SetAsideHero extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
           const SizedBox(height: 6),
           Text(
             formatIls(saved),
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: SyncColors.primary,
+                  color: context.sync.primary,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -282,8 +282,8 @@ class _SetAsideHero extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 10,
-                backgroundColor: SyncColors.surfaceMint,
-                color: SyncColors.primary,
+                backgroundColor: context.sync.surfaceMint,
+                color: context.sync.primary,
               ),
             ),
           ],
@@ -337,13 +337,13 @@ class _PotCard extends StatelessWidget {
     final monthPlan = state.plannedFor(pot.id);
     final showMonth = !isLeftover && (monthSaved > 0 || monthPlan > 0);
     final metaStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: SyncColors.textMuted,
+          color: context.sync.textMuted,
         );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: context.sync.panelBase.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

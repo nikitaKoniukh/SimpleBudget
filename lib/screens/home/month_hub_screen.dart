@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/money.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../widgets/summary_card.dart';
@@ -205,6 +206,8 @@ class _CategoryTypeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color bg;
+    // Pastel type chips keep dark ink in both themes.
+    Color? fg = SyncColors.text;
     switch (type) {
       case 'savings':
         bg = const Color(0xFFFFB74D);
@@ -214,6 +217,7 @@ class _CategoryTypeChip extends StatelessWidget {
         bg = const Color(0xFF81C784);
       default:
         bg = Theme.of(context).colorScheme.surfaceContainerHighest;
+        fg = null;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -225,6 +229,7 @@ class _CategoryTypeChip extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.w600,
+              color: fg,
             ),
       ),
     );

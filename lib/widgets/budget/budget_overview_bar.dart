@@ -21,12 +21,12 @@ class BudgetOverviewBar extends StatelessWidget {
     final isOver = remaining < 0;
     final primaryAmount = isOver ? -remaining : remaining;
     final primaryLabel = isOver ? l10n.overLabel : l10n.remaining;
-    final primaryColor = isOver ? SyncColors.overspend : SyncColors.primary;
+    final primaryColor = isOver ? context.sync.overspendText : context.sync.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: context.sync.panelBase.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -36,7 +36,7 @@ class BudgetOverviewBar extends StatelessWidget {
               Text(
                 primaryLabel,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
               const SizedBox(height: 2),
@@ -94,7 +94,7 @@ class BudgetOverviewBar extends StatelessWidget {
                 Text(
                   l10n.planExceedsIncome,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: SyncColors.warning,
+                        color: context.sync.warningText,
                       ),
                 ),
               ],
@@ -122,7 +122,7 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: SyncColors.surfaceMint.withValues(alpha: 0.65),
+        color: context.sync.surfaceMint.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -133,7 +133,7 @@ class _StatTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
           const SizedBox(height: 2),
@@ -143,7 +143,7 @@ class _StatTile extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: highlight ? SyncColors.overspend : SyncColors.text,
+                  color: highlight ? context.sync.overspendText : context.sync.text,
                 ),
           ),
         ],

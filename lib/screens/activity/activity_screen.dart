@@ -222,7 +222,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     Icon(
                       Icons.receipt_long_outlined,
                       size: 56,
-                      color: SyncColors.primary.withValues(alpha: 0.65),
+                      color: context.sync.primary.withValues(alpha: 0.65),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -235,7 +235,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                       l10n.emptyIncome,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                     const SizedBox(height: 20),
@@ -266,7 +266,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     ),
                     const SizedBox(height: 12),
                     Material(
-                      color: SyncColors.frostedSurface,
+                      color: context.sync.frostedSurface,
                       borderRadius: BorderRadius.circular(16),
                       child: TextField(
                         decoration: InputDecoration(
@@ -388,7 +388,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                             Icon(
                               Icons.filter_list_off_outlined,
                               size: 40,
-                              color: SyncColors.textMuted.withValues(alpha: 0.7),
+                              color: context.sync.textMuted.withValues(alpha: 0.7),
                             ),
                             const SizedBox(height: 12),
                             Text(
@@ -397,7 +397,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                               style: Theme.of(context)
                                   .textTheme
                                   .bodyLarge
-                                  ?.copyWith(color: SyncColors.textMuted),
+                                  ?.copyWith(color: context.sync.textMuted),
                             ),
                           ],
                         ),
@@ -467,7 +467,7 @@ class _ActivitySummaryBar extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -477,21 +477,21 @@ class _ActivitySummaryBar extends StatelessWidget {
               child: _SummaryCell(
                 label: incomeLabel,
                 amount: incomeAmount,
-                color: SyncColors.primary,
+                color: context.sync.primary,
               ),
             ),
             Container(
               width: 1,
               height: 36,
-              color: SyncColors.textMuted.withValues(alpha: 0.2),
+              color: context.sync.textMuted.withValues(alpha: 0.2),
             ),
             Expanded(
               child: _SummaryCell(
                 label: l10n.spentLabel,
                 amount: totals.totalSpent,
                 color: totals.totalSpent > totals.planned && totals.planned > 0
-                    ? SyncColors.overspend
-                    : SyncColors.accent,
+                    ? context.sync.overspendText
+                    : context.sync.accentText,
                 alignEnd: true,
               ),
             ),
@@ -524,7 +524,7 @@ class _SummaryCell extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: SyncColors.textMuted,
+                color: context.sync.textMuted,
               ),
         ),
         const SizedBox(height: 2),
@@ -557,7 +557,7 @@ class _DayHeader extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: SyncColors.textMuted,
+              color: context.sync.textMuted,
               fontWeight: FontWeight.w600,
             ),
       ),
@@ -633,7 +633,7 @@ class _IncomeTile extends StatelessWidget {
     ];
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -648,10 +648,10 @@ class _IncomeTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: SyncColors.surfaceMint,
-                child: const Icon(
+                backgroundColor: context.sync.surfaceMint,
+                child: Icon(
                   Icons.arrow_downward_rounded,
-                  color: SyncColors.primary,
+                  color: context.sync.primary,
                   size: 20,
                 ),
               ),
@@ -673,7 +673,7 @@ class _IncomeTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ],
@@ -685,7 +685,7 @@ class _IncomeTile extends StatelessWidget {
                 '+${formatIls(entry.amount)}',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: SyncColors.primary,
+                      color: context.sync.primary,
                     ),
               ),
             ],
@@ -726,7 +726,7 @@ class _ExpenseTile extends StatelessWidget {
     ];
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -751,9 +751,9 @@ class _ExpenseTile extends StatelessWidget {
                   radius: 20,
                   backgroundColor:
                       const Color(0xFF90A4AE).withValues(alpha: 0.35),
-                  child: const Icon(
+                  child: Icon(
                     Icons.arrow_upward_rounded,
-                    color: SyncColors.accent,
+                    color: context.sync.accent,
                     size: 20,
                   ),
                 ),
@@ -775,7 +775,7 @@ class _ExpenseTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ],
@@ -787,7 +787,7 @@ class _ExpenseTile extends StatelessWidget {
                 formatIls(expense.amount),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: SyncColors.accent,
+                      color: context.sync.accentText,
                     ),
               ),
             ],
@@ -829,7 +829,7 @@ class _DepositTile extends StatelessWidget {
     ];
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -854,9 +854,9 @@ class _DepositTile extends StatelessWidget {
                   radius: 20,
                   backgroundColor:
                       const Color(0xFF90A4AE).withValues(alpha: 0.35),
-                  child: const Icon(
+                  child: Icon(
                     Icons.savings_outlined,
-                    color: SyncColors.primary,
+                    color: context.sync.primary,
                     size: 20,
                   ),
                 ),
@@ -878,7 +878,7 @@ class _DepositTile extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ],
@@ -890,7 +890,7 @@ class _DepositTile extends StatelessWidget {
                 formatIls(deposit.amount),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: SyncColors.primary,
+                      color: context.sync.primary,
                     ),
               ),
             ],
@@ -933,7 +933,7 @@ class _LoanPaymentTile extends StatelessWidget {
     ];
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -941,10 +941,10 @@ class _LoanPaymentTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: SyncColors.warning.withValues(alpha: 0.25),
-              child: const Icon(
+              backgroundColor: context.sync.warning.withValues(alpha: 0.25),
+              child: Icon(
                 Icons.credit_card_outlined,
-                color: SyncColors.warning,
+                color: context.sync.warning,
                 size: 20,
               ),
             ),
@@ -966,7 +966,7 @@ class _LoanPaymentTile extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                   ],
@@ -978,7 +978,7 @@ class _LoanPaymentTile extends StatelessWidget {
               formatIls(payment.amount),
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: SyncColors.warning,
+                    color: context.sync.warningText,
                   ),
             ),
           ],

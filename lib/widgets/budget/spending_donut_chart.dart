@@ -40,7 +40,7 @@ class SpendingDonutChart extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Material(
-          color: SyncColors.frostedSurface,
+          color: context.sync.frostedSurface,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
@@ -48,7 +48,7 @@ class SpendingDonutChart extends StatelessWidget {
               child: Text(
                 l10n.noData,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ),
@@ -63,7 +63,7 @@ class SpendingDonutChart extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: SyncColors.frostedSurface,
+        color: context.sync.frostedSurface,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -81,7 +81,7 @@ class SpendingDonutChart extends StatelessWidget {
                 formatIls(total),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: SyncColors.accent,
+                      color: context.sync.accentText,
                     ),
               ),
               const SizedBox(height: 12),
@@ -163,7 +163,7 @@ class SpendingDonutChart extends StatelessWidget {
                           '${((seg.value / total) * 100).round()}%',
                           style:
                               Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: SyncColors.textMuted,
+                                    color: context.sync.textMuted,
                                   ),
                         ),
                       ],

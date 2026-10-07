@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/sync_theme.dart';
 import '../utils/money.dart';
 
 class SummaryCard extends StatelessWidget {
@@ -64,7 +65,7 @@ class DifferenceText extends StatelessWidget {
     final isNeg = value < 0;
     final color = isNeg
         ? Theme.of(context).colorScheme.error
-        : const Color(0xFF3D7A5F);
+        : context.sync.primary;
     return Text(
       formatIls(value),
       style: TextStyle(

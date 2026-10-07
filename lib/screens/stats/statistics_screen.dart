@@ -174,7 +174,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 },
               ),
               Material(
-                color: SyncColors.frostedSurface,
+                color: context.sync.frostedSurface,
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
                   padding: const EdgeInsets.all(14),
@@ -223,7 +223,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                               Icon(
                                 Icons.bar_chart_outlined,
                                 size: 36,
-                                color: SyncColors.textMuted
+                                color: context.sync.textMuted
                                     .withValues(alpha: 0.7),
                               ),
                               const SizedBox(height: 10),
@@ -233,7 +233,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
-                                    ?.copyWith(color: SyncColors.textMuted),
+                                    ?.copyWith(color: context.sync.textMuted),
                               ),
                             ],
                           ),
@@ -291,7 +291,7 @@ class _CompareRangeButton extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final picked = await showModalBottomSheet<_StatsRange>(
       context: context,
-      backgroundColor: SyncColors.surface,
+      backgroundColor: context.sync.surface,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -317,9 +317,9 @@ class _CompareRangeButton extends StatelessWidget {
                   ListTile(
                     title: Text(_statsRangeLabel(l10n, option)),
                     trailing: option == range
-                        ? const Icon(
+                        ? Icon(
                             Icons.check_rounded,
-                            color: SyncColors.primary,
+                            color: context.sync.primary,
                           )
                         : null,
                     onTap: () => Navigator.pop(ctx, option),
@@ -336,7 +336,7 @@ class _CompareRangeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: SyncColors.surfaceMint.withValues(alpha: 0.85),
+      color: context.sync.surfaceMint.withValues(alpha: 0.85),
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -354,15 +354,15 @@ class _CompareRangeButton extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: SyncColors.primary,
+                        color: context.sync.primary,
                       ),
                 ),
               ),
               const SizedBox(width: 2),
-              const Icon(
+              Icon(
                 Icons.expand_more_rounded,
                 size: 18,
-                color: SyncColors.primary,
+                color: context.sync.primary,
               ),
             ],
           ),
@@ -423,7 +423,7 @@ class _CompareTable extends StatelessWidget {
           child: Text(
             l10n.noData,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
         ),
@@ -459,7 +459,7 @@ class _CompareTable extends StatelessWidget {
                         style:
                             Theme.of(context).textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.w600,
-                                  color: SyncColors.textMuted,
+                                  color: context.sync.textMuted,
                                 ),
                       ),
                     ),
@@ -568,7 +568,7 @@ class _CompareCategoryRow extends StatelessWidget {
 
     return Material(
       color: expanded
-          ? SyncColors.surfaceMint.withValues(alpha: 0.45)
+          ? context.sync.surfaceMint.withValues(alpha: 0.45)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
@@ -602,7 +602,7 @@ class _CompareCategoryRow extends StatelessWidget {
                       Icon(
                         expanded ? Icons.expand_less : Icons.expand_more,
                         size: 18,
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                   ],
                 ),
@@ -681,7 +681,7 @@ class _CompareSubcategoryRow extends StatelessWidget {
                 label,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ),
@@ -698,7 +698,7 @@ class _CompareSubcategoryRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ),

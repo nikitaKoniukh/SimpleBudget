@@ -21,8 +21,8 @@ class FlowStepProgress extends StatelessWidget {
               height: 4,
               decoration: BoxDecoration(
                 color: i <= current
-                    ? SyncColors.primary
-                    : SyncColors.textMuted.withValues(alpha: 0.2),
+                    ? context.sync.primary
+                    : context.sync.textMuted.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
@@ -52,7 +52,7 @@ class FlowOnboardingHeader extends StatelessWidget {
         Icon(
           icon,
           size: 64,
-          color: SyncColors.primary.withValues(alpha: 0.85),
+          color: context.sync.primary.withValues(alpha: 0.85),
         ),
         const SizedBox(height: 16),
         Text(
@@ -66,7 +66,7 @@ class FlowOnboardingHeader extends StatelessWidget {
             subtitle!,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: SyncColors.textMuted,
+              color: context.sync.textMuted,
             ),
           ),
         ],
@@ -99,7 +99,7 @@ class FlowOptionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
           color: selected
-              ? SyncColors.primary
+              ? context.sync.primary
               : Colors.transparent,
           width: 2,
         ),
@@ -107,12 +107,12 @@ class FlowOptionCard extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: selected ? SyncColors.primary : SyncColors.textMuted,
+          color: selected ? context.sync.primary : context.sync.textMuted,
         ),
         title: Text(title),
         subtitle: subtitle == null ? null : Text(subtitle!),
         trailing: selected
-            ? Icon(Icons.check_circle, color: SyncColors.primary)
+            ? Icon(Icons.check_circle, color: context.sync.primary)
             : null,
         onTap: onTap,
       ),

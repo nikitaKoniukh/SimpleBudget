@@ -27,7 +27,7 @@ class AlertsSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: context.sync.panelBase.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: ExpansionTile(
@@ -36,7 +36,7 @@ class AlertsSection extends StatelessWidget {
           initiallyExpanded: false,
           leading: Icon(
             Icons.notifications_outlined,
-            color: SyncColors.warning,
+            color: context.sync.warning,
             size: 22,
           ),
           title: Text(
@@ -52,7 +52,7 @@ class AlertsSection extends StatelessWidget {
                 child: Text(
                   l10n.watchlist,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
@@ -67,13 +67,13 @@ class AlertsSection extends StatelessWidget {
                       avatar: Icon(
                         Icons.warning_amber_rounded,
                         size: 18,
-                        color: SyncColors.warning,
+                        color: context.sync.warning,
                       ),
                       label: Text(
                         '${cat.localizedName(state.localeCode)} · ${l10n.overspendAlert}',
                       ),
                       backgroundColor:
-                          SyncColors.warning.withValues(alpha: 0.15),
+                          context.sync.warning.withValues(alpha: 0.15),
                     ),
                 ],
               ),
@@ -86,7 +86,7 @@ class AlertsSection extends StatelessWidget {
                 child: Text(
                   l10n.upcomingBills,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                         fontWeight: FontWeight.w600,
                       ),
                 ),
