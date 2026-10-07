@@ -25,9 +25,15 @@ IconData themeModeIcon(ThemeMode mode) {
   }
 }
 
-/// Inline Settings control: System | Light | Dark, applied immediately.
-class ThemeModeSwitcher extends StatelessWidget {
-  const ThemeModeSwitcher({super.key});
+/// Settings row: switch between light and dark (persists via [ThemePrefs]).
+class AppearanceSwitcherTile extends StatelessWidget {
+  const AppearanceSwitcherTile({super.key});
+
+  bool _isDark(BuildContext context, ThemeMode mode) {
+    if (mode == ThemeMode.dark) return true;
+    if (mode == ThemeMode.light) return false;
+    return MediaQuery.platformBrightnessOf(context) == Brightness.dark;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,38 +41,16 @@ class ThemeModeSwitcher extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemePrefs.mode,
       builder: (context, mode, _) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.appearance,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<ThemeMode>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final m in ThemeMode.values)
-                    ButtonSegment<ThemeMode>(
-                      value: m,
-                      icon: Icon(themeModeIcon(m)),
-                      label: Text(
-                        themeModeLabel(l10n, m),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                selected: {mode},
-                onSelectionChanged: (selection) =>
-                    ThemePrefs.set(selection.first),
-              ),
-            ],
+        final isDark = _isDark(context, mode);
+        return SwitchListTile(
+          secondary: Icon(
+            isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
           ),
+          title: Text(l10n.appearance),
+          subtitle: Text(isDark ? l10n.themeDark : l10n.themeLight),
+          value: isDark,
+          onChanged: (dark) =>
+              ThemePrefs.set(dark ? ThemeMode.dark : ThemeMode.light),
         );
       },
     );

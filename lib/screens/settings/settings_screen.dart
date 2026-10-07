@@ -106,8 +106,6 @@ class SettingsScreen extends StatelessWidget {
         appBar: SyncAppBar.page(title: l10n.settings),
         body: ListView(
           children: [
-            const ThemeModeSwitcher(),
-            const Divider(),
             ListTile(
               title: Text(l10n.myHouseholds),
               subtitle: Text(
@@ -190,6 +188,7 @@ class SettingsScreen extends StatelessWidget {
                   : () => exportAndShareMonthCsv(context),
             ),
             const Divider(),
+            const AppearanceSwitcherTile(),
             LanguagePickerTile(
               localeCode: state.localeCode,
               onLocaleSelected: state.setLocale,
