@@ -15,7 +15,7 @@ class DetailInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: padding,
@@ -54,7 +54,7 @@ class DetailInfoRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: SyncColors.textMuted,
+                    color: context.sync.textMuted,
                   ),
             ),
           ),
@@ -102,7 +102,7 @@ class DetailStatCell extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: SyncColors.textMuted,
+                color: context.sync.textMuted,
               ),
         ),
         const SizedBox(height: 2),

@@ -28,7 +28,7 @@ class SavingsBudgetSection extends StatelessWidget {
             .toList(growable: false);
     if (pots.isEmpty && !canEdit) return const SizedBox.shrink();
 
-    final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
+    final hairline = context.sync.textMuted.withValues(alpha: 0.12);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -42,7 +42,7 @@ class SavingsBudgetSection extends StatelessWidget {
                   l10n.sectionSavings,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
               ),
@@ -50,7 +50,7 @@ class SavingsBudgetSection extends StatelessWidget {
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: SyncColors.textMuted,
+                    foregroundColor: context.sync.textMuted,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -63,14 +63,14 @@ class SavingsBudgetSection extends StatelessWidget {
         ),
         if (pots.isEmpty)
           Material(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: context.sync.panelBase.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 l10n.emptyPots,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ),
@@ -79,7 +79,7 @@ class SavingsBudgetSection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Material(
-              color: Colors.white.withValues(alpha: 0.92),
+              color: context.sync.panelBase.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(12),
               clipBehavior: Clip.antiAlias,
               child: Column(

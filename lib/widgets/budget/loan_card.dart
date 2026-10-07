@@ -63,7 +63,7 @@ class LoanCard extends StatelessWidget {
     }
 
     final card = Material(
-      color: Colors.white.withValues(alpha: paidOff ? 0.72 : 0.92),
+      color: context.sync.panelBase.withValues(alpha: paidOff ? 0.72 : 0.92),
       borderRadius: BorderRadius.circular(dense ? 12 : 16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -98,7 +98,7 @@ class LoanCard extends StatelessWidget {
                                     ?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       color: paidOff
-                                          ? SyncColors.textMuted
+                                          ? context.sync.textMuted
                                           : null,
                                       decoration: paidOff
                                           ? TextDecoration.lineThrough
@@ -119,8 +119,8 @@ class LoanCard extends StatelessWidget {
                               ?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: paidOff
-                                ? SyncColors.textMuted
-                                : SyncColors.text,
+                                ? context.sync.textMuted
+                                : context.sync.text,
                           ),
                         ),
                         if (meta.isNotEmpty) ...[
@@ -129,7 +129,7 @@ class LoanCard extends StatelessWidget {
                             meta.join(' · '),
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: SyncColors.textMuted,
+                                      color: context.sync.textMuted,
                                     ),
                           ),
                         ],
@@ -140,14 +140,14 @@ class LoanCard extends StatelessWidget {
                     IconButton(
                       tooltip: l10n.logDebt,
                       icon: const Icon(Icons.payments_outlined),
-                      color: SyncColors.primary,
+                      color: context.sync.primary,
                       onPressed: onPay,
                     ),
                   if (!dense && canEdit)
                     PopupMenuButton<_LoanAction>(
                       icon: Icon(
                         Icons.more_vert,
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                       onSelected: (action) {
                         switch (action) {
@@ -179,15 +179,15 @@ class LoanCard extends StatelessWidget {
                   child: SizedBox(
                     height: dense ? 4 : 6,
                     child: ColoredBox(
-                      color: SyncColors.surfaceMint,
+                      color: context.sync.surfaceMint,
                       child: Align(
                         alignment: AlignmentDirectional.centerStart,
                         child: FractionallySizedBox(
                           widthFactor: progress,
                           child: ColoredBox(
                             color: paidOff
-                                ? SyncColors.textMuted
-                                : SyncColors.primary,
+                                ? context.sync.textMuted
+                                : context.sync.primary,
                           ),
                         ),
                       ),
@@ -222,13 +222,13 @@ class _TypeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: SyncColors.surfaceMint.withValues(alpha: muted ? 0.5 : 0.9),
+        color: context.sync.surfaceMint.withValues(alpha: muted ? 0.5 : 0.9),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: muted ? SyncColors.textMuted : SyncColors.primary,
+              color: muted ? context.sync.textMuted : context.sync.primary,
               fontWeight: FontWeight.w600,
             ),
       ),

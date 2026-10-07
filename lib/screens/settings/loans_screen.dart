@@ -81,7 +81,7 @@ class LoansScreen extends StatelessWidget {
                         l10n.sectionDebt,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ),
@@ -119,7 +119,7 @@ class LoansScreen extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w700,
-                                    color: SyncColors.textMuted,
+                                    color: context.sync.textMuted,
                                   ),
                         ),
                         children: [
@@ -163,7 +163,7 @@ class _DebtHero extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: context.sync.panelBase.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -173,14 +173,14 @@ class _DebtHero extends StatelessWidget {
               Text(
                 l10n.remainingDebt,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
               const SizedBox(height: 2),
               Text(
                 formatIls(remaining),
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: SyncColors.primary,
+                      color: context.sync.primary,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -221,7 +221,7 @@ class _HeroStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: SyncColors.surfaceMint.withValues(alpha: 0.65),
+        color: context.sync.surfaceMint.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -232,7 +232,7 @@ class _HeroStat extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
           const SizedBox(height: 2),
@@ -268,14 +268,14 @@ class _EmptyLoans extends StatelessWidget {
             Icon(
               Icons.credit_card_outlined,
               size: 56,
-              color: SyncColors.primary.withValues(alpha: 0.7),
+              color: context.sync.primary.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 16),
             Text(
               l10n.emptyLoans,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: SyncColors.textMuted,
+                    color: context.sync.textMuted,
                   ),
             ),
             if (canEdit) ...[

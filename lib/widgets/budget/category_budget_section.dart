@@ -32,16 +32,16 @@ class CategoryBudgetSection extends StatelessWidget {
     final planned = state.categoryPlanned(cat.id);
     final actual = state.categoryActual(cat.id);
     final overPlan = actual > planned && planned > 0;
-    final overColor = SyncColors.overspend;
+    final overColor = context.sync.overspendText;
     final subs = state.subcategoriesForMonth(cat.id);
     final canEdit = state.canEditPlan;
-    final hairline = SyncColors.textMuted.withValues(alpha: 0.12);
+    final hairline = context.sync.textMuted.withValues(alpha: 0.12);
 
     return Padding(
       key: scrollKey,
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.92),
+        color: context.sync.panelBase.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -82,7 +82,7 @@ class CategoryBudgetSection extends StatelessWidget {
                     Text(
                       l10n.noSubcategories,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                     if (canEdit) ...[
@@ -90,7 +90,7 @@ class CategoryBudgetSection extends StatelessWidget {
                       TextButton.icon(
                         style: TextButton.styleFrom(
                           visualDensity: VisualDensity.compact,
-                          foregroundColor: SyncColors.textMuted,
+                          foregroundColor: context.sync.textMuted,
                           padding: EdgeInsets.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),

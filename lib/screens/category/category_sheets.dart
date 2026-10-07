@@ -6,6 +6,7 @@ import '../../data/default_categories.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../theme/sync_theme.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/budget/category_color_icon.dart';
 import '../../navigation/adaptive_page_route.dart';
@@ -52,34 +53,36 @@ Widget categoryIconPicker({
   required ValueChanged<String> onSelected,
   bool enabled = true,
 }) {
-  return Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: categoryIconCatalog.map((entry) {
-      final selected = entry.key == iconKey;
-      return GestureDetector(
-        onTap: enabled ? () => onSelected(entry.key) : null,
-        child: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Color(colorValue),
-            shape: BoxShape.circle,
-            border: selected
-                ? Border.all(width: 3, color: Colors.black87)
-                : null,
+  return Builder(
+    builder: (context) => Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: categoryIconCatalog.map((entry) {
+        final selected = entry.key == iconKey;
+        return GestureDetector(
+          onTap: enabled ? () => onSelected(entry.key) : null,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Color(colorValue),
+              shape: BoxShape.circle,
+              border: selected
+                  ? Border.all(width: 3, color: context.sync.selectionRing)
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              entry.icon,
+              size: 20,
+              color: Color(colorValue).computeLuminance() > 0.55
+                  ? Colors.black87
+                  : Colors.white,
+            ),
           ),
-          alignment: Alignment.center,
-          child: Icon(
-            entry.icon,
-            size: 20,
-            color: Color(colorValue).computeLuminance() > 0.55
-                ? Colors.black87
-                : Colors.white,
-          ),
-        ),
-      );
-    }).toList(),
+        );
+      }).toList(),
+    ),
   );
 }
 
@@ -292,7 +295,10 @@ Future<String?> showCategoryEditor(
                             color: Color(c),
                             shape: BoxShape.circle,
                             border: selected
-                                ? Border.all(width: 3, color: Colors.black87)
+                                ? Border.all(
+                                    width: 3,
+                                    color: context.sync.selectionRing,
+                                  )
                                 : null,
                           ),
                         ),

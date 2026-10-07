@@ -675,7 +675,7 @@ class _LogCategoryStep extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
                   color: selectedCategoryId == cat.id
-                      ? SyncColors.primary
+                      ? context.sync.primary
                       : Colors.transparent,
                   width: 2,
                 ),
@@ -688,7 +688,7 @@ class _LogCategoryStep extends StatelessWidget {
                 ),
                 title: Text(cat.localizedName(state.localeCode)),
                 trailing: selectedCategoryId == cat.id
-                    ? Icon(Icons.check_circle, color: SyncColors.primary)
+                    ? Icon(Icons.check_circle, color: context.sync.primary)
                     : null,
                 onTap: () => onCategoryChanged(cat.id),
               ),
@@ -814,7 +814,7 @@ class _LogSubcategoryStep extends StatelessWidget {
           Text(
             l10n.logFixedHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: SyncColors.textMuted,
+                  color: context.sync.textMuted,
                 ),
           ),
         ],
@@ -857,7 +857,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(
               color: selectedSubId == sub.id
-                  ? SyncColors.primary
+                  ? context.sync.primary
                   : Colors.transparent,
               width: 2,
             ),
@@ -870,7 +870,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             ),
             title: Text(state.localizedSubcategoryName(sub)),
             trailing: selectedSubId == sub.id
-                ? Icon(Icons.check_circle, color: SyncColors.primary)
+                ? Icon(Icons.check_circle, color: context.sync.primary)
                 : null,
             onTap: () => onSubChanged(sub.id),
           ),
@@ -921,7 +921,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(
               color: selectedSubId == sub.id
-                  ? SyncColors.primary
+                  ? context.sync.primary
                   : Colors.transparent,
               width: 2,
             ),
@@ -934,7 +934,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             ),
             title: Text(state.localizedSubcategoryName(sub)),
             trailing: selectedSubId == sub.id
-                ? Icon(Icons.check_circle, color: SyncColors.primary)
+                ? Icon(Icons.check_circle, color: context.sync.primary)
                 : null,
             onTap: () => onSubChanged(sub.id),
           ),
@@ -1029,7 +1029,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             side: BorderSide(
               color: selectedLoanId == loan.id
-                  ? SyncColors.primary
+                  ? context.sync.primary
                   : Colors.transparent,
               width: 2,
             ),
@@ -1039,7 +1039,7 @@ class _LogSubcategoryStep extends StatelessWidget {
             title: Text(loan.name),
             subtitle: Text(formatIls(loan.remainingBalance)),
             trailing: selectedLoanId == loan.id
-                ? Icon(Icons.check_circle, color: SyncColors.primary)
+                ? Icon(Icons.check_circle, color: context.sync.primary)
                 : null,
             onTap: () => onLoanChanged(loan.id),
           ),

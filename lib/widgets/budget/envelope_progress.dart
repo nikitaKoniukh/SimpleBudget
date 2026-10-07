@@ -21,7 +21,7 @@ class BudgetAmountHeaders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: SyncColors.textMuted,
+          color: context.sync.textMuted,
           fontWeight: FontWeight.w600,
         );
     return Padding(
@@ -70,8 +70,8 @@ class EnvelopeAmountRow extends StatelessWidget {
     final progress = planned > 0
         ? (spent / planned).clamp(0.0, 1.0)
         : (spent > 0 ? 1.0 : 0.0);
-    final barColor = overPlan ? SyncColors.overspend : SyncColors.primary;
-    final spentColor = overPlan ? SyncColors.overspend : SyncColors.text;
+    final barColor = overPlan ? context.sync.overspend : context.sync.primary;
+    final spentColor = overPlan ? context.sync.overspendText : context.sync.text;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -92,7 +92,7 @@ class EnvelopeAmountRow extends StatelessWidget {
                       name,
                       style: nameStyle ??
                           Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: overPlan ? SyncColors.overspend : null,
+                                color: overPlan ? context.sync.overspendText : null,
                               ),
                     ),
                     if (meta != null && meta!.isNotEmpty) ...[
@@ -100,7 +100,7 @@ class EnvelopeAmountRow extends StatelessWidget {
                       Text(
                         meta!,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: SyncColors.textMuted,
+                              color: context.sync.textMuted,
                             ),
                       ),
                     ],
@@ -124,7 +124,7 @@ class EnvelopeAmountRow extends StatelessWidget {
                   formatIls(planned),
                   textAlign: TextAlign.end,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
               ),
@@ -137,7 +137,7 @@ class EnvelopeAmountRow extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 3,
-                backgroundColor: SyncColors.surfaceMint,
+                backgroundColor: context.sync.surfaceMint,
                 color: barColor,
               ),
             ),

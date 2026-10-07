@@ -129,9 +129,9 @@ class SyncAppBar extends StatelessWidget implements PreferredSizeWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              SyncColors.surface.withValues(alpha: 0.97),
-              SyncColors.surface.withValues(alpha: 0.82),
-              SyncColors.surface.withValues(alpha: 0),
+              context.sync.surface.withValues(alpha: 0.97),
+              context.sync.surface.withValues(alpha: 0.82),
+              context.sync.surface.withValues(alpha: 0),
             ],
             stops: const [0.0, 0.55, 1.0],
           ),
@@ -200,10 +200,10 @@ class _GlassIconAction extends StatelessWidget {
             sigmaY: SyncColors.frostedBlur,
           ),
           child: Material(
-            color: SyncColors.glassButton,
+            color: context.sync.glassButton,
             shape: CircleBorder(
               side: BorderSide(
-                color: Colors.white.withValues(alpha: 0.55),
+                color: context.sync.glassStroke,
               ),
             ),
             clipBehavior: Clip.antiAlias,
@@ -213,7 +213,7 @@ class _GlassIconAction extends StatelessWidget {
               child: SizedBox(
                 width: 40,
                 height: 40,
-                child: Icon(icon, size: 20, color: SyncColors.text),
+                child: Icon(icon, size: 20, color: context.sync.text),
               ),
             ),
           ),
@@ -247,7 +247,7 @@ class _ContextLink extends StatelessWidget {
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                       fontWeight: FontWeight.w500,
                     ),
                 overflow: TextOverflow.ellipsis,
@@ -256,7 +256,7 @@ class _ContextLink extends StatelessWidget {
             Icon(
               Icons.expand_more_rounded,
               size: 18,
-              color: SyncColors.textMuted.withValues(alpha: 0.85),
+              color: context.sync.textMuted.withValues(alpha: 0.85),
             ),
           ],
         ),
@@ -296,7 +296,7 @@ class _ContextRow extends StatelessWidget {
             child: Text(
               '·',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: SyncColors.textMuted.withValues(alpha: 0.5),
+                    color: context.sync.textMuted.withValues(alpha: 0.5),
                   ),
             ),
           ),
@@ -335,7 +335,7 @@ class _ContextSubtitle extends StatelessWidget {
     return Text(
       parts.join(' · '),
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: SyncColors.textMuted,
+            color: context.sync.textMuted,
             letterSpacing: 0.1,
           ),
       overflow: TextOverflow.ellipsis,

@@ -125,10 +125,10 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
                               width: 112,
                               height: 112,
                               decoration: BoxDecoration(
-                                color: SyncColors.surfaceMint,
+                                color: context.sync.surfaceMint,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: SyncColors.primary.withValues(
+                                  color: context.sync.primary.withValues(
                                     alpha: 0.2,
                                   ),
                                 ),
@@ -136,7 +136,7 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
                               child: Icon(
                                 page.icon,
                                 size: 52,
-                                color: SyncColors.primary,
+                                color: context.sync.primary,
                               ),
                             ),
                             const SizedBox(height: 36),
@@ -150,7 +150,7 @@ class _AppIntroScreenState extends State<AppIntroScreen> {
                               page.body,
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyLarge?.copyWith(
-                                color: SyncColors.textMuted,
+                                color: context.sync.textMuted,
                                 height: 1.45,
                               ),
                             ),

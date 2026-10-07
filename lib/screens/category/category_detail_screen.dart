@@ -190,7 +190,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
               Center(
                 child: Chip(
                   label: Text(categoryTypeLabel(l10n, category.type)),
-                  backgroundColor: SyncColors.surfaceMint,
+                  backgroundColor: context.sync.surfaceMint,
                 ),
               ),
             ],
@@ -218,20 +218,20 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                             label: l10n.spentLabel,
                             amount: formatIls(actual),
                             color: actual > planned && planned > 0
-                                ? SyncColors.overspend
-                                : SyncColors.accent,
+                                ? context.sync.overspendText
+                                : context.sync.accentText,
                           ),
                         ),
                         Container(
                           width: 1,
                           height: 36,
-                          color: SyncColors.textMuted.withValues(alpha: 0.2),
+                          color: context.sync.textMuted.withValues(alpha: 0.2),
                         ),
                         Expanded(
                           child: DetailStatCell(
                             label: l10n.plannedLabel,
                             amount: formatIls(planned),
-                            color: SyncColors.text,
+                            color: context.sync.text,
                             alignEnd: true,
                           ),
                         ),
@@ -260,7 +260,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                         return DetailInfoRow(
                           label: l10n.savedLabel,
                           value: formatIls(potTotal),
-                          valueColor: SyncColors.primary,
+                          valueColor: context.sync.primary,
                         );
                       },
                     ),
@@ -316,7 +316,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       l10n.noSubcategories,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                   ),
@@ -435,7 +435,10 @@ class _CategoryEditForm extends StatelessWidget {
                     color: Color(c),
                     shape: BoxShape.circle,
                     border: selected
-                        ? Border.all(width: 3, color: Colors.black87)
+                        ? Border.all(
+                            width: 3,
+                            color: context.sync.selectionRing,
+                          )
                         : null,
                   ),
                 ),
@@ -477,7 +480,7 @@ class _SubcategoryListTile extends StatelessWidget {
     final planned = state.planFor(subcategory.id)?.planned ?? 0;
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -502,22 +505,22 @@ class _SubcategoryListTile extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: spent > planned && planned > 0
-                          ? SyncColors.overspend
-                          : SyncColors.accent,
+                          ? context.sync.overspendText
+                          : context.sync.accentText,
                     ),
               ),
               const SizedBox(width: 12),
               Text(
                 formatIls(planned),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
               const SizedBox(width: 4),
               Icon(
                 Icons.chevron_right,
                 size: 20,
-                color: SyncColors.textMuted.withValues(alpha: 0.7),
+                color: context.sync.textMuted.withValues(alpha: 0.7),
               ),
             ],
           ),

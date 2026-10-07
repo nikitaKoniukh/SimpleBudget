@@ -241,7 +241,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                 category.localizedName(state.localeCode),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ],
@@ -277,20 +277,20 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                           label: l10n.spentLabel,
                           amount: formatIls(spent),
                           color: spent > planned && planned > 0
-                              ? SyncColors.overspend
-                              : SyncColors.accent,
+                              ? context.sync.overspendText
+                              : context.sync.accentText,
                         ),
                       ),
                       Container(
                         width: 1,
                         height: 36,
-                        color: SyncColors.textMuted.withValues(alpha: 0.2),
+                        color: context.sync.textMuted.withValues(alpha: 0.2),
                       ),
                       Expanded(
                         child: DetailStatCell(
                           label: l10n.plannedLabel,
                           amount: formatIls(planned),
-                          color: SyncColors.text,
+                          color: context.sync.text,
                           alignEnd: true,
                         ),
                       ),
@@ -312,7 +312,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                       DetailInfoRow(
                         label: l10n.savedLabel,
                         value: formatIls(potBalance),
-                        valueColor: SyncColors.primary,
+                        valueColor: context.sync.primary,
                       ),
                     if (isPot && sub.targetAmount != null && sub.targetAmount! > 0)
                       DetailInfoRow(
@@ -345,7 +345,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                       isPot ? l10n.noDepositsThisMonth : l10n.noExpensesYet,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: SyncColors.textMuted,
+                            color: context.sync.textMuted,
                           ),
                     ),
                   ),
@@ -359,7 +359,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                     note: deposit.note,
                     date: deposit.date,
                     amount: deposit.amount,
-                    amountColor: SyncColors.primary,
+                    amountColor: context.sync.primary,
                     dateFmt: dateFmt,
                     onTap: _editing
                         ? () => showLogEntrySheet(
@@ -378,7 +378,7 @@ class _SubcategoryDetailScreenState extends State<SubcategoryDetailScreen> {
                     note: expense.note,
                     date: expense.date,
                     amount: expense.amount,
-                    amountColor: SyncColors.accent,
+                    amountColor: context.sync.accentText,
                     dateFmt: dateFmt,
                     onTap: _editing
                         ? () => showLogEntrySheet(
@@ -557,7 +557,7 @@ class _LedgerTile extends StatelessWidget {
                 Text(
                   dateFmt.format(date),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
               ],
@@ -575,7 +575,7 @@ class _LedgerTile extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 20,
-              color: SyncColors.textMuted.withValues(alpha: 0.7),
+              color: context.sync.textMuted.withValues(alpha: 0.7),
             ),
           ],
         ],
@@ -583,7 +583,7 @@ class _LedgerTile extends StatelessWidget {
     );
 
     return Material(
-      color: SyncColors.frostedSurface,
+      color: context.sync.frostedSurface,
       borderRadius: BorderRadius.circular(14),
       child: onTap == null
           ? content

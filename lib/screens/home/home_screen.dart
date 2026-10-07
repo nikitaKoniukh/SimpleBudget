@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(
                   Icons.calendar_month_outlined,
                   size: 64,
-                  color: SyncColors.primary.withValues(alpha: 0.7),
+                  color: context.sync.primary.withValues(alpha: 0.7),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -59,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   l10n.emptyMonths,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
                 const SizedBox(height: 28),
@@ -190,7 +190,7 @@ class _TypedSection extends StatelessWidget {
                   title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
               ),
@@ -198,7 +198,7 @@ class _TypedSection extends StatelessWidget {
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: SyncColors.textMuted,
+                    foregroundColor: context.sync.textMuted,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -247,7 +247,7 @@ class _LoansSection extends StatelessWidget {
                   l10n.sectionDebt,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: SyncColors.textMuted,
+                        color: context.sync.textMuted,
                       ),
                 ),
               ),
@@ -255,7 +255,7 @@ class _LoansSection extends StatelessWidget {
                 TextButton.icon(
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: SyncColors.textMuted,
+                    foregroundColor: context.sync.textMuted,
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -266,7 +266,7 @@ class _LoansSection extends StatelessWidget {
               TextButton(
                 style: TextButton.styleFrom(
                   visualDensity: VisualDensity.compact,
-                  foregroundColor: SyncColors.textMuted,
+                  foregroundColor: context.sync.textMuted,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -279,14 +279,14 @@ class _LoansSection extends StatelessWidget {
         ),
         if (loans.isEmpty)
           Material(
-            color: Colors.white.withValues(alpha: 0.92),
+            color: context.sync.panelBase.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 l10n.noData,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: SyncColors.textMuted,
+                      color: context.sync.textMuted,
                     ),
               ),
             ),
