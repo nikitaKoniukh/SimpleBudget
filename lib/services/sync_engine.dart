@@ -3,11 +3,9 @@ import '../models/models.dart';
 import 'budget_repository.dart';
 
 class SyncEngine {
-  SyncEngine({
-    required BudgetRepository repo,
-    LocalBudgetStore? store,
-  })  : _repo = repo,
-        _store = store ?? LocalBudgetStore.instance;
+  SyncEngine({required BudgetRepository repo, LocalBudgetStore? store})
+    : _repo = repo,
+      _store = store ?? LocalBudgetStore.instance;
 
   final BudgetRepository _repo;
   final LocalBudgetStore _store;
@@ -83,10 +81,7 @@ class SyncEngine {
     }
   }
 
-  Future<void> persistMonthSummary(
-    String householdId,
-    BudgetMonth month,
-  ) {
+  Future<void> persistMonthSummary(String householdId, BudgetMonth month) {
     return _store.upsertHouseholdDoc(
       householdId: householdId,
       collection: kColMonths,
@@ -204,7 +199,8 @@ class SyncEngine {
         expenses: bundle.expenses,
         deposits: bundle.deposits,
         plans: bundle.plans,
-        income: bundle.month?.incomeTotal ??
+        income:
+            bundle.month?.incomeTotal ??
             bundle.incomeEntries.fold<double>(0, (s, e) => s + e.amount),
         debtPaid: bundle.month?.debtPaidTotal ?? 0,
       ),

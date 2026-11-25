@@ -61,7 +61,8 @@ abstract final class QuickLogWidgetService {
       'layoutRtl': rtl ? '1' : '0',
     };
 
-    final monthReady = state.isSignedIn &&
+    final monthReady =
+        state.isSignedIn &&
         state.hasHousehold &&
         state.hasMonthSelected &&
         state.monthId != null &&
@@ -98,8 +99,11 @@ abstract final class QuickLogWidgetService {
       payload['ready'] = '1';
       payload['heroLabel'] = isOver ? l10n.overLabel : l10n.remaining;
       payload['heroAmount'] = _formatWidgetIls(heroAmount, locale);
-      payload['heroAmountCompact'] =
-          _formatWidgetIls(heroAmount, locale, decimalDigits: 0);
+      payload['heroAmountCompact'] = _formatWidgetIls(
+        heroAmount,
+        locale,
+        decimalDigits: 0,
+      );
       payload['heroIsOver'] = isOver ? '1' : '0';
       payload['incomeLabel'] = l10n.income;
       payload['incomeAmount'] = _formatWidgetIls(totals.income, locale);
@@ -111,8 +115,9 @@ abstract final class QuickLogWidgetService {
       payload['budgetAmount'] = _formatWidgetIls(totals.planned, locale);
     }
 
-    final fingerprint =
-        payload.entries.map((e) => '${e.key}=${e.value}').join('|');
+    final fingerprint = payload.entries
+        .map((e) => '${e.key}=${e.value}')
+        .join('|');
     if (fingerprint == _fingerprint) return;
 
     try {
@@ -150,15 +155,11 @@ abstract final class QuickLogWidgetService {
     }
   }
 
-  static Future<bool> pinCompact() => _pin(
-        name: compactAndroidName,
-        qualifiedName: compactQualifiedName,
-      );
+  static Future<bool> pinCompact() =>
+      _pin(name: compactAndroidName, qualifiedName: compactQualifiedName);
 
-  static Future<bool> pinExtended() => _pin(
-        name: extendedAndroidName,
-        qualifiedName: extendedQualifiedName,
-      );
+  static Future<bool> pinExtended() =>
+      _pin(name: extendedAndroidName, qualifiedName: extendedQualifiedName);
 
   static Future<bool> _pin({
     required String name,
