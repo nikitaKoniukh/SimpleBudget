@@ -1,5 +1,5 @@
 {
-  "name": "simplebudget-functions",
+  "name": "syncmonth-functions",
   "private": true,
   "engines": {
     "node": "20"

@@ -146,14 +146,14 @@ Future<String?> showAddPotFlow(BuildContext context) async {
   try {
     if (choice.suggested != null) {
       final pot = choice.suggested!;
-      return showEditPotSheet(
+      return await showEditPotSheet(
         context,
         initialNameEn: pot.nameEn,
         initialNameRu: pot.nameRu,
       );
     }
     if (choice.wantsCustom) {
-      return showEditPotSheet(context);
+      return await showEditPotSheet(context);
     }
   } catch (e) {
     if (!context.mounted) return null;

@@ -80,7 +80,7 @@ class AuthService {
       }
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       final cred = await _auth.signInWithCredential(credential);
-      return ensureUserDoc(cred.user!);
+      return await ensureUserDoc(cred.user!);
     } on FirebaseAuthException catch (e) {
       _mapAccountExists(e);
     } on GoogleSignInException catch (e) {
@@ -117,7 +117,7 @@ class AuthService {
           (user.displayName == null || user.displayName!.isEmpty)) {
         await user.updateDisplayName(fullName);
       }
-      return ensureUserDoc(user);
+      return await ensureUserDoc(user);
     } on FirebaseAuthException catch (e) {
       _mapAccountExists(e);
     } on SignInWithAppleAuthorizationException catch (e) {
@@ -378,8 +378,9 @@ class AuthService {
     final ids = List<String>.from(data['householdIds'] as List? ?? const []);
     ids.remove(householdId);
     final active = data['activeHouseholdId'] as String?;
-    final newActive =
-        ids.contains(active) ? active : (ids.isEmpty ? null : ids.first);
+    final newActive = ids.contains(active)
+        ? active
+        : (ids.isEmpty ? null : ids.first);
     await ref.update({
       'householdIds': ids,
       if (newActive == null)

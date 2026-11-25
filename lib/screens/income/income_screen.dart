@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/app_state.dart';
+import '../../services/budget_repository.dart';
 import '../../utils/money.dart';
 import '../../utils/text_format.dart';
 import '../../widgets/sync_app_bar.dart';

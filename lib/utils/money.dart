@@ -48,10 +48,10 @@ String previousMonthId(String monthId) {
 
 /// Month to open on app launch: this calendar month if it exists, otherwise
 /// the latest month that is not in the future.
-String? preferredMonthId(Iterable<String> monthIds) {
+String? preferredMonthId(Iterable<String> monthIds, {DateTime? now}) {
   final ids = monthIds.toList();
   if (ids.isEmpty) return null;
-  final current = monthIdFromDate(DateTime.now());
+  final current = monthIdFromDate(now ?? DateTime.now());
   if (ids.contains(current)) return current;
   final pastOrCurrent = ids.where((id) => id.compareTo(current) <= 0).toList()
     ..sort((a, b) => b.compareTo(a));
@@ -62,7 +62,11 @@ String? preferredMonthId(Iterable<String> monthIds) {
 
 /// Month to pre-select when adding a new month: the slot after the latest
 /// existing month, or the earliest open slot from the current calendar month.
-DateTime suggestedNewMonthDate(Iterable<String> existingMonthIds) {
+DateTime suggestedNewMonthDate(
+  Iterable<String> existingMonthIds, {
+  DateTime? now,
+}) {
+  final today = now ?? DateTime.now();
   final existing = existingMonthIds.toSet();
   if (existing.isNotEmpty) {
     final sorted = existing.toList()..sort();
@@ -73,10 +77,10 @@ DateTime suggestedNewMonthDate(Iterable<String> existingMonthIds) {
       cursor = DateTime(cursor.year, cursor.month + 1);
     }
   }
-  var cursor = DateTime(DateTime.now().year, DateTime.now().month);
+  var cursor = DateTime(today.year, today.month);
   for (var i = 0; i < 36; i++) {
     if (!existing.contains(monthIdFromDate(cursor))) return cursor;
     cursor = DateTime(cursor.year, cursor.month + 1);
   }
-  return DateTime(DateTime.now().year, DateTime.now().month);
+  return DateTime(today.year, today.month);
 }

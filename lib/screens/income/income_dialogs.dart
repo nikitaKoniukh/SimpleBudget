@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/models.dart';
 import '../../providers/app_state.dart';
+import '../../services/budget_repository.dart';
 import '../../utils/text_format.dart';
 
 Future<String?> showAddIncomeSourceDialog(BuildContext context) async {
