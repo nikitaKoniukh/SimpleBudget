@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/sync_theme.dart';
 
 class FlowStepProgress extends StatelessWidget {
-  const FlowStepProgress({required this.current, required this.total});
+  const FlowStepProgress({super.key, required this.current, required this.total});
 
   final int current;
   final int total;
@@ -35,6 +35,7 @@ class FlowStepProgress extends StatelessWidget {
 
 class FlowOnboardingHeader extends StatelessWidget {
   const FlowOnboardingHeader({
+    super.key,
     required this.icon,
     required this.title,
     this.subtitle,
@@ -78,6 +79,7 @@ class FlowOnboardingHeader extends StatelessWidget {
 
 class FlowOptionCard extends StatelessWidget {
   const FlowOptionCard({
+    super.key,
     required this.icon,
     required this.title,
     required this.selected,

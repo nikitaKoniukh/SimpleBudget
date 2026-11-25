@@ -100,11 +100,11 @@ Future<String?> showAddCategoryFlow(
 
   try {
     if (choice.suggested != null) {
-      return context.read<AppState>().addSuggestedCategory(choice.suggested!);
+      return await context.read<AppState>().addSuggestedCategory(choice.suggested!);
     }
 
     if (choice.wantsCustom) {
-      return showCategoryEditor(context, preferredType: preferredType);
+      return await showCategoryEditor(context, preferredType: preferredType);
     }
   } catch (e) {
     if (!context.mounted) return null;

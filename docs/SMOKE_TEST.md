@@ -9,16 +9,21 @@
 - [ ] Members sheet shows names; owner can set editor vs log-only
 
 ## Navigation
-- [ ] Bottom nav has **Home / Activity / Set aside** (no Settings tab)
+- [ ] Bottom nav has **Home / Statistics / Activity / Set aside** (no Settings tab)
+- [ ] Landscape hides tab bar and Home app bars
 - [ ] Settings opens from gear on Home
-- [ ] Language EN / RU / Hebrew toggle works in Settings
-- [ ] Reports and Recurring bills open from Settings
+- [ ] Language picker works in Settings (EN / RU / HE / ES / FR / UK / AR); Hebrew and Arabic render RTL
+- [ ] Appearance light/dark switch at top of Settings; persists after restart
+- [ ] Reports, Recurring bills and Loans & debt open from Settings
+- [ ] First launch shows the one-time feature tour; it does not reappear
 
 ## Months
 - [ ] **Create this month** opens full-screen flow (pick month)
 - [ ] If another month exists: copy source, empty month, leftover rollover
 - [ ] Copy from previous → categories + planned copied; monthly/savings also get spent/deposit equal to planned; spend actuals stay 0 (unless rollover)
 - [ ] Select month from Home swap control
+- [ ] Switching months never shows the previous month's leftover
+- [ ] Reinstall + sign in: all existing months are listed
 - [ ] **Start next month from this plan** in Settings
 
 ## Home
@@ -38,12 +43,20 @@
 - [ ] Income and expenses show **who logged**
 - [ ] Deposits labeled; split spends labeled
 - [ ] Tap to edit / delete
+- [ ] Income source filter shows the filtered sum
 
 ## Set aside
 - [ ] Pots with optional target and target date
 - [ ] Log deposit reduces Home remaining
 - [ ] Changing month shows pot balances through and including that month
 - [ ] Leftover uses month leftoverFromPrior (not lifetime pot total)
+
+## Statistics
+- [ ] Totals match Home for the same month
+- [ ] Compare two months shows correct deltas
+
+## Recurring bills
+- [ ] Hero cards show upcoming bills; edit sheet saves changes
 
 ## Loans
 - [ ] Settings → Loans & debt: add installment or balance loan
@@ -52,4 +65,8 @@
 
 ## Budget basics
 - [ ] Split a new spend across two line items
-- [ ] CSV export, language toggle
+- [ ] CSV export opens in a spreadsheet correctly (household name with a comma stays in one cell)
+
+## Widgets
+- [ ] iOS QuickLog widget opens the log sheet; follows dark mode
+- [ ] Android compact + extended widgets show month overview and open quick log

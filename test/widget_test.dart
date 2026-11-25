@@ -17,14 +17,17 @@ void main() {
 
   test('preferredMonthId opens current month when it exists', () {
     expect(
-      preferredMonthId(['2026-09', '2026-08', '2026-07']),
+      preferredMonthId(
+        ['2026-09', '2026-08', '2026-07'],
+        now: DateTime(2026, 8, 17),
+      ),
       '2026-08',
     );
   });
 
   test('preferredMonthId skips future months when current is missing', () {
     expect(
-      preferredMonthId(['2026-09', '2026-07']),
+      preferredMonthId(['2026-09', '2026-07'], now: DateTime(2026, 8, 17)),
       '2026-07',
     );
   });

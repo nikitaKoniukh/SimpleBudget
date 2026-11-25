@@ -13,7 +13,7 @@ String buildMonthCsv({
   String localeCode = 'en',
 }) {
   final buf = StringBuffer();
-  buf.writeln('SyncMonth,$householdName,$monthId');
+  buf.writeln('SyncMonth,${_csv(householdName)},$monthId');
   buf.writeln();
   buf.writeln('INCOME');
   buf.writeln('Source,Amount,Note');
@@ -98,7 +98,8 @@ String _subDisplayName(
 }
 
 String _csv(String value) {
-  if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+  if (value.contains(',') || value.contains('"') || value.contains('\n') ||
+      value.contains('\r')) {
     return '"${value.replaceAll('"', '""')}"';
   }
   return value;
